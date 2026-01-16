@@ -1,14 +1,18 @@
 # Flutter BlockNote Editor
 
+[![Pub Version](https://img.shields.io/pub/v/flutter_blocknote_editor)](https://pub.dev/packages/flutter_blocknote_editor)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-iOS%20%7C%20Android-lightgrey)](https://flutter.dev)
+
 > **⚠️ BETA VERSION WARNING**
 >
 > This is a **beta version** of the Flutter BlockNote Editor package. We've just started working on it, and there may be bugs and incomplete features. We're actively working on fixes and improvements. Please report any issues you encounter.
 
 A Flutter package that embeds [BlockNoteJS](https://github.com/TypeCellOS/BlockNote) inside a WebView with bidirectional communication, transaction batching, and undo/redo safety.
 
-**📦 Pub.dev**: [https://pub.dev/packages/flutter_blocknote_editor](https://pub.dev/packages/flutter_blocknote_editor)  
-**📂 Repository**: [https://github.com/NarekManukyan/flutter_blocknote_editor](https://github.com/NarekManukyan/flutter_blocknote_editor)  
-**🐛 Issues**: [https://github.com/NarekManukyan/flutter_blocknote_editor/issues](https://github.com/NarekManukyan/flutter_blocknote_editor/issues)
+<p align="center">
+  <img src="https://raw.githubusercontent.com/TypeCellOS/BlockNote/main/docs/static/img/blocknote-hero.png" alt="BlockNote Editor Preview" width="600"/>
+</p>
 
 ## What We Support
 
@@ -396,7 +400,7 @@ BlockNoteJS itself has known bugs that may affect this package. You can check th
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License.
 
 ## Contributing
 
