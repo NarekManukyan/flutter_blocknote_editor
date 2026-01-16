@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+  <title>BlockNote Editor</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+    #root {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+    // Immediate inline script to verify JavaScript execution
+    console.log('[BlockNote] Inline script executed');
+    console.log('[BlockNote] Document ready state:', document.readyState);
+    
+    // Set up BlockNoteChannel immediately (before module loads)
+    if (!window.BlockNoteChannel) {
+      window.BlockNoteChannel = {
+        postMessage: function(message) {
+          try {
+            if (window.onMessage) {
+              window.onMessage.postMessage(message);
+            } else {
+              console.log('[BlockNote] Message (no channel):', message);
+            }
+          } catch (err) {
+            console.error('[BlockNote] Error posting message:', err);
+          }
+        }
+      };
+      console.log('[BlockNote] BlockNoteChannel initialized in inline script');
+    }
+    
+    // Send test message immediately
+    setTimeout(function() {
+      if (window.BlockNoteChannel) {
+        window.BlockNoteChannel.postMessage(JSON.stringify({
+          type: 'test',
+          data: { message: 'Inline script executed successfully' }
+        }));
+      }
+    }, 100);
+  </script>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+</html>

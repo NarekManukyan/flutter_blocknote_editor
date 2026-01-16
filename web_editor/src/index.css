@@ -1,0 +1,113 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 100%;
+  height: 100vh;
+  /* Don't set overflow: hidden - popups (portals) need to render as direct children of body */
+  /* Popups use position: fixed, so they won't cause scrolling issues */
+  /* The #root container handles scrolling with overflow: auto */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  position: relative;
+}
+
+/* Ensure popups can render outside clipped containers */
+.bn-ak-popover,
+[data-radix-portal],
+[role="dialog"],
+[role="menu"],
+[data-ariakit-popover],
+.bn-form-popover,
+.mantine-Popover-dropdown,
+.mantine-Menu-dropdown {
+  position: fixed !important;
+  z-index: 9999 !important;
+  pointer-events: auto !important;
+  display: block !important;
+  visibility: visible !important;
+}
+
+/* Ensure toolbar buttons can receive clicks */
+.bn-toolbar button,
+.bn-toolbar [role="button"] {
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+}
+
+/* Prevent root from capturing events meant for popups */
+#root {
+  pointer-events: auto;
+}
+
+/* Ensure popups are not hidden */
+.bn-ak-popover[hidden],
+[data-radix-portal][hidden],
+.bn-form-popover[hidden],
+.mantine-Popover-dropdown[hidden],
+.mantine-Menu-dropdown[hidden] {
+  display: block !important;
+  visibility: visible !important;
+}
+
+/* Prevent popups from being closed by outside clicks in WebView */
+.bn-ak-popover,
+[data-radix-portal],
+.bn-form-popover {
+  touch-action: manipulation !important;
+}
+
+/* Ensure select/menu dropdowns work */
+[data-ariakit-select-popover],
+[data-ariakit-menu],
+.mantine-Select-dropdown,
+.mantine-Menu-dropdown {
+  position: fixed !important;
+  z-index: 10000 !important;
+  pointer-events: auto !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Mantine Menu dropdown specific fixes */
+.mantine-Menu-dropdown {
+  position: fixed !important;
+  z-index: 10002 !important;
+  pointer-events: auto !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  transform: none !important;
+  max-height: 300px !important;
+  overflow-y: auto !important;
+  isolation: isolate !important;
+}
+
+/* Ensure bn-container doesn't cover popups */
+.bn-container {
+  z-index: auto !important;
+  isolation: auto !important;
+}
+
+/* Ensure Mantine dropdowns are not hidden */
+.mantine-Menu-dropdown[hidden],
+.mantine-Select-dropdown[hidden] {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* BlockNote select menu */
+.bn-select {
+  position: fixed !important;
+  z-index: 10001 !important;
+}
