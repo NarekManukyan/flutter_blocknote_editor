@@ -5,9 +5,10 @@
 /// batched before being sent to Flutter to prevent excessive rebuilds.
 library;
 
-import 'package:json_annotation/json_annotation.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'blocknote_block.dart';
 
+part 'blocknote_transaction.freezed.dart';
 part 'blocknote_transaction.g.dart';
 
 /// Transaction operation types.
@@ -28,41 +29,29 @@ enum BlockNoteTransactionOperation {
 /// A single transaction operation.
 ///
 /// Represents one operation in a transaction (insert, update, delete, move).
-@JsonSerializable()
-class BlockNoteTransactionOp {
+@freezed
+class BlockNoteTransactionOp with _$BlockNoteTransactionOp {
   /// Creates a new transaction operation.
-  const BlockNoteTransactionOp({
-    required this.operation,
-    required this.blockId,
-    this.block,
-    this.index,
-    this.parentId,
-  });
+  const factory BlockNoteTransactionOp({
+    /// The type of operation.
+    required BlockNoteTransactionOperation operation,
 
-  /// The type of operation.
-  @JsonKey(name: 'operation', fromJson: _operationFromJson, toJson: _operationToJson)
-  final BlockNoteTransactionOperation operation;
+    /// The ID of the block being operated on.
+    required String blockId,
 
-  /// The ID of the block being operated on.
-  @JsonKey(name: 'blockId')
-  final String blockId;
+    /// The block data (for insert/update operations).
+    BlockNoteBlock? block,
 
-  /// The block data (for insert/update operations).
-  final BlockNoteBlock? block;
+    /// The index position (for insert/move operations).
+    int? index,
 
-  /// The index position (for insert/move operations).
-  final int? index;
-
-  /// The parent block ID (for nested structures).
-  @JsonKey(name: 'parentId')
-  final String? parentId;
+    /// The parent block ID (for nested structures).
+    String? parentId,
+  }) = _BlockNoteTransactionOp;
 
   /// Creates a BlockNoteTransactionOp from a JSON map.
   factory BlockNoteTransactionOp.fromJson(Map<String, dynamic> json) =>
       _$BlockNoteTransactionOpFromJson(json);
-
-  /// Converts this instance to a JSON map.
-  Map<String, dynamic> toJson() => _$BlockNoteTransactionOpToJson(this);
 }
 
 /// A BlockNote transaction containing one or more operations.
@@ -71,40 +60,21 @@ class BlockNoteTransactionOp {
 /// emitted from the JavaScript editor and batched before being sent to
 /// Flutter. Each transaction includes a base version number for conflict
 /// resolution.
-@JsonSerializable()
-class BlockNoteTransaction {
+@freezed
+class BlockNoteTransaction with _$BlockNoteTransaction {
   /// Creates a new transaction instance.
-  const BlockNoteTransaction({
-    required this.baseVersion,
-    required this.operations,
-    this.timestamp,
-  });
+  const factory BlockNoteTransaction({
+    /// The base document version this transaction is based on.
+    required int baseVersion,
 
-  /// The base document version this transaction is based on.
-  @JsonKey(name: 'baseVersion')
-  final int baseVersion;
+    /// The operations in this transaction.
+    required List<BlockNoteTransactionOp> operations,
 
-  /// The operations in this transaction.
-  final List<BlockNoteTransactionOp> operations;
-
-  /// Optional timestamp when this transaction was created.
-  final int? timestamp;
+    /// Optional timestamp when this transaction was created.
+    int? timestamp,
+  }) = _BlockNoteTransaction;
 
   /// Creates a BlockNoteTransaction from a JSON map.
   factory BlockNoteTransaction.fromJson(Map<String, dynamic> json) =>
       _$BlockNoteTransactionFromJson(json);
-
-  /// Converts this instance to a JSON map.
-  Map<String, dynamic> toJson() => _$BlockNoteTransactionToJson(this);
 }
-
-/// Helper function to deserialize BlockNoteTransactionOperation from JSON.
-BlockNoteTransactionOperation _operationFromJson(String value) {
-  return BlockNoteTransactionOperation.values.firstWhere(
-    (e) => e.name == value,
-    orElse: () => BlockNoteTransactionOperation.update,
-  );
-}
-
-/// Helper function to serialize BlockNoteTransactionOperation to JSON.
-String _operationToJson(BlockNoteTransactionOperation value) => value.name;

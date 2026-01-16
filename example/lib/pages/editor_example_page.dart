@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_blocknote_editor/flutter_blocknote_editor.dart';
 import '../config/editor_config.dart';
 import 'transaction_log_page.dart';
@@ -23,6 +25,28 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
   BlockNoteDocument _document = BlockNoteDocument.empty();
 
   @override
+  void initState() {
+    super.initState();
+    _loadDocumentFromJson();
+  }
+
+  Future<void> _loadDocumentFromJson() async {
+    try {
+      final String jsonString =
+          await rootBundle.loadString('assets/sample_document.json');
+      final Map<String, dynamic> jsonData = json.decode(jsonString);
+      setState(() {
+        _document = BlockNoteDocument.fromJson(jsonData);
+      });
+    } catch (e) {
+      // If loading fails, fall back to empty document
+      setState(() {
+        _document = BlockNoteDocument.empty();
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -41,8 +65,8 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
+              _loadDocumentFromJson();
               setState(() {
-                _document = BlockNoteDocument.empty();
                 _transactions.clear();
                 _isReady = false;
               });

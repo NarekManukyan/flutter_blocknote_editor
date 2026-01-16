@@ -1,3 +1,18 @@
+## 0.0.5-beta
+
+**Major Refactoring and Improvements**
+
+* **BREAKING**: Migrated all model classes from `JsonSerializable` to `Freezed`
+  * All models now use `@freezed` annotation for better immutability and code generation
+  * Removed all custom `fromJson`/`toJson` converters - freezed handles serialization automatically
+  * Models now have built-in `copyWith` methods and better type safety
+* **BREAKING**: Fixed `styles` type from `Map<String, bool>` to `Map<String, dynamic>`
+  * Now correctly supports both boolean values (bold, italic, underline, strike) and string values (textColor, backgroundColor)
+  * Matches BlockNoteJS official schema
+* Added comprehensive test suite for document JSON parsing
+* Updated example app to load document from JSON file instead of empty document
+* Improved code quality and maintainability
+
 ## 0.0.4-beta
 
 **Documentation Improvements**

@@ -5,8 +5,9 @@
 /// points for custom blocks (e.g., agenda_item).
 library;
 
-import 'package:json_annotation/json_annotation.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
+part 'blocknote_block.freezed.dart';
 part 'blocknote_block.g.dart';
 
 /// Standard BlockNote block types.
@@ -57,99 +58,57 @@ enum BlockNoteInlineContentType {
 /// BlockNote block inline content.
 ///
 /// Represents inline content within a block (text, links, mentions).
-@JsonSerializable()
-class BlockNoteInlineContent {
+@freezed
+class BlockNoteInlineContent with _$BlockNoteInlineContent {
   /// Creates a new inline content instance.
-  const BlockNoteInlineContent({
-    required this.type,
-    required this.text,
-    this.styles,
-    this.href,
-    this.mentionId,
-  });
+  const factory BlockNoteInlineContent({
+    /// The type of inline content.
+    required BlockNoteInlineContentType type,
 
-  /// The type of inline content.
-  @JsonKey(name: 'type', fromJson: _inlineContentTypeFromJson, toJson: _inlineContentTypeToJson)
-  final BlockNoteInlineContentType type;
+    /// The text content.
+    required String text,
 
-  /// The text content.
-  final String text;
+    /// Optional text styles (bold, italic, underline, textColor, backgroundColor, etc.).
+    /// Can contain boolean values (bold, italic, underline, strike) and string values (textColor, backgroundColor).
+    Map<String, dynamic>? styles,
 
-  /// Optional text styles (bold, italic, underline, etc.).
-  final Map<String, bool>? styles;
+    /// Optional href for link content.
+    String? href,
 
-  /// Optional href for link content.
-  final String? href;
-
-  /// Optional mention ID for mention content.
-  @JsonKey(name: 'mentionId')
-  final String? mentionId;
+    /// Optional mention ID for mention content.
+    String? mentionId,
+  }) = _BlockNoteInlineContent;
 
   /// Creates a BlockNoteInlineContent from a JSON map.
   factory BlockNoteInlineContent.fromJson(Map<String, dynamic> json) =>
       _$BlockNoteInlineContentFromJson(json);
-
-  /// Converts this instance to a JSON map.
-  Map<String, dynamic> toJson() => _$BlockNoteInlineContentToJson(this);
 }
 
 /// BlockNote block structure.
 ///
 /// Represents a single block in a BlockNote document. Blocks can contain
 /// inline content, have properties, and reference parent/child blocks.
-@JsonSerializable()
-class BlockNoteBlock {
+@freezed
+class BlockNoteBlock with _$BlockNoteBlock {
   /// Creates a new block instance.
-  const BlockNoteBlock({
-    required this.id,
-    required this.type,
-    this.content,
-    this.props,
-    this.children,
-  });
+  const factory BlockNoteBlock({
+    /// Unique identifier for this block.
+    required String id,
 
-  /// Unique identifier for this block.
-  final String id;
+    /// The type of this block.
+    required BlockNoteBlockType type,
 
-  /// The type of this block.
-  @JsonKey(name: 'type', fromJson: _blockTypeFromJson, toJson: _blockTypeToJson)
-  final BlockNoteBlockType type;
+    /// Inline content of this block (for text-based blocks).
+    List<BlockNoteInlineContent>? content,
 
-  /// Inline content of this block (for text-based blocks).
-  final List<BlockNoteInlineContent>? content;
+    /// Block-specific properties (e.g., heading level, list item type).
+    Map<String, dynamic>? props,
 
-  /// Block-specific properties (e.g., heading level, list item type).
-  final Map<String, dynamic>? props;
-
-  /// Child blocks (for nested structures like lists).
-  final List<BlockNoteBlock>? children;
+    /// Child blocks (for nested structures like lists).
+    List<BlockNoteBlock>? children,
+  }) = _BlockNoteBlock;
 
   /// Creates a BlockNoteBlock from a JSON map.
   factory BlockNoteBlock.fromJson(Map<String, dynamic> json) =>
       _$BlockNoteBlockFromJson(json);
-
-  /// Converts this instance to a JSON map.
-  Map<String, dynamic> toJson() => _$BlockNoteBlockToJson(this);
 }
-
-/// Helper function to deserialize BlockNoteBlockType from JSON.
-BlockNoteBlockType _blockTypeFromJson(String value) {
-  return BlockNoteBlockType.values.firstWhere(
-    (e) => e.name == value,
-    orElse: () => BlockNoteBlockType.custom,
-  );
-}
-
-/// Helper function to serialize BlockNoteBlockType to JSON.
-String _blockTypeToJson(BlockNoteBlockType value) => value.name;
-
-/// Helper function to deserialize BlockNoteInlineContentType from JSON.
-BlockNoteInlineContentType _inlineContentTypeFromJson(String value) {
-  return BlockNoteInlineContentType.values.firstWhere(
-    (e) => e.name == value,
-    orElse: () => BlockNoteInlineContentType.text,
-  );
-}
-
-/// Helper function to serialize BlockNoteInlineContentType to JSON.
-String _inlineContentTypeToJson(BlockNoteInlineContentType value) => value.name;

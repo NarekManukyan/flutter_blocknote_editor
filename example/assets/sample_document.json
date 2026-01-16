@@ -1,0 +1,159 @@
+{
+  "blocks": [
+    {
+      "id": "block1",
+      "type": "heading",
+      "content": [
+        {
+          "type": "text",
+          "text": "Welcome to BlockNote Editor"
+        }
+      ],
+      "props": {
+        "level": 1
+      }
+    },
+    {
+      "id": "block2",
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "This is a sample document loaded from JSON. It demonstrates various block types and formatting options available in the BlockNote editor."
+        }
+      ]
+    },
+    {
+      "id": "block3",
+      "type": "heading",
+      "content": [
+        {
+          "type": "text",
+          "text": "Features"
+        }
+      ],
+      "props": {
+        "level": 2
+      }
+    },
+    {
+      "id": "block4",
+      "type": "bulletListItem",
+      "content": [
+        {
+          "type": "text",
+          "text": "Rich text editing with formatting options"
+        }
+      ]
+    },
+    {
+      "id": "block5",
+      "type": "bulletListItem",
+      "content": [
+        {
+          "type": "text",
+          "text": "Multiple block types (headings, lists, code blocks, etc.)"
+        }
+      ]
+    },
+    {
+      "id": "block6",
+      "type": "bulletListItem",
+      "content": [
+        {
+          "type": "text",
+          "text": "Nested structures and hierarchical content"
+        }
+      ]
+    },
+    {
+      "id": "block7",
+      "type": "heading",
+      "content": [
+        {
+          "type": "text",
+          "text": "Try It Out"
+        }
+      ],
+      "props": {
+        "level": 2
+      }
+    },
+    {
+      "id": "block8",
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "You can edit this document, add new blocks, format text, and see all changes reflected in real-time. The editor supports ",
+          "styles": {}
+        },
+        {
+          "type": "text",
+          "text": "bold",
+          "styles": {
+            "bold": true
+          }
+        },
+        {
+          "type": "text",
+          "text": ", ",
+          "styles": {}
+        },
+        {
+          "type": "text",
+          "text": "italic",
+          "styles": {
+            "italic": true
+          }
+        },
+        {
+          "type": "text",
+          "text": ", and ",
+          "styles": {}
+        },
+        {
+          "type": "text",
+          "text": "underline",
+          "styles": {
+            "underline": true
+          }
+        },
+        {
+          "type": "text",
+          "text": " formatting."
+        }
+      ]
+    },
+    {
+      "id": "block9",
+      "type": "numberedListItem",
+      "content": [
+        {
+          "type": "text",
+          "text": "First numbered item"
+        }
+      ]
+    },
+    {
+      "id": "block10",
+      "type": "numberedListItem",
+      "content": [
+        {
+          "type": "text",
+          "text": "Second numbered item"
+        }
+      ]
+    },
+    {
+      "id": "block11",
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "Happy editing! 🎉"
+        }
+      ]
+    }
+  ]
+}

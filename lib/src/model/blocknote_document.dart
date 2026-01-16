@@ -5,41 +5,27 @@
 /// for future compatibility.
 library;
 
-import 'package:json_annotation/json_annotation.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'blocknote_block.dart';
 
+part 'blocknote_document.freezed.dart';
 part 'blocknote_document.g.dart';
 
 /// BlockNote document schema version.
 ///
 /// Used for schema versioning to support future migrations and compatibility.
-@JsonSerializable()
-class BlockNoteDocumentVersion {
+@freezed
+class BlockNoteDocumentVersion with _$BlockNoteDocumentVersion {
   /// Creates a new document version.
-  const BlockNoteDocumentVersion({
-    this.major = 1,
-    this.minor = 0,
-    this.patch = 0,
-  });
-
-  /// Major version number.
-  final int major;
-
-  /// Minor version number.
-  final int minor;
-
-  /// Patch version number.
-  final int patch;
+  const factory BlockNoteDocumentVersion({
+    @Default(1) int major,
+    @Default(0) int minor,
+    @Default(0) int patch,
+  }) = _BlockNoteDocumentVersion;
 
   /// Creates a BlockNoteDocumentVersion from a JSON map.
   factory BlockNoteDocumentVersion.fromJson(Map<String, dynamic> json) =>
       _$BlockNoteDocumentVersionFromJson(json);
-
-  /// Converts this instance to a JSON map.
-  Map<String, dynamic> toJson() => _$BlockNoteDocumentVersionToJson(this);
-
-  @override
-  String toString() => '$major.$minor.$patch';
 }
 
 /// BlockNote document structure.
@@ -47,23 +33,16 @@ class BlockNoteDocumentVersion {
 /// Represents a complete BlockNote document containing blocks and metadata.
 /// Documents are normalized and can be serialized to/from JSON for
 /// communication with the JavaScript editor.
-@JsonSerializable()
-class BlockNoteDocument {
+@freezed
+class BlockNoteDocument with _$BlockNoteDocument {
   /// Creates a new document instance.
-  const BlockNoteDocument({
-    required this.blocks,
-    this.version,
-  });
+  const factory BlockNoteDocument({
+    /// The blocks that make up this document.
+    required List<BlockNoteBlock> blocks,
 
-  /// The blocks that make up this document.
-  final List<BlockNoteBlock> blocks;
-
-  /// Optional schema version for future compatibility.
-  final BlockNoteDocumentVersion? version;
-
-  /// Creates a BlockNoteDocument from a JSON map.
-  factory BlockNoteDocument.fromJson(Map<String, dynamic> json) =>
-      _$BlockNoteDocumentFromJson(json);
+    /// Optional schema version for future compatibility.
+    BlockNoteDocumentVersion? version,
+  }) = _BlockNoteDocument;
 
   /// Creates an empty document with a single paragraph block.
   factory BlockNoteDocument.empty() {
@@ -83,6 +62,7 @@ class BlockNoteDocument {
     );
   }
 
-  /// Converts this instance to a JSON map.
-  Map<String, dynamic> toJson() => _$BlockNoteDocumentToJson(this);
+  /// Creates a BlockNoteDocument from a JSON map.
+  factory BlockNoteDocument.fromJson(Map<String, dynamic> json) =>
+      _$BlockNoteDocumentFromJson(json);
 }
