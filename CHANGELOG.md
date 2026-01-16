@@ -1,3 +1,20 @@
+## 0.0.4-beta
+
+**Documentation Improvements**
+
+* Added BlockNoteJS banner image and links to BlockNote resources
+* Enhanced README with BlockNote feature descriptions
+* Added credits section acknowledging BlockNote, Prosemirror, and Tiptap
+* Improved README structure and visual presentation
+
+## 0.0.3-beta
+
+**Code Quality Improvements**
+
+* Fixed deprecated API usage: replaced `color.value` with `color.toARGB32()`
+* Added ignore comments for deprecated `fontFamily` field usage (kept for backwards compatibility)
+* Improved pub.dev static analysis score
+
 ## 0.0.2-beta
 
 **Documentation and Metadata Updates**

@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 
 /// Converts a Flutter Color to a hex string (e.g., "#3f3f3f").
 String _colorToHex(Color color) {
-  final argb = color.value;
+  final argb = color.toARGB32();
   return '#${argb.toRadixString(16).padLeft(8, '0').substring(2)}';
 }
 
@@ -513,8 +513,7 @@ class BlockNoteTheme {
 
   /// Font configuration using Flutter-friendly API.
   ///
-  /// Prefer this over [fontFamily] as it supports both system fonts
-  /// and custom font files with automatic CSS generation.
+  /// Supports both system fonts and custom font files with automatic CSS generation.
   final BlockNoteFontConfig? font;
 
   /// Light theme colors (overrides colors).
@@ -525,8 +524,9 @@ class BlockNoteTheme {
 
   /// Gets the effective font family string.
   ///
-  /// Returns [font].family if [font] is provided, otherwise [fontFamily].
+  /// Returns [font].family if [font] is provided, otherwise the legacy font family.
   String? get effectiveFontFamily {
+    // ignore: deprecated_member_use_from_same_package
     return font?.family ?? fontFamily;
   }
 
@@ -559,6 +559,7 @@ class BlockNoteTheme {
             )
           : null,
       borderRadius: json['borderRadius'] as double?,
+      // ignore: deprecated_member_use_from_same_package
       fontFamily: json['fontFamily'] as String?,
       light: json['light'] != null
           ? BlockNoteColorScheme.fromJson(

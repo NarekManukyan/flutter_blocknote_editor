@@ -11,8 +11,21 @@
 A Flutter package that embeds [BlockNoteJS](https://github.com/TypeCellOS/BlockNote) inside a WebView with bidirectional communication, transaction batching, and undo/redo safety.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/TypeCellOS/BlockNote/main/docs/static/img/blocknote-hero.png" alt="BlockNote Editor Preview" width="600"/>
+  <a href="https://www.blocknotejs.org">
+    <img alt="BlockNote" src="https://github.com/TypeCellOS/BlockNote/raw/main/docs/public/img/logos/banner.svg?raw=true" width="300" />
+  </a>
 </p>
+
+<p align="center">
+  BlockNote is an open source Block-Based rich text editor. This Flutter package brings BlockNote's modern text editing experience to your Flutter apps.
+</p>
+
+<p align="center">
+  <a href="https://www.blocknotejs.org">Homepage</a> - 
+  <a href="https://www.blocknotejs.org/docs">Documentation</a> - 
+  <a href="https://www.blocknotejs.org/examples">Examples</a>
+</p>
+
 
 ## What We Support
 
@@ -398,9 +411,21 @@ BlockNoteJS itself has known bugs that may affect this package. You can check th
 
 **Critical Bug**: [Issue #2122](https://github.com/TypeCellOS/BlockNote/issues/2122) - On iOS Safari, when selecting text near the top of the editor, two overlapping menus appear (the native iOS text selection menu and the BlockNote toolbar). This makes it difficult or impossible to access the BlockNote toolbar features on mobile devices. This is a known issue in BlockNoteJS and is being tracked upstream.
 
+## Credits
+
+This Flutter package wraps [BlockNote](https://www.blocknotejs.org), an open source Block-Based rich text editor.
+
+BlockNote builds directly on two awesome projects:
+- [Prosemirror](https://prosemirror.net/) by Marijn Haverbeke
+- [Tiptap](https://tiptap.dev/)
+
+BlockNote is built as part of [TypeCell](https://www.typecell.org) and is sponsored by the [NLNet foundation](https://nlnet.nl/foundation/).
+
 ## License
 
 This project is licensed under the MIT License.
+
+BlockNote itself is licensed under the [MPL-2.0 license](https://github.com/TypeCellOS/BlockNote/blob/main/LICENSE-MPL.txt), which allows you to use BlockNote in commercial (and closed-source) applications.
 
 ## Contributing
 
