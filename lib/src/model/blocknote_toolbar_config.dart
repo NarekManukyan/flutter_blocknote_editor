@@ -5,7 +5,11 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'blocknote_block.dart';
+
+part 'blocknote_toolbar_config.freezed.dart';
+part 'blocknote_toolbar_config.g.dart';
 
 /// Basic text styles for formatting toolbar buttons.
 enum BlockNoteBasicTextStyle {
@@ -23,97 +27,6 @@ enum BlockNoteBasicTextStyle {
 
   /// Code text style.
   code,
-}
-
-/// Toolbar button configuration.
-class BlockNoteToolbarButton {
-  /// Creates a new toolbar button configuration.
-  ///
-  /// If [key] is not provided, it will be auto-generated based on the button
-  /// type and properties (e.g., "basicTextStyleButton_bold").
-  const BlockNoteToolbarButton({
-    this.key,
-    required this.type,
-    this.basicTextStyle,
-    this.textAlignment,
-  });
-
-  /// Unique key for the button (used by React for list reconciliation).
-  ///
-  /// If not provided, will be auto-generated based on type and properties.
-  final String? key;
-
-  /// Button type.
-  final BlockNoteToolbarButtonType type;
-
-  /// Basic text style (for BasicTextStyleButton).
-  final BlockNoteBasicTextStyle? basicTextStyle;
-
-  /// Text alignment (for TextAlignButton).
-  ///
-  /// Only left, center, and right are supported by BlockNote.
-  final TextAlign? textAlignment;
-
-  /// Gets the effective key for this button.
-  ///
-  /// Returns the provided key or generates one based on type and properties.
-  String get effectiveKey {
-    if (key != null) return key!;
-    return _generateKey();
-  }
-
-  /// Generates a unique key based on button type and properties.
-  String _generateKey() {
-    switch (type) {
-      case BlockNoteToolbarButtonType.basicTextStyleButton:
-        if (basicTextStyle != null) {
-          return '${type.name}_${basicTextStyle!.name}';
-        }
-        return type.name;
-      case BlockNoteToolbarButtonType.textAlignButton:
-        if (textAlignment != null) {
-          final alignStr = _textAlignToBlockNote(textAlignment!);
-          return '${type.name}_$alignStr';
-        }
-        return type.name;
-      default:
-        return type.name;
-    }
-  }
-
-  /// Converts to JSON.
-  Map<String, dynamic> toJson() {
-    final json = <String, dynamic>{
-      'key': effectiveKey,
-      'type': type.name,
-    };
-    if (basicTextStyle != null) {
-      json['basicTextStyle'] = basicTextStyle!.name;
-    }
-    if (textAlignment != null) {
-      // Convert Flutter TextAlign to BlockNote format
-      json['textAlignment'] = _textAlignToBlockNote(textAlignment!);
-    }
-    return json;
-  }
-}
-
-/// Converts Flutter TextAlign to BlockNote text alignment string.
-String _textAlignToBlockNote(TextAlign align) {
-  switch (align) {
-    case TextAlign.left:
-      return 'left';
-    case TextAlign.center:
-      return 'center';
-    case TextAlign.right:
-      return 'right';
-    case TextAlign.justify:
-      return 'justify';
-    case TextAlign.start:
-      return 'left'; // Default to left for start
-    case TextAlign.end:
-      return 'right'; // Default to right for end
-  }
 }
 
 /// Toolbar button types.
@@ -146,70 +59,175 @@ enum BlockNoteToolbarButtonType {
   createLinkButton,
 }
 
-/// Block type select item configuration.
-class BlockNoteBlockTypeItem {
-  /// Creates a new block type item configuration.
-  const BlockNoteBlockTypeItem({
-    required this.type,
-    required this.title,
-    this.icon,
-    this.group,
-  });
-
-  /// Block type.
-  final BlockNoteBlockType type;
-
-  /// Display title.
-  final String title;
-
-  /// Icon name or identifier (optional).
-  final String? icon;
-
-  /// Group name (optional).
-  final String? group;
-
-  /// Converts to JSON.
-  Map<String, dynamic> toJson() {
-    final json = <String, dynamic>{
-      'type': type.name,
-      'title': title,
-    };
-    if (icon != null) json['icon'] = icon;
-    if (group != null) json['group'] = group;
-    return json;
+/// Converts Flutter TextAlign to BlockNote text alignment string.
+String _textAlignToBlockNote(TextAlign align) {
+  switch (align) {
+    case TextAlign.left:
+      return 'left';
+    case TextAlign.center:
+      return 'center';
+    case TextAlign.right:
+      return 'right';
+    case TextAlign.justify:
+      return 'justify';
+    case TextAlign.start:
+      return 'left';
+    case TextAlign.end:
+      return 'right';
   }
 }
 
+/// Converts BlockNote text alignment string to Flutter TextAlign.
+TextAlign _textAlignFromBlockNote(String align) {
+  switch (align) {
+    case 'left':
+      return TextAlign.left;
+    case 'center':
+      return TextAlign.center;
+    case 'right':
+      return TextAlign.right;
+    case 'justify':
+      return TextAlign.justify;
+    default:
+      return TextAlign.left;
+  }
+}
+
+/// Generates a unique key based on button type and properties.
+String _generateToolbarButtonKey(
+  BlockNoteToolbarButtonType type,
+  BlockNoteBasicTextStyle? basicTextStyle,
+  TextAlign? textAlignment,
+) {
+  switch (type) {
+    case BlockNoteToolbarButtonType.basicTextStyleButton:
+      if (basicTextStyle != null) {
+        return '${type.name}_${basicTextStyle.name}';
+      }
+      return type.name;
+    case BlockNoteToolbarButtonType.textAlignButton:
+      if (textAlignment != null) {
+        final alignStr = _textAlignToBlockNote(textAlignment);
+        return '${type.name}_$alignStr';
+      }
+      return type.name;
+    default:
+      return type.name;
+  }
+}
+
+/// Toolbar button configuration.
+@freezed
+sealed class BlockNoteToolbarButton with _$BlockNoteToolbarButton {
+  /// Creates a new toolbar button configuration.
+  ///
+  /// If [key] is not provided, it will be auto-generated based on the button
+  /// type and properties (e.g., "basicTextStyleButton_bold").
+  const factory BlockNoteToolbarButton({
+    /// Unique key for the button (used by React for list reconciliation).
+    ///
+    /// If not provided, will be auto-generated based on type and properties.
+    String? key,
+
+    /// Button type.
+    required BlockNoteToolbarButtonType type,
+
+    /// Basic text style (for BasicTextStyleButton).
+    BlockNoteBasicTextStyle? basicTextStyle,
+
+    /// Text alignment (for TextAlignButton).
+    ///
+    /// Only left, center, and right are supported by BlockNote.
+    // ignore: invalid_annotation_target
+    @JsonKey(
+      fromJson: _textAlignFromBlockNoteNullable,
+      toJson: _textAlignToBlockNoteNullable,
+    )
+    TextAlign? textAlignment,
+  }) = _BlockNoteToolbarButton;
+
+  /// Creates a BlockNoteToolbarButton from a JSON map.
+  factory BlockNoteToolbarButton.fromJson(Map<String, dynamic> json) =>
+      _$BlockNoteToolbarButtonFromJson(json);
+}
+
+/// Extension to add effectiveKey getter.
+extension BlockNoteToolbarButtonExtension on BlockNoteToolbarButton {
+  /// Gets the effective key for this button.
+  ///
+  /// Returns the provided key or generates one based on type and properties.
+  String get effectiveKey {
+    if (key != null) return key!;
+    return _generateToolbarButtonKey(type, basicTextStyle, textAlignment);
+  }
+}
+
+/// Helper to convert TextAlign to JSON string (nullable).
+String? _textAlignToBlockNoteNullable(TextAlign? align) {
+  return align != null ? _textAlignToBlockNote(align) : null;
+}
+
+/// Helper to convert JSON string to TextAlign (nullable).
+TextAlign? _textAlignFromBlockNoteNullable(String? align) {
+  return align != null ? _textAlignFromBlockNote(align) : null;
+}
+
+/// Block type select item configuration.
+@freezed
+sealed class BlockNoteBlockTypeItem with _$BlockNoteBlockTypeItem {
+  /// Creates a new block type item configuration.
+  const factory BlockNoteBlockTypeItem({
+    /// Block type.
+    required BlockNoteBlockType type,
+
+    /// Display title.
+    required String title,
+
+    /// Icon name or identifier (optional).
+    String? icon,
+
+    /// Group name (optional).
+    String? group,
+  }) = _BlockNoteBlockTypeItem;
+
+  /// Creates a BlockNoteBlockTypeItem from a JSON map.
+  factory BlockNoteBlockTypeItem.fromJson(Map<String, dynamic> json) =>
+      _$BlockNoteBlockTypeItemFromJson(json);
+}
+
 /// Toolbar configuration.
-class BlockNoteToolbarConfig {
+@freezed
+sealed class BlockNoteToolbarConfig with _$BlockNoteToolbarConfig {
   /// Creates a new toolbar configuration.
-  const BlockNoteToolbarConfig({
-    this.buttons,
-    this.blockTypeSelectItems,
-    this.enabled = true,
-  });
+  const factory BlockNoteToolbarConfig({
+    /// Custom toolbar buttons (replaces default if provided).
+    // ignore: invalid_annotation_target
+    @JsonKey(toJson: _buttonsToJson)
+    List<BlockNoteToolbarButton>? buttons,
 
-  /// Custom toolbar buttons (replaces default if provided).
-  final List<BlockNoteToolbarButton>? buttons;
+    /// Custom block type select items (extends default if provided).
+    List<BlockNoteBlockTypeItem>? blockTypeSelectItems,
 
-  /// Custom block type select items (extends default if provided).
-  final List<BlockNoteBlockTypeItem>? blockTypeSelectItems;
+    /// Whether the toolbar is enabled (default: true).
+    @Default(true) bool enabled,
+  }) = _BlockNoteToolbarConfig;
 
-  /// Whether the toolbar is enabled (default: true).
-  final bool enabled;
+  /// Creates a BlockNoteToolbarConfig from a JSON map.
+  factory BlockNoteToolbarConfig.fromJson(Map<String, dynamic> json) =>
+      _$BlockNoteToolbarConfigFromJson(json);
+}
 
-  /// Converts to JSON.
-  Map<String, dynamic> toJson() {
-    final json = <String, dynamic>{
-      'enabled': enabled,
-    };
-    if (buttons != null) {
-      json['buttons'] = buttons!.map((b) => b.toJson()).toList();
-    }
-    if (blockTypeSelectItems != null) {
-      json['blockTypeSelectItems'] =
-          blockTypeSelectItems!.map((i) => i.toJson()).toList();
+/// Helper to convert buttons to JSON with effectiveKey.
+List<Map<String, dynamic>>? _buttonsToJson(
+  List<BlockNoteToolbarButton>? buttons,
+) {
+  if (buttons == null) return null;
+  return buttons.map((button) {
+    final json = button.toJson();
+    // Replace 'key' with effectiveKey if key was null
+    if (button.key == null) {
+      json['key'] = button.effectiveKey;
     }
     return json;
-  }
+  }).toList();
 }

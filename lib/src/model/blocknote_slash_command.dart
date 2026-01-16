@@ -4,87 +4,64 @@
 /// types "/" in the editor.
 library;
 
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'blocknote_slash_command.freezed.dart';
+part 'blocknote_slash_command.g.dart';
+
 /// Slash command item configuration.
-class BlockNoteSlashCommandItem {
+@freezed
+sealed class BlockNoteSlashCommandItem with _$BlockNoteSlashCommandItem {
   /// Creates a new slash command item.
-  const BlockNoteSlashCommandItem({
-    required this.title,
-    required this.onItemClick,
-    this.subtext,
-    this.badge,
-    this.aliases,
-    this.group,
-    this.icon,
-  });
+  const factory BlockNoteSlashCommandItem({
+    /// Title of the command item.
+    required String title,
 
-  /// Title of the command item.
-  final String title;
+    /// JavaScript function code to execute when the item is clicked.
+    ///
+    /// This should be a string containing JavaScript code that will be
+    /// evaluated. The code has access to the `editor` variable.
+    ///
+    /// Example: "editor.insertBlocks([{type: 'paragraph', content: 'Hello'}], editor.getTextCursorPosition().block, 'after');"
+    required String onItemClick,
 
-  /// JavaScript function code to execute when the item is clicked.
-  ///
-  /// This should be a string containing JavaScript code that will be
-  /// evaluated. The code has access to the `editor` variable.
-  ///
-  /// Example: "editor.insertBlocks([{type: 'paragraph', content: 'Hello'}], editor.getTextCursorPosition().block, 'after');"
-  final String onItemClick;
+    /// Subtitle text (optional).
+    String? subtext,
 
-  /// Subtitle text (optional).
-  final String? subtext;
+    /// Badge text (optional, typically shows keyboard shortcut).
+    String? badge,
 
-  /// Badge text (optional, typically shows keyboard shortcut).
-  final String? badge;
+    /// Aliases for filtering (optional).
+    List<String>? aliases,
 
-  /// Aliases for filtering (optional).
-  final List<String>? aliases;
+    /// Group name (optional).
+    String? group,
 
-  /// Group name (optional).
-  final String? group;
+    /// Icon identifier (optional).
+    String? icon,
+  }) = _BlockNoteSlashCommandItem;
 
-  /// Icon identifier (optional).
-  final String? icon;
-
-  /// Converts to JSON.
-  Map<String, dynamic> toJson() {
-    final json = <String, dynamic>{
-      'title': title,
-      'onItemClick': onItemClick,
-    };
-    if (subtext != null) json['subtext'] = subtext;
-    if (badge != null) json['badge'] = badge;
-    if (aliases != null) json['aliases'] = aliases;
-    if (group != null) json['group'] = group;
-    if (icon != null) json['icon'] = icon;
-    return json;
-  }
+  /// Creates a BlockNoteSlashCommandItem from a JSON map.
+  factory BlockNoteSlashCommandItem.fromJson(Map<String, dynamic> json) =>
+      _$BlockNoteSlashCommandItemFromJson(json);
 }
 
 /// Slash command configuration.
-class BlockNoteSlashCommandConfig {
+@freezed
+sealed class BlockNoteSlashCommandConfig with _$BlockNoteSlashCommandConfig {
   /// Creates a new slash command configuration.
-  const BlockNoteSlashCommandConfig({
-    this.items,
-    this.enabled = true,
-    this.triggerCharacter = '/',
-  });
+  const factory BlockNoteSlashCommandConfig({
+    /// Custom slash command items (extends default if provided).
+    List<BlockNoteSlashCommandItem>? items,
 
-  /// Custom slash command items (extends default if provided).
-  final List<BlockNoteSlashCommandItem>? items;
+    /// Whether the slash menu is enabled (default: true).
+    @Default(true) bool enabled,
 
-  /// Whether the slash menu is enabled (default: true).
-  final bool enabled;
+    /// Trigger character (default: '/').
+    @Default('/') String triggerCharacter,
+  }) = _BlockNoteSlashCommandConfig;
 
-  /// Trigger character (default: '/').
-  final String triggerCharacter;
-
-  /// Converts to JSON.
-  Map<String, dynamic> toJson() {
-    final json = <String, dynamic>{
-      'enabled': enabled,
-      'triggerCharacter': triggerCharacter,
-    };
-    if (items != null) {
-      json['items'] = items!.map((i) => i.toJson()).toList();
-    }
-    return json;
-  }
+  /// Creates a BlockNoteSlashCommandConfig from a JSON map.
+  factory BlockNoteSlashCommandConfig.fromJson(Map<String, dynamic> json) =>
+      _$BlockNoteSlashCommandConfigFromJson(json);
 }

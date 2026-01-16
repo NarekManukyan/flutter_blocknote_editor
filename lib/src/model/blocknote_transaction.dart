@@ -30,7 +30,7 @@ enum BlockNoteTransactionOperation {
 ///
 /// Represents one operation in a transaction (insert, update, delete, move).
 @freezed
-class BlockNoteTransactionOp with _$BlockNoteTransactionOp {
+sealed class BlockNoteTransactionOp with _$BlockNoteTransactionOp {
   /// Creates a new transaction operation.
   const factory BlockNoteTransactionOp({
     /// The type of operation.
@@ -61,7 +61,7 @@ class BlockNoteTransactionOp with _$BlockNoteTransactionOp {
 /// Flutter. Each transaction includes a base version number for conflict
 /// resolution.
 @freezed
-class BlockNoteTransaction with _$BlockNoteTransaction {
+sealed class BlockNoteTransaction with _$BlockNoteTransaction {
   /// Creates a new transaction instance.
   const factory BlockNoteTransaction({
     /// The base document version this transaction is based on.

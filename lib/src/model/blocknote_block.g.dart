@@ -6,8 +6,8 @@ part of 'blocknote_block.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$BlockNoteInlineContentImpl _$$BlockNoteInlineContentImplFromJson(Map json) =>
-    _$BlockNoteInlineContentImpl(
+_BlockNoteInlineContent _$BlockNoteInlineContentFromJson(Map json) =>
+    _BlockNoteInlineContent(
       type: $enumDecode(_$BlockNoteInlineContentTypeEnumMap, json['type']),
       text: json['text'] as String,
       styles: (json['styles'] as Map?)?.map((k, e) => MapEntry(k as String, e)),
@@ -15,14 +15,14 @@ _$BlockNoteInlineContentImpl _$$BlockNoteInlineContentImplFromJson(Map json) =>
       mentionId: json['mentionId'] as String?,
     );
 
-Map<String, dynamic> _$$BlockNoteInlineContentImplToJson(
-  _$BlockNoteInlineContentImpl instance,
+Map<String, dynamic> _$BlockNoteInlineContentToJson(
+  _BlockNoteInlineContent instance,
 ) => <String, dynamic>{
   'type': _$BlockNoteInlineContentTypeEnumMap[instance.type]!,
   'text': instance.text,
-  if (instance.styles case final value?) 'styles': value,
-  if (instance.href case final value?) 'href': value,
-  if (instance.mentionId case final value?) 'mentionId': value,
+  'styles': ?instance.styles,
+  'href': ?instance.href,
+  'mentionId': ?instance.mentionId,
 };
 
 const _$BlockNoteInlineContentTypeEnumMap = {
@@ -31,36 +31,30 @@ const _$BlockNoteInlineContentTypeEnumMap = {
   BlockNoteInlineContentType.mention: 'mention',
 };
 
-_$BlockNoteBlockImpl _$$BlockNoteBlockImplFromJson(Map json) =>
-    _$BlockNoteBlockImpl(
-      id: json['id'] as String,
-      type: $enumDecode(_$BlockNoteBlockTypeEnumMap, json['type']),
-      content: (json['content'] as List<dynamic>?)
-          ?.map(
-            (e) => BlockNoteInlineContent.fromJson(
-              Map<String, dynamic>.from(e as Map),
-            ),
-          )
-          .toList(),
-      props: (json['props'] as Map?)?.map((k, e) => MapEntry(k as String, e)),
-      children: (json['children'] as List<dynamic>?)
-          ?.map(
-            (e) => BlockNoteBlock.fromJson(Map<String, dynamic>.from(e as Map)),
-          )
-          .toList(),
-    );
+_BlockNoteBlock _$BlockNoteBlockFromJson(Map json) => _BlockNoteBlock(
+  id: json['id'] as String,
+  type: $enumDecode(_$BlockNoteBlockTypeEnumMap, json['type']),
+  content: (json['content'] as List<dynamic>?)
+      ?.map(
+        (e) => BlockNoteInlineContent.fromJson(
+          Map<String, dynamic>.from(e as Map),
+        ),
+      )
+      .toList(),
+  props: (json['props'] as Map?)?.map((k, e) => MapEntry(k as String, e)),
+  children: (json['children'] as List<dynamic>?)
+      ?.map((e) => BlockNoteBlock.fromJson(Map<String, dynamic>.from(e as Map)))
+      .toList(),
+);
 
-Map<String, dynamic> _$$BlockNoteBlockImplToJson(
-  _$BlockNoteBlockImpl instance,
-) => <String, dynamic>{
-  'id': instance.id,
-  'type': _$BlockNoteBlockTypeEnumMap[instance.type]!,
-  if (instance.content?.map((e) => e.toJson()).toList() case final value?)
-    'content': value,
-  if (instance.props case final value?) 'props': value,
-  if (instance.children?.map((e) => e.toJson()).toList() case final value?)
-    'children': value,
-};
+Map<String, dynamic> _$BlockNoteBlockToJson(_BlockNoteBlock instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'type': _$BlockNoteBlockTypeEnumMap[instance.type]!,
+      'content': ?instance.content?.map((e) => e.toJson()).toList(),
+      'props': ?instance.props,
+      'children': ?instance.children?.map((e) => e.toJson()).toList(),
+    };
 
 const _$BlockNoteBlockTypeEnumMap = {
   BlockNoteBlockType.paragraph: 'paragraph',

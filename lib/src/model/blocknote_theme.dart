@@ -5,6 +5,10 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'blocknote_theme.freezed.dart';
+part 'blocknote_theme.g.dart';
 
 /// Converts a Flutter Color to a hex string (e.g., "#3f3f3f").
 String _colorToHex(Color color) {
@@ -24,35 +28,31 @@ Color _hexToColor(String hex) {
 }
 
 /// A color pair with text and background colors.
-class BlockNoteColorPair {
+@freezed
+sealed class BlockNoteColorPair with _$BlockNoteColorPair {
   /// Creates a new color pair.
-  const BlockNoteColorPair({
-    required this.text,
-    required this.background,
-  });
+  const factory BlockNoteColorPair({
+    /// Text color.
+    // ignore: invalid_annotation_target
+    @JsonKey(fromJson: _colorFromJson, toJson: _colorToJson)
+    required Color text,
 
-  /// Text color.
-  final Color text;
+    /// Background color.
+    // ignore: invalid_annotation_target
+    @JsonKey(fromJson: _colorFromJson, toJson: _colorToJson)
+    required Color background,
+  }) = _BlockNoteColorPair;
 
-  /// Background color.
-  final Color background;
-
-  /// Converts to JSON.
-  Map<String, dynamic> toJson() {
-    return {
-      'text': _colorToHex(text),
-      'background': _colorToHex(background),
-    };
-  }
-
-  /// Creates from JSON.
-  factory BlockNoteColorPair.fromJson(Map<String, dynamic> json) {
-    return BlockNoteColorPair(
-      text: _hexToColor(json['text'] as String),
-      background: _hexToColor(json['background'] as String),
-    );
-  }
+  /// Creates a BlockNoteColorPair from a JSON map.
+  factory BlockNoteColorPair.fromJson(Map<String, dynamic> json) =>
+      _$BlockNoteColorPairFromJson(json);
 }
+
+/// Helper to convert Color from JSON.
+Color _colorFromJson(String hex) => _hexToColor(hex);
+
+/// Helper to convert Color to JSON.
+String _colorToJson(Color color) => _colorToHex(color);
 
 /// Highlight color type.
 enum BlockNoteHighlightColorType {
@@ -82,259 +82,98 @@ enum BlockNoteHighlightColorType {
 
   /// Pink highlight color.
   pink;
-
-  /// Gets the JSON key for this highlight color type.
-  String get jsonKey => name;
 }
 
 /// Highlight colors configuration.
-class BlockNoteHighlightColors {
+@freezed
+sealed class BlockNoteHighlightColors with _$BlockNoteHighlightColors {
   /// Creates a new highlight colors configuration.
-  const BlockNoteHighlightColors({
-    this.gray,
-    this.brown,
-    this.red,
-    this.orange,
-    this.yellow,
-    this.green,
-    this.blue,
-    this.purple,
-    this.pink,
-  });
+  const factory BlockNoteHighlightColors({
+    /// Gray highlight color.
+    BlockNoteColorPair? gray,
 
-  /// Gray highlight color.
-  final BlockNoteColorPair? gray;
+    /// Brown highlight color.
+    BlockNoteColorPair? brown,
 
-  /// Brown highlight color.
-  final BlockNoteColorPair? brown;
+    /// Red highlight color.
+    BlockNoteColorPair? red,
 
-  /// Red highlight color.
-  final BlockNoteColorPair? red;
+    /// Orange highlight color.
+    BlockNoteColorPair? orange,
 
-  /// Orange highlight color.
-  final BlockNoteColorPair? orange;
+    /// Yellow highlight color.
+    BlockNoteColorPair? yellow,
 
-  /// Yellow highlight color.
-  final BlockNoteColorPair? yellow;
+    /// Green highlight color.
+    BlockNoteColorPair? green,
 
-  /// Green highlight color.
-  final BlockNoteColorPair? green;
+    /// Blue highlight color.
+    BlockNoteColorPair? blue,
 
-  /// Blue highlight color.
-  final BlockNoteColorPair? blue;
+    /// Purple highlight color.
+    BlockNoteColorPair? purple,
 
-  /// Purple highlight color.
-  final BlockNoteColorPair? purple;
+    /// Pink highlight color.
+    BlockNoteColorPair? pink,
+  }) = _BlockNoteHighlightColors;
 
-  /// Pink highlight color.
-  final BlockNoteColorPair? pink;
-
-  /// Converts to JSON.
-  Map<String, dynamic> toJson() {
-    final json = <String, dynamic>{};
-    if (gray != null) {
-      json[BlockNoteHighlightColorType.gray.jsonKey] = gray!.toJson();
-    }
-    if (brown != null) {
-      json[BlockNoteHighlightColorType.brown.jsonKey] = brown!.toJson();
-    }
-    if (red != null) {
-      json[BlockNoteHighlightColorType.red.jsonKey] = red!.toJson();
-    }
-    if (orange != null) {
-      json[BlockNoteHighlightColorType.orange.jsonKey] = orange!.toJson();
-    }
-    if (yellow != null) {
-      json[BlockNoteHighlightColorType.yellow.jsonKey] = yellow!.toJson();
-    }
-    if (green != null) {
-      json[BlockNoteHighlightColorType.green.jsonKey] = green!.toJson();
-    }
-    if (blue != null) {
-      json[BlockNoteHighlightColorType.blue.jsonKey] = blue!.toJson();
-    }
-    if (purple != null) {
-      json[BlockNoteHighlightColorType.purple.jsonKey] = purple!.toJson();
-    }
-    if (pink != null) {
-      json[BlockNoteHighlightColorType.pink.jsonKey] = pink!.toJson();
-    }
-    return json;
-  }
-
-  /// Creates from JSON.
-  factory BlockNoteHighlightColors.fromJson(Map<String, dynamic> json) {
-    return BlockNoteHighlightColors(
-      gray: json[BlockNoteHighlightColorType.gray.jsonKey] != null
-          ? BlockNoteColorPair.fromJson(
-              json[BlockNoteHighlightColorType.gray.jsonKey]
-                  as Map<String, dynamic>,
-            )
-          : null,
-      brown: json[BlockNoteHighlightColorType.brown.jsonKey] != null
-          ? BlockNoteColorPair.fromJson(
-              json[BlockNoteHighlightColorType.brown.jsonKey]
-                  as Map<String, dynamic>,
-            )
-          : null,
-      red: json[BlockNoteHighlightColorType.red.jsonKey] != null
-          ? BlockNoteColorPair.fromJson(
-              json[BlockNoteHighlightColorType.red.jsonKey]
-                  as Map<String, dynamic>,
-            )
-          : null,
-      orange: json[BlockNoteHighlightColorType.orange.jsonKey] != null
-          ? BlockNoteColorPair.fromJson(
-              json[BlockNoteHighlightColorType.orange.jsonKey]
-                  as Map<String, dynamic>,
-            )
-          : null,
-      yellow: json[BlockNoteHighlightColorType.yellow.jsonKey] != null
-          ? BlockNoteColorPair.fromJson(
-              json[BlockNoteHighlightColorType.yellow.jsonKey]
-                  as Map<String, dynamic>,
-            )
-          : null,
-      green: json[BlockNoteHighlightColorType.green.jsonKey] != null
-          ? BlockNoteColorPair.fromJson(
-              json[BlockNoteHighlightColorType.green.jsonKey]
-                  as Map<String, dynamic>,
-            )
-          : null,
-      blue: json[BlockNoteHighlightColorType.blue.jsonKey] != null
-          ? BlockNoteColorPair.fromJson(
-              json[BlockNoteHighlightColorType.blue.jsonKey]
-                  as Map<String, dynamic>,
-            )
-          : null,
-      purple: json[BlockNoteHighlightColorType.purple.jsonKey] != null
-          ? BlockNoteColorPair.fromJson(
-              json[BlockNoteHighlightColorType.purple.jsonKey]
-                  as Map<String, dynamic>,
-            )
-          : null,
-      pink: json[BlockNoteHighlightColorType.pink.jsonKey] != null
-          ? BlockNoteColorPair.fromJson(
-              json[BlockNoteHighlightColorType.pink.jsonKey]
-                  as Map<String, dynamic>,
-            )
-          : null,
-    );
-  }
+  /// Creates a BlockNoteHighlightColors from a JSON map.
+  factory BlockNoteHighlightColors.fromJson(Map<String, dynamic> json) =>
+      _$BlockNoteHighlightColorsFromJson(json);
 }
 
 /// Color scheme configuration.
-class BlockNoteColorScheme {
+@freezed
+sealed class BlockNoteColorScheme with _$BlockNoteColorScheme {
   /// Creates a new color scheme.
-  const BlockNoteColorScheme({
-    this.editor,
-    this.menu,
-    this.tooltip,
-    this.hovered,
-    this.selected,
-    this.disabled,
-    this.shadow,
-    this.border,
-    this.sideMenu,
-    this.highlights,
-  });
+  const factory BlockNoteColorScheme({
+    /// Editor text and background colors.
+    BlockNoteColorPair? editor,
 
-  /// Editor text and background colors.
-  final BlockNoteColorPair? editor;
+    /// Menu text and background colors.
+    BlockNoteColorPair? menu,
 
-  /// Menu text and background colors.
-  final BlockNoteColorPair? menu;
+    /// Tooltip text and background colors.
+    BlockNoteColorPair? tooltip,
 
-  /// Tooltip text and background colors.
-  final BlockNoteColorPair? tooltip;
+    /// Hovered element text and background colors.
+    BlockNoteColorPair? hovered,
 
-  /// Hovered element text and background colors.
-  final BlockNoteColorPair? hovered;
+    /// Selected element text and background colors.
+    BlockNoteColorPair? selected,
 
-  /// Selected element text and background colors.
-  final BlockNoteColorPair? selected;
+    /// Disabled element text and background colors.
+    BlockNoteColorPair? disabled,
 
-  /// Disabled element text and background colors.
-  final BlockNoteColorPair? disabled;
+    /// Shadow color.
+    // ignore: invalid_annotation_target
+    @JsonKey(fromJson: _colorFromJsonNullable, toJson: _colorToJsonNullable)
+    Color? shadow,
 
-  /// Shadow color.
-  final Color? shadow;
+    /// Border color.
+    // ignore: invalid_annotation_target
+    @JsonKey(fromJson: _colorFromJsonNullable, toJson: _colorToJsonNullable)
+    Color? border,
 
-  /// Border color.
-  final Color? border;
+    /// Side menu color.
+    // ignore: invalid_annotation_target
+    @JsonKey(fromJson: _colorFromJsonNullable, toJson: _colorToJsonNullable)
+    Color? sideMenu,
 
-  /// Side menu color.
-  final Color? sideMenu;
+    /// Highlight colors.
+    BlockNoteHighlightColors? highlights,
+  }) = _BlockNoteColorScheme;
 
-  /// Highlight colors.
-  final BlockNoteHighlightColors? highlights;
-
-  /// Converts to JSON.
-  Map<String, dynamic> toJson() {
-    final json = <String, dynamic>{};
-    if (editor != null) json['editor'] = editor!.toJson();
-    if (menu != null) json['menu'] = menu!.toJson();
-    if (tooltip != null) json['tooltip'] = tooltip!.toJson();
-    if (hovered != null) json['hovered'] = hovered!.toJson();
-    if (selected != null) json['selected'] = selected!.toJson();
-    if (disabled != null) json['disabled'] = disabled!.toJson();
-    if (shadow != null) json['shadow'] = _colorToHex(shadow!);
-    if (border != null) json['border'] = _colorToHex(border!);
-    if (sideMenu != null) json['sideMenu'] = _colorToHex(sideMenu!);
-    if (highlights != null) json['highlights'] = highlights!.toJson();
-    return json;
-  }
-
-  /// Creates from JSON.
-  factory BlockNoteColorScheme.fromJson(Map<String, dynamic> json) {
-    return BlockNoteColorScheme(
-      editor: json['editor'] != null
-          ? BlockNoteColorPair.fromJson(
-              json['editor'] as Map<String, dynamic>,
-            )
-          : null,
-      menu: json['menu'] != null
-          ? BlockNoteColorPair.fromJson(
-              json['menu'] as Map<String, dynamic>,
-            )
-          : null,
-      tooltip: json['tooltip'] != null
-          ? BlockNoteColorPair.fromJson(
-              json['tooltip'] as Map<String, dynamic>,
-            )
-          : null,
-      hovered: json['hovered'] != null
-          ? BlockNoteColorPair.fromJson(
-              json['hovered'] as Map<String, dynamic>,
-            )
-          : null,
-      selected: json['selected'] != null
-          ? BlockNoteColorPair.fromJson(
-              json['selected'] as Map<String, dynamic>,
-            )
-          : null,
-      disabled: json['disabled'] != null
-          ? BlockNoteColorPair.fromJson(
-              json['disabled'] as Map<String, dynamic>,
-            )
-          : null,
-      shadow: json['shadow'] != null
-          ? _hexToColor(json['shadow'] as String)
-          : null,
-      border: json['border'] != null
-          ? _hexToColor(json['border'] as String)
-          : null,
-      sideMenu: json['sideMenu'] != null
-          ? _hexToColor(json['sideMenu'] as String)
-          : null,
-      highlights: json['highlights'] != null
-          ? BlockNoteHighlightColors.fromJson(
-              json['highlights'] as Map<String, dynamic>,
-            )
-          : null,
-    );
-  }
+  /// Creates a BlockNoteColorScheme from a JSON map.
+  factory BlockNoteColorScheme.fromJson(Map<String, dynamic> json) =>
+      _$BlockNoteColorSchemeFromJson(json);
 }
+
+/// Helper to convert Color from JSON (nullable).
+Color? _colorFromJsonNullable(String? hex) => hex != null ? _hexToColor(hex) : null;
+
+/// Helper to convert Color to JSON (nullable).
+String? _colorToJsonNullable(Color? color) => color != null ? _colorToHex(color) : null;
 
 /// Font file format.
 enum BlockNoteFontFormat {
@@ -349,57 +188,45 @@ enum BlockNoteFontFormat {
 
   /// OpenType font format.
   otf;
-
-  /// Gets the CSS format string.
-  String get cssFormat {
-    switch (this) {
-      case BlockNoteFontFormat.woff2:
-        return 'woff2';
-      case BlockNoteFontFormat.woff:
-        return 'woff';
-      case BlockNoteFontFormat.ttf:
-        return 'truetype';
-      case BlockNoteFontFormat.otf:
-        return 'opentype';
-    }
-  }
 }
 
 /// A font file for custom font configuration.
 ///
 /// Represents a single font file with its path, format, weight, and style.
-class BlockNoteFontFile {
+@freezed
+sealed class BlockNoteFontFile with _$BlockNoteFontFile {
   /// Creates a new font file configuration.
-  const BlockNoteFontFile({
-    required this.path,
-    required this.format,
-    this.weight,
-    this.style,
-  });
+  const factory BlockNoteFontFile({
+    /// Path to the font file (relative to the asset server root).
+    ///
+    /// Example: './fonts/custom-font.woff2' or 'fonts/custom-font.woff2'
+    required String path,
 
-  /// Path to the font file (relative to the asset server root).
-  ///
-  /// Example: './fonts/custom-font.woff2' or 'fonts/custom-font.woff2'
-  final String path;
+    /// Font file format.
+    required BlockNoteFontFormat format,
 
-  /// Font file format.
-  final BlockNoteFontFormat format;
+    /// Font weight using Flutter's FontWeight enum.
+    ///
+    /// Common values: FontWeight.normal (400), FontWeight.bold (700)
+    // ignore: invalid_annotation_target
+    @JsonKey(fromJson: _fontWeightFromJson, toJson: _fontWeightToJson)
+    FontWeight? weight,
 
-  /// Font weight using Flutter's FontWeight enum.
-  ///
-  /// Common values: FontWeight.normal (400), FontWeight.bold (700)
-  final FontWeight? weight;
+    /// Font style using Flutter's FontStyle enum.
+    ///
+    /// Common values: FontStyle.normal, FontStyle.italic
+    // ignore: invalid_annotation_target
+    @JsonKey(fromJson: _fontStyleFromJson, toJson: _fontStyleToJson)
+    FontStyle? style,
+  }) = _BlockNoteFontFile;
 
-  /// Font style using Flutter's FontStyle enum.
-  ///
-  /// Common values: FontStyle.normal, FontStyle.italic
-  final FontStyle? style;
+  /// Creates a BlockNoteFontFile from a JSON map.
+  factory BlockNoteFontFile.fromJson(Map<String, dynamic> json) =>
+      _$BlockNoteFontFileFromJson(json);
+}
 
-  /// Converts to CSS src format.
-  String toCssSrc() {
-    return 'url("$path") format("${format.cssFormat}")';
-  }
-
+/// Extension for BlockNoteFontFile to add CSS-related getters.
+extension BlockNoteFontFileExtension on BlockNoteFontFile {
   /// Gets the CSS font-weight value.
   int? get cssWeight => weight?.value;
 
@@ -415,11 +242,65 @@ class BlockNoteFontFile {
   }
 }
 
+/// Gets the CSS format string.
+extension BlockNoteFontFormatExtension on BlockNoteFontFormat {
+  String get cssFormat {
+    switch (this) {
+      case BlockNoteFontFormat.woff2:
+        return 'woff2';
+      case BlockNoteFontFormat.woff:
+        return 'woff';
+      case BlockNoteFontFormat.ttf:
+        return 'truetype';
+      case BlockNoteFontFormat.otf:
+        return 'opentype';
+    }
+  }
+}
+
+/// Helper to convert FontWeight from JSON.
+FontWeight _fontWeightFromJson(int value) {
+  // FontWeight values are typically 100-900 in increments of 100
+  // Clamp to valid range and find closest match
+  final clamped = (value.clamp(100, 900) / 100).round() * 100;
+  return FontWeight.values.firstWhere(
+    (w) => w.value == clamped,
+    orElse: () => FontWeight.normal,
+  );
+}
+
+/// Helper to convert FontWeight to JSON.
+int? _fontWeightToJson(FontWeight? weight) => weight?.value;
+
+/// Helper to convert FontStyle from JSON.
+FontStyle _fontStyleFromJson(String value) {
+  switch (value) {
+    case 'normal':
+      return FontStyle.normal;
+    case 'italic':
+      return FontStyle.italic;
+    default:
+      return FontStyle.normal;
+  }
+}
+
+/// Helper to convert FontStyle to JSON.
+String _fontStyleToJson(FontStyle? style) {
+  if (style == null) return 'normal';
+  switch (style) {
+    case FontStyle.normal:
+      return 'normal';
+    case FontStyle.italic:
+      return 'italic';
+  }
+}
+
 /// Font configuration for BlockNote editor.
 ///
 /// Allows specifying custom fonts using Flutter-friendly API instead of raw CSS.
 /// Supports both system fonts (no files needed) and custom font files.
-class BlockNoteFontConfig {
+@freezed
+sealed class BlockNoteFontConfig with _$BlockNoteFontConfig {
   /// Creates a new font configuration.
   ///
   /// [family] is the font family name (e.g., 'CustomFont', 'Georgia').
@@ -447,19 +328,31 @@ class BlockNoteFontConfig {
   ///   ],
   /// )
   /// ```
-  const BlockNoteFontConfig({
-    required this.family,
-    this.files = const [],
-  });
+  const factory BlockNoteFontConfig({
+    /// Font family name (CSS font-family string).
+    required String family,
 
-  /// Font family name (CSS font-family string).
-  final String family;
+    /// Font files for @font-face declarations.
+    ///
+    /// If empty, the font is assumed to be a system font.
+    @Default([]) List<BlockNoteFontFile> files,
+  }) = _BlockNoteFontConfig;
 
-  /// Font files for @font-face declarations.
-  ///
-  /// If empty, the font is assumed to be a system font.
-  final List<BlockNoteFontFile> files;
+  /// Creates a BlockNoteFontConfig from a JSON map.
+  factory BlockNoteFontConfig.fromJson(Map<String, dynamic> json) =>
+      _$BlockNoteFontConfigFromJson(json);
+}
 
+/// Extension for BlockNoteFontFile to add toCssSrc method.
+extension BlockNoteFontFileCssExtension on BlockNoteFontFile {
+  /// Converts to CSS src format.
+  String toCssSrc() {
+    return 'url("$path") format("${format.cssFormat}")';
+  }
+}
+
+/// Extension for BlockNoteFontConfig to add generateCss method.
+extension BlockNoteFontConfigExtension on BlockNoteFontConfig {
   /// Generates CSS @font-face declarations if files are provided.
   String? generateCss() {
     if (files.isEmpty) {
@@ -487,90 +380,37 @@ class BlockNoteFontConfig {
 }
 
 /// Theme configuration for BlockNote editor.
-class BlockNoteTheme {
+@freezed
+sealed class BlockNoteTheme with _$BlockNoteTheme {
   /// Creates a new theme configuration.
-  const BlockNoteTheme({
-    this.colors,
-    this.borderRadius,
-    this.fontFamily,
-    this.font,
-    this.light,
-    this.dark,
-  });
+  const factory BlockNoteTheme({
+    /// Colors for both light and dark themes (if light/dark not specified).
+    BlockNoteColorScheme? colors,
 
-  /// Colors for both light and dark themes (if light/dark not specified).
-  final BlockNoteColorScheme? colors;
+    /// Border radius in pixels.
+    double? borderRadius,
 
-  /// Border radius in pixels.
-  final double? borderRadius;
+    /// Font configuration using Flutter-friendly API.
+    ///
+    /// Supports both system fonts and custom font files with automatic CSS generation.
+    BlockNoteFontConfig? font,
 
-  /// Font family (CSS font-family string).
-  ///
-  /// **Deprecated**: Use [font] instead for a more Flutter-friendly API.
-  /// This field is kept for backwards compatibility.
-  @Deprecated('Use font instead')
-  final String? fontFamily;
+    /// Light theme colors (overrides colors).
+    BlockNoteColorScheme? light,
 
-  /// Font configuration using Flutter-friendly API.
-  ///
-  /// Supports both system fonts and custom font files with automatic CSS generation.
-  final BlockNoteFontConfig? font;
+    /// Dark theme colors (overrides colors).
+    BlockNoteColorScheme? dark,
+  }) = _BlockNoteTheme;
 
-  /// Light theme colors (overrides colors).
-  final BlockNoteColorScheme? light;
+  /// Creates a BlockNoteTheme from a JSON map.
+  factory BlockNoteTheme.fromJson(Map<String, dynamic> json) =>
+      _$BlockNoteThemeFromJson(json);
+}
 
-  /// Dark theme colors (overrides colors).
-  final BlockNoteColorScheme? dark;
-
-  /// Gets the effective font family string.
-  ///
-  /// Returns [font].family if [font] is provided, otherwise the legacy font family.
-  String? get effectiveFontFamily {
-    // ignore: deprecated_member_use_from_same_package
-    return font?.family ?? fontFamily;
-  }
-
+/// Extension for BlockNoteTheme to add helper methods.
+extension BlockNoteThemeExtension on BlockNoteTheme {
   /// Generates custom CSS for font @font-face declarations if needed.
   String? generateFontCss() {
     return font?.generateCss();
-  }
-
-  /// Converts to JSON.
-  Map<String, dynamic> toJson() {
-    final json = <String, dynamic>{};
-    if (colors != null) json['colors'] = colors!.toJson();
-    if (borderRadius != null) json['borderRadius'] = borderRadius;
-    // Use effective font family (from font config or legacy fontFamily)
-    final effectiveFamily = effectiveFontFamily;
-    if (effectiveFamily != null) {
-      json['fontFamily'] = effectiveFamily;
-    }
-    if (light != null) json['light'] = light!.toJson();
-    if (dark != null) json['dark'] = dark!.toJson();
-    return json;
-  }
-
-  /// Creates from JSON.
-  factory BlockNoteTheme.fromJson(Map<String, dynamic> json) {
-    return BlockNoteTheme(
-      colors: json['colors'] != null
-          ? BlockNoteColorScheme.fromJson(
-              json['colors'] as Map<String, dynamic>,
-            )
-          : null,
-      borderRadius: json['borderRadius'] as double?,
-      // ignore: deprecated_member_use_from_same_package
-      fontFamily: json['fontFamily'] as String?,
-      light: json['light'] != null
-          ? BlockNoteColorScheme.fromJson(
-              json['light'] as Map<String, dynamic>,
-            )
-          : null,
-      dark: json['dark'] != null
-          ? BlockNoteColorScheme.fromJson(
-              json['dark'] as Map<String, dynamic>,
-            )
-          : null,
-    );
   }
 }

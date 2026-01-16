@@ -6,8 +6,8 @@ part of 'blocknote_transaction.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$BlockNoteTransactionOpImpl _$$BlockNoteTransactionOpImplFromJson(Map json) =>
-    _$BlockNoteTransactionOpImpl(
+_BlockNoteTransactionOp _$BlockNoteTransactionOpFromJson(Map json) =>
+    _BlockNoteTransactionOp(
       operation: $enumDecode(
         _$BlockNoteTransactionOperationEnumMap,
         json['operation'],
@@ -22,14 +22,14 @@ _$BlockNoteTransactionOpImpl _$$BlockNoteTransactionOpImplFromJson(Map json) =>
       parentId: json['parentId'] as String?,
     );
 
-Map<String, dynamic> _$$BlockNoteTransactionOpImplToJson(
-  _$BlockNoteTransactionOpImpl instance,
+Map<String, dynamic> _$BlockNoteTransactionOpToJson(
+  _BlockNoteTransactionOp instance,
 ) => <String, dynamic>{
   'operation': _$BlockNoteTransactionOperationEnumMap[instance.operation]!,
   'blockId': instance.blockId,
-  if (instance.block?.toJson() case final value?) 'block': value,
-  if (instance.index case final value?) 'index': value,
-  if (instance.parentId case final value?) 'parentId': value,
+  'block': ?instance.block?.toJson(),
+  'index': ?instance.index,
+  'parentId': ?instance.parentId,
 };
 
 const _$BlockNoteTransactionOperationEnumMap = {
@@ -39,8 +39,8 @@ const _$BlockNoteTransactionOperationEnumMap = {
   BlockNoteTransactionOperation.move: 'move',
 };
 
-_$BlockNoteTransactionImpl _$$BlockNoteTransactionImplFromJson(Map json) =>
-    _$BlockNoteTransactionImpl(
+_BlockNoteTransaction _$BlockNoteTransactionFromJson(Map json) =>
+    _BlockNoteTransaction(
       baseVersion: (json['baseVersion'] as num).toInt(),
       operations: (json['operations'] as List<dynamic>)
           .map(
@@ -52,10 +52,10 @@ _$BlockNoteTransactionImpl _$$BlockNoteTransactionImplFromJson(Map json) =>
       timestamp: (json['timestamp'] as num?)?.toInt(),
     );
 
-Map<String, dynamic> _$$BlockNoteTransactionImplToJson(
-  _$BlockNoteTransactionImpl instance,
+Map<String, dynamic> _$BlockNoteTransactionToJson(
+  _BlockNoteTransaction instance,
 ) => <String, dynamic>{
   'baseVersion': instance.baseVersion,
   'operations': instance.operations.map((e) => e.toJson()).toList(),
-  if (instance.timestamp case final value?) 'timestamp': value,
+  'timestamp': ?instance.timestamp,
 };

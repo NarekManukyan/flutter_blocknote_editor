@@ -1,3 +1,15 @@
+## 0.0.6
+
+**Breaking Changes and Code Quality Improvements**
+
+* **BREAKING**: Removed deprecated `fontFamily` field from `BlockNoteTheme`
+  * Use `font` field with `BlockNoteFontConfig` instead
+  * Removed redundant `effectiveFontFamily` getter (use `theme.font?.family` directly)
+* Migrated model classes to use `sealed class` instead of `class` for better type safety
+  * `BlockNoteInlineContent` and `BlockNoteBlock` now use sealed classes
+  * Provides better exhaustiveness checking and type safety
+* Fixed linting warnings for `JsonKey` annotations on Freezed constructor parameters
+
 ## 0.0.5-beta
 
 **Major Refactoring and Improvements**

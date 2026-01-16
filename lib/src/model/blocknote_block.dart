@@ -59,7 +59,7 @@ enum BlockNoteInlineContentType {
 ///
 /// Represents inline content within a block (text, links, mentions).
 @freezed
-class BlockNoteInlineContent with _$BlockNoteInlineContent {
+sealed class BlockNoteInlineContent with _$BlockNoteInlineContent {
   /// Creates a new inline content instance.
   const factory BlockNoteInlineContent({
     /// The type of inline content.
@@ -89,7 +89,7 @@ class BlockNoteInlineContent with _$BlockNoteInlineContent {
 /// Represents a single block in a BlockNote document. Blocks can contain
 /// inline content, have properties, and reference parent/child blocks.
 @freezed
-class BlockNoteBlock with _$BlockNoteBlock {
+sealed class BlockNoteBlock with _$BlockNoteBlock {
   /// Creates a new block instance.
   const factory BlockNoteBlock({
     /// Unique identifier for this block.

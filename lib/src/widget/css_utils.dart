@@ -2,6 +2,7 @@
 library;
 
 import 'blocknote_editor.dart';
+import '../model/blocknote_theme.dart';
 
 /// Gets the effective CSS to inject (from customCss and/or theme font).
 class CssUtils {

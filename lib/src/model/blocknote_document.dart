@@ -15,7 +15,7 @@ part 'blocknote_document.g.dart';
 ///
 /// Used for schema versioning to support future migrations and compatibility.
 @freezed
-class BlockNoteDocumentVersion with _$BlockNoteDocumentVersion {
+sealed class BlockNoteDocumentVersion with _$BlockNoteDocumentVersion {
   /// Creates a new document version.
   const factory BlockNoteDocumentVersion({
     @Default(1) int major,
@@ -34,7 +34,7 @@ class BlockNoteDocumentVersion with _$BlockNoteDocumentVersion {
 /// Documents are normalized and can be serialized to/from JSON for
 /// communication with the JavaScript editor.
 @freezed
-class BlockNoteDocument with _$BlockNoteDocument {
+sealed class BlockNoteDocument with _$BlockNoteDocument {
   /// Creates a new document instance.
   const factory BlockNoteDocument({
     /// The blocks that make up this document.
