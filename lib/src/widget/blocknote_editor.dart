@@ -463,9 +463,6 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
                 _lastSignificantChangeTime = null;
               }
             },
-            updateLastContentHeight: (height) {
-              _lastContentHeight = height;
-            },
             updateLastSignificantChangeTime: (time) {
               _lastSignificantChangeTime = time;
             },

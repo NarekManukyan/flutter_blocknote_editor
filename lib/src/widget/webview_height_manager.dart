@@ -82,7 +82,6 @@ class WebViewHeightManager {
     required bool isReady,
     required bool debugLogging,
     required Function() onScrollToSelection,
-    required Function(double) updateLastContentHeight,
     required Function(DateTime) updateLastSignificantChangeTime,
     required Function(Timer?) updateDebounceTimer,
     required DateTime? lastSignificantChangeTime,
@@ -101,8 +100,6 @@ class WebViewHeightManager {
     if (!isReady) return;
 
     final heightDiff = (newContentSize.height - oldContentSize.height).abs();
-    final currentHeight = newContentSize.height;
-    updateLastContentHeight(currentHeight);
     
     // Track significant changes (>20px) but don't reset timer on every small change
     if (heightDiff > 20) {
