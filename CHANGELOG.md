@@ -1,3 +1,12 @@
+## 0.0.2-beta
+
+**Documentation and Metadata Updates**
+
+* Added pub.dev URL and repository links to README
+* Added issue tracker link to pubspec.yaml
+* Added topics/tags for better discoverability on pub.dev
+* Updated README with improved links and metadata
+
 ## 0.0.1-beta
 
 **Beta Release** - This is the initial beta release of Flutter BlockNote Editor.

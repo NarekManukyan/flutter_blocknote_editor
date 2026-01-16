@@ -6,7 +6,9 @@
 
 A Flutter package that embeds [BlockNoteJS](https://github.com/TypeCellOS/BlockNote) inside a WebView with bidirectional communication, transaction batching, and undo/redo safety.
 
-**Repository**: [https://github.com/NarekManukyan/flutter_blocknote_editor](https://github.com/NarekManukyan/flutter_blocknote_editor)
+**📦 Pub.dev**: [https://pub.dev/packages/flutter_blocknote_editor](https://pub.dev/packages/flutter_blocknote_editor)  
+**📂 Repository**: [https://github.com/NarekManukyan/flutter_blocknote_editor](https://github.com/NarekManukyan/flutter_blocknote_editor)  
+**🐛 Issues**: [https://github.com/NarekManukyan/flutter_blocknote_editor/issues](https://github.com/NarekManukyan/flutter_blocknote_editor/issues)
 
 ## What We Support
 
