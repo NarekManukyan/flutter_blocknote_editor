@@ -6,16 +6,11 @@ repository: https://github.com/NarekManukyan/flutter_blocknote_editor
 issue_tracker: https://github.com/NarekManukyan/flutter_blocknote_editor/issues
 
 topics:
-  - flutter
   - blocknote
   - editor
   - rich-text
-  - webview
   - text-editor
-  - markdown
-  - wysiwyg
   - block-editor
-  - mobile
 
 environment:
   sdk: ^3.10.7
