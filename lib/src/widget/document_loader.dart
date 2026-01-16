@@ -1,7 +1,6 @@
 /// Document loading utilities for BlockNote editor.
 library;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../bridge/js_bridge.dart';
 import 'blocknote_editor.dart';

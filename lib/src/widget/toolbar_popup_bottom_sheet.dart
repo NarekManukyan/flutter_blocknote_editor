@@ -143,7 +143,7 @@ class ToolbarPopupBottomSheet extends StatelessWidget {
           width: 40,
           height: 4,
           decoration: BoxDecoration(
-            color: menuColors.text.withOpacity(0.3),
+            color: menuColors.text.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(2),
           ),
         ),

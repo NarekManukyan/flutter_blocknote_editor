@@ -6,7 +6,6 @@
 library;
 
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../model/blocknote_document.dart';
@@ -133,7 +132,6 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
   String? _initialUrl;
   bool _isInitializing = false;
   Timer? _contentSizeChangeDebounceTimer;
-  double _lastContentHeight = 0;
   DateTime? _lastSignificantChangeTime;
 
   @override

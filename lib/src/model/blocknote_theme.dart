@@ -8,7 +8,8 @@ import 'package:flutter/material.dart';
 
 /// Converts a Flutter Color to a hex string (e.g., "#3f3f3f").
 String _colorToHex(Color color) {
-  return '#${color.value.toRadixString(16).padLeft(8, '0').substring(2)}';
+  final argb = color.value;
+  return '#${argb.toRadixString(16).padLeft(8, '0').substring(2)}';
 }
 
 /// Parses a hex string to a Flutter Color.

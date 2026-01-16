@@ -86,7 +86,7 @@ class TransactionLogPage extends StatelessWidget {
               children: [
                 Container(
                   padding: const EdgeInsets.all(16.0),
-                  color: Theme.of(context).colorScheme.surfaceVariant,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   child: Row(
                     children: [
                       Icon(
@@ -244,7 +244,7 @@ class _TransactionCardState extends State<_TransactionCard> {
                         margin: const EdgeInsets.only(bottom: 8),
                         color: Theme.of(context)
                             .colorScheme
-                            .surfaceVariant
+                            .surfaceContainerHighest
                             .withOpacity(0.3),
                         child: Padding(
                           padding: const EdgeInsets.all(12.0),
