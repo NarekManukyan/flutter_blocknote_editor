@@ -108,7 +108,7 @@ class WebViewHeightManager {
       if (debugLogging) {
         debugPrint(
           '[BlockNoteEditor] Significant content size change detected '
-          '(heightDiff=$heightDiff, newHeight=$currentHeight)',
+          '(heightDiff=$heightDiff, newHeight=${newContentSize.height})',
         );
       }
       
