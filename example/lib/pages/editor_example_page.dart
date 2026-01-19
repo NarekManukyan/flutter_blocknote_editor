@@ -32,8 +32,9 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
 
   Future<void> _loadDocumentFromJson() async {
     try {
-      final String jsonString =
-          await rootBundle.loadString('assets/sample_document.json');
+      final String jsonString = await rootBundle.loadString(
+        'assets/sample_document.json',
+      );
       final Map<String, dynamic> jsonData = json.decode(jsonString);
       setState(() {
         _document = BlockNoteDocument.fromJson(jsonData);
@@ -53,6 +54,13 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('BlockNote Editor Example'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.open_in_full),
+            onPressed: () {
+              _showEditorInModalBottomSheet(context);
+            },
+            tooltip: 'Open editor in modal bottom sheet',
+          ),
           IconButton(
             icon: Icon(_readOnly ? Icons.lock : Icons.lock_open),
             onPressed: () {
@@ -179,9 +187,7 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
                 value: 'font',
                 child: Row(
                   children: [
-                    Icon(
-                      _useCustomFont ? Icons.check : Icons.circle_outlined,
-                    ),
+                    Icon(_useCustomFont ? Icons.check : Icons.circle_outlined),
                     const SizedBox(width: 8),
                     const Text('Custom Font'),
                   ],
@@ -263,10 +269,7 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
               );
             },
             child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 4,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Text(
                 'Transactions: ${_transactions.length}',
                 style: TextStyle(
@@ -339,5 +342,78 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
       return EditorConfig.createFontTheme();
     }
     return null;
+  }
+
+  void _showEditorInModalBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      enableDrag: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Editor in Modal Bottom Sheet',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(),
+            Expanded(
+              child: BlockNoteEditor(
+                initialDocument: _document,
+                onReady: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Editor is ready in modal!'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                },
+                onTransactions: (transactions) {
+                  setState(() {
+                    _transactions.addAll(transactions);
+                  });
+                },
+                readOnly: _readOnly,
+                debugLogging: true,
+                theme: _buildTheme(),
+                toolbarConfig: _useCustomToolbar
+                    ? EditorConfig.createCustomToolbar()
+                    : null,
+                slashCommandConfig: _useCustomSlashCommands
+                    ? EditorConfig.createCustomSlashCommands()
+                    : null,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

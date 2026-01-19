@@ -202,8 +202,7 @@ sealed class BlockNoteToolbarConfig with _$BlockNoteToolbarConfig {
   const factory BlockNoteToolbarConfig({
     /// Custom toolbar buttons (replaces default if provided).
     // ignore: invalid_annotation_target
-    @JsonKey(toJson: _buttonsToJson)
-    List<BlockNoteToolbarButton>? buttons,
+    @JsonKey(toJson: _buttonsToJson) List<BlockNoteToolbarButton>? buttons,
 
     /// Custom block type select items (extends default if provided).
     List<BlockNoteBlockTypeItem>? blockTypeSelectItems,

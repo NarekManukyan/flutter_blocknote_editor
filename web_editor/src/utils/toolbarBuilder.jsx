@@ -27,50 +27,48 @@ export function buildFormattingToolbar(toolbarConfig) {
     return null; // Use default toolbar
   }
 
-  const buttons = toolbarConfig.buttons.map((buttonConfig) => {
-    switch (buttonConfig.type) {
-      case 'blockTypeSelect':
-        return <BlockTypeSelect key={buttonConfig.key} />;
-      case 'fileCaptionButton':
-        return <FileCaptionButton key={buttonConfig.key} />;
-      case 'fileReplaceButton':
-        return <FileReplaceButton key={buttonConfig.key} />;
-      case 'basicTextStyleButton':
-        return (
-          <BasicTextStyleButton
-            key={buttonConfig.key}
-            basicTextStyle={buttonConfig.basicTextStyle}
-          />
-        );
-      case 'textAlignButton':
-        return (
-          <TextAlignButton
-            key={buttonConfig.key}
-            textAlignment={buttonConfig.textAlignment}
-          />
-        );
-      case 'colorStyleButton':
-        return <ColorStyleButton key={buttonConfig.key} />;
-      case 'nestBlockButton':
-        return <NestBlockButton key={buttonConfig.key} />;
-      case 'unnestBlockButton':
-        return <UnnestBlockButton key={buttonConfig.key} />;
-      case 'createLinkButton':
-        return <CreateLinkButton key={buttonConfig.key} />;
-      default:
-        return null;
-    }
-  }).filter(Boolean);
+  const buttons = toolbarConfig.buttons
+    .map((buttonConfig) => {
+      switch (buttonConfig.type) {
+        case 'blockTypeSelect':
+          return <BlockTypeSelect key={buttonConfig.key} />;
+        case 'fileCaptionButton':
+          return <FileCaptionButton key={buttonConfig.key} />;
+        case 'fileReplaceButton':
+          return <FileReplaceButton key={buttonConfig.key} />;
+        case 'basicTextStyleButton':
+          return (
+            <BasicTextStyleButton
+              key={buttonConfig.key}
+              basicTextStyle={buttonConfig.basicTextStyle}
+            />
+          );
+        case 'textAlignButton':
+          return (
+            <TextAlignButton
+              key={buttonConfig.key}
+              textAlignment={buttonConfig.textAlignment}
+            />
+          );
+        case 'colorStyleButton':
+          return <ColorStyleButton key={buttonConfig.key} />;
+        case 'nestBlockButton':
+          return <NestBlockButton key={buttonConfig.key} />;
+        case 'unnestBlockButton':
+          return <UnnestBlockButton key={buttonConfig.key} />;
+        case 'createLinkButton':
+          return <CreateLinkButton key={buttonConfig.key} />;
+        default:
+          return null;
+      }
+    })
+    .filter(Boolean);
 
   // FormattingToolbarController needs to be a child of BlockNoteView
   // to have access to the editor context for popups
   return (
     <FormattingToolbarController
-      formattingToolbar={() => (
-        <FormattingToolbar>
-          {buttons}
-        </FormattingToolbar>
-      )}
+      formattingToolbar={() => <FormattingToolbar>{buttons}</FormattingToolbar>}
     />
   );
 }

@@ -3,7 +3,7 @@
  */
 
 import { useCreateBlockNote } from '@blocknote/react';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 
 /**
  * Custom hook to initialize BlockNote editor and set up lifecycle.
@@ -27,7 +27,7 @@ export function useBlockNoteEditor() {
       },
     ],
   });
-  
+
   // Expose editor globally for Flutter access
   useEffect(() => {
     if (editor) {

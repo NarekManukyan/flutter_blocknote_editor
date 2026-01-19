@@ -12,10 +12,7 @@ class JsonSerializer {
   /// Safely encodes an object to JSON string.
   ///
   /// Returns null if encoding fails, with optional error logging.
-  static String? encode(
-    dynamic value, {
-    bool debugLogging = false,
-  }) {
+  static String? encode(dynamic value, {bool debugLogging = false}) {
     try {
       return jsonEncode(value);
     } catch (e) {
@@ -29,10 +26,7 @@ class JsonSerializer {
   /// Safely decodes a JSON string to an object.
   ///
   /// Returns null if decoding fails, with optional error logging.
-  static dynamic decode(
-    String jsonString, {
-    bool debugLogging = false,
-  }) {
+  static dynamic decode(String jsonString, {bool debugLogging = false}) {
     try {
       return jsonDecode(jsonString);
     } catch (e) {

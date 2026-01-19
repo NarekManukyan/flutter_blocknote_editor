@@ -39,12 +39,13 @@ class WebViewHeightManager {
 
     // Update via bridge
     bridge.updateWebViewHeight(heightInPixels, keyboardHeightInPixels);
-    
+
     // Also ensure WebView itself has proper size constraints
     // This helps with scrolling when there are many blocks
     Future.microtask(() async {
       try {
-        await controller.evaluateJavascript(source: '''
+        await controller.evaluateJavascript(
+          source: '''
           (function() {
             // Ensure document and body have proper height for scrolling
             const html = document.documentElement;
@@ -65,7 +66,8 @@ class WebViewHeightManager {
               void root.offsetHeight;
             }
           })();
-        ''');
+        ''',
+        );
       } catch (e) {
         if (debugLogging) {
           debugPrint('[BlockNoteEditor] Error ensuring scroll setup: $e');
@@ -94,27 +96,27 @@ class WebViewHeightManager {
         'new=${newContentSize.width}x${newContentSize.height}',
       );
     }
-    
+
     // Debounce scroll-to-selection to avoid multiple rapid calls
     // Only trigger when content size has stabilized after a significant change
     if (!isReady) return;
 
     final heightDiff = (newContentSize.height - oldContentSize.height).abs();
-    
+
     // Track significant changes (>20px) but don't reset timer on every small change
     if (heightDiff > 20) {
       updateLastSignificantChangeTime(DateTime.now());
-      
+
       if (debugLogging) {
         debugPrint(
           '[BlockNoteEditor] Significant content size change detected '
           '(heightDiff=$heightDiff, newHeight=${newContentSize.height})',
         );
       }
-      
+
       // Cancel previous timer and start new one
       contentSizeChangeDebounceTimer?.cancel();
-      
+
       // Wait for content to stabilize (no significant changes for 300ms)
       final newTimer = Timer(const Duration(milliseconds: 300), () {
         // Check if there was a significant change and it's been stable
@@ -124,7 +126,7 @@ class WebViewHeightManager {
           onScrollToSelection();
         }
       });
-      
+
       updateDebounceTimer(newTimer);
     } else if (heightDiff <= 2 && lastSignificantChangeTime != null) {
       // Small changes (<2px) after a significant change - don't reset timer
@@ -149,8 +151,9 @@ class WebViewHeightManager {
         'triggering scroll-to-selection',
       );
     }
-    
-    controller.evaluateJavascript(source: '''
+
+    controller.evaluateJavascript(
+      source: '''
       (function() {
         try {
           if (window.editor && window.editor._tiptapEditor) {
@@ -166,6 +169,7 @@ class WebViewHeightManager {
           // Silently fail
         }
       })();
-    ''');
+    ''',
+    );
   }
 }

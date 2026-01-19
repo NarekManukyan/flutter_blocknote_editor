@@ -30,7 +30,10 @@ void main() {
 
       expect(deserialized.blocks.length, equals(1));
       expect(deserialized.blocks.first.id, equals('block1'));
-      expect(deserialized.blocks.first.content?.first.text, equals('Test content'));
+      expect(
+        deserialized.blocks.first.content?.first.text,
+        equals('Test content'),
+      );
     });
 
     test('should serialize and deserialize transaction', () {
@@ -61,7 +64,10 @@ void main() {
 
       expect(deserialized.baseVersion, equals(1));
       expect(deserialized.operations.length, equals(1));
-      expect(deserialized.operations.first.operation, equals(BlockNoteTransactionOperation.insert));
+      expect(
+        deserialized.operations.first.operation,
+        equals(BlockNoteTransactionOperation.insert),
+      );
       expect(deserialized.operations.first.blockId, equals('block1'));
       expect(deserialized.timestamp, equals(1234567890));
     });
@@ -162,11 +168,7 @@ void main() {
             'id': 'block2',
             'type': 'paragraph',
             'content': [
-              {
-                'type': 'text',
-                'text': 'Test content',
-                'styles': {},
-              },
+              {'type': 'text', 'text': 'Test content', 'styles': {}},
             ],
           },
         ],
@@ -178,10 +180,7 @@ void main() {
       expect(document.blocks.first.type, equals(BlockNoteBlockType.heading));
       expect(document.blocks[1].content?.first.text, equals('Test content'));
       // Empty styles map should be treated as null or empty map
-      expect(
-        document.blocks[1].content?.first.styles,
-        anyOf(isNull, isEmpty),
-      );
+      expect(document.blocks[1].content?.first.styles, anyOf(isNull, isEmpty));
     });
 
     test('should parse complex document with various block types', () {
@@ -313,21 +312,18 @@ void main() {
       expect(document.blocks[0].type, equals(BlockNoteBlockType.heading));
       expect(document.blocks[0].props?['level'], equals(1));
       expect(document.blocks[1].type, equals(BlockNoteBlockType.paragraph));
-      expect(document.blocks[3].type, equals(BlockNoteBlockType.bulletListItem));
+      expect(
+        document.blocks[3].type,
+        equals(BlockNoteBlockType.bulletListItem),
+      );
       expect(document.blocks[7].content?.length, equals(7));
+      expect(document.blocks[7].content?[1].styles?['bold'], isTrue);
+      expect(document.blocks[7].content?[3].styles?['italic'], isTrue);
+      expect(document.blocks[7].content?[5].styles?['underline'], isTrue);
       expect(
-        document.blocks[7].content?[1].styles?['bold'],
-        isTrue,
+        document.blocks[8].type,
+        equals(BlockNoteBlockType.numberedListItem),
       );
-      expect(
-        document.blocks[7].content?[3].styles?['italic'],
-        isTrue,
-      );
-      expect(
-        document.blocks[7].content?[5].styles?['underline'],
-        isTrue,
-      );
-      expect(document.blocks[8].type, equals(BlockNoteBlockType.numberedListItem));
     });
 
     test('should parse inline content with missing styles', () {
@@ -352,23 +348,14 @@ void main() {
 
       expect(document.blocks.first.content?.length, equals(2));
       expect(document.blocks.first.content?.first.styles, isNull);
-      expect(
-        document.blocks.first.content?[1].styles?['bold'],
-        isTrue,
-      );
-      expect(
-        document.blocks.first.content?[1].styles?['italic'],
-        isFalse,
-      );
+      expect(document.blocks.first.content?[1].styles?['bold'], isTrue);
+      expect(document.blocks.first.content?[1].styles?['italic'], isFalse);
     });
 
     test('should handle blocks without content', () {
       final jsonData = {
         'blocks': [
-          {
-            'id': 'block1',
-            'type': 'paragraph',
-          },
+          {'id': 'block1', 'type': 'paragraph'},
         ],
       };
 
@@ -430,11 +417,7 @@ void main() {
             'id': 'block2',
             'type': 'paragraph',
             'content': [
-              {
-                'type': 'text',
-                'text': 'Text with ',
-                'styles': {},
-              },
+              {'type': 'text', 'text': 'Text with ', 'styles': {}},
               {
                 'type': 'text',
                 'text': 'bold',
@@ -453,10 +436,7 @@ void main() {
       expect(deserialized.blocks.length, equals(2));
       expect(deserialized.blocks[0].type, equals(BlockNoteBlockType.heading));
       expect(deserialized.blocks[1].content?.length, equals(3));
-      expect(
-        deserialized.blocks[1].content?[1].styles?['bold'],
-        isTrue,
-      );
+      expect(deserialized.blocks[1].content?[1].styles?['bold'], isTrue);
     });
   });
 }

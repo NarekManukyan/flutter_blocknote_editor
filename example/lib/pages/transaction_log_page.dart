@@ -58,26 +58,16 @@ class TransactionLogPage extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.list_alt,
-                    size: 64,
-                    color: Colors.grey[400],
-                  ),
+                  Icon(Icons.list_alt, size: 64, color: Colors.grey[400]),
                   const SizedBox(height: 16),
                   Text(
                     'No transactions yet',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Start editing to see transactions',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[500],
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                   ),
                 ],
               ),
@@ -100,7 +90,9 @@ class TransactionLogPage extends StatelessWidget {
                           'Total: ${transactions.length} transaction(s)',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),
@@ -128,10 +120,7 @@ class TransactionLogPage extends StatelessWidget {
 /// Expandable card widget for displaying transaction details.
 class _TransactionCard extends StatefulWidget {
   /// Creates a new transaction card.
-  const _TransactionCard({
-    required this.transaction,
-    required this.index,
-  });
+  const _TransactionCard({required this.transaction, required this.index});
 
   /// The transaction to display.
   final BlockNoteTransaction transaction;
@@ -149,14 +138,14 @@ class _TransactionCardState extends State<_TransactionCard> {
   /// Extracts text content from a block.
   String _extractBlockText(BlockNoteBlock? block) {
     if (block == null) return 'null';
-    
+
     if (block.content != null && block.content!.isNotEmpty) {
       return block.content!
           .map((item) => item.text)
           .where((text) => text.isNotEmpty)
           .join(' ');
     }
-    
+
     return '(no text)';
   }
 
@@ -168,22 +157,16 @@ class _TransactionCardState extends State<_TransactionCard> {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.symmetric(
-        horizontal: 8,
-        vertical: 4,
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: Column(
         children: [
           ListTile(
             leading: CircleAvatar(
-              backgroundColor:
-                  Theme.of(context).colorScheme.primaryContainer,
+              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
               child: Text(
                 '${widget.index + 1}',
                 style: TextStyle(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onPrimaryContainer,
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -211,9 +194,7 @@ class _TransactionCardState extends State<_TransactionCard> {
                   ),
               ],
             ),
-            trailing: Icon(
-              _isExpanded ? Icons.expand_less : Icons.expand_more,
-            ),
+            trailing: Icon(_isExpanded ? Icons.expand_less : Icons.expand_more),
             onTap: () {
               setState(() {
                 _isExpanded = !_isExpanded;
@@ -238,110 +219,107 @@ class _TransactionCardState extends State<_TransactionCard> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  ...widget.transaction.operations.map(
-                    (op) {
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest
-                            .withOpacity(0.3),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Chip(
-                                    label: Text(
-                                      op.operation.name.toUpperCase(),
-                                      style: const TextStyle(fontSize: 10),
-                                    ),
-                                    backgroundColor:
-                                        Theme.of(context)
-                                            .colorScheme
-                                            .primaryContainer,
+                  ...widget.transaction.operations.map((op) {
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest
+                          .withValues(alpha: 0.3),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Chip(
+                                  label: Text(
+                                    op.operation.name.toUpperCase(),
+                                    style: const TextStyle(fontSize: 10),
                                   ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      'Block ID: ${op.blockId}',
-                                      style: const TextStyle(fontSize: 12),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.primaryContainer,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Block ID: ${op.blockId}',
+                                    style: const TextStyle(fontSize: 12),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                ],
+                                ),
+                              ],
+                            ),
+                            if (op.block != null) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                'Type: ${_formatBlockType(op.block!.type)}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
-                              if (op.block != null) ...[
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Type: ${_formatBlockType(op.block!.type)}',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Text: ${_extractBlockText(op.block)}',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                              if (op.block!.content != null &&
+                                  op.block!.content!.isNotEmpty) ...[
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Text: ${_extractBlockText(op.block)}',
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                                if (op.block!.content != null &&
-                                    op.block!.content!.isNotEmpty) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Content items: ${op.block!.content!.length}',
-                                    style: const TextStyle(fontSize: 11),
-                                  ),
-                                ],
-                                if (op.block!.props != null &&
-                                    op.block!.props!.isNotEmpty) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Props: ${op.block!.props}',
-                                    style: const TextStyle(fontSize: 11),
-                                  ),
-                                ],
-                                if (op.block!.children != null &&
-                                    op.block!.children!.isNotEmpty) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Children: ${op.block!.children!.length}',
-                                    style: const TextStyle(fontSize: 11),
-                                  ),
-                                ],
-                              ] else ...[
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Block: null',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontStyle: FontStyle.italic,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              ],
-                              if (op.index != null) ...[
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Index: ${op.index}',
+                                  'Content items: ${op.block!.content!.length}',
                                   style: const TextStyle(fontSize: 11),
                                 ),
                               ],
-                              if (op.parentId != null) ...[
+                              if (op.block!.props != null &&
+                                  op.block!.props!.isNotEmpty) ...[
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Parent ID: ${op.parentId}',
+                                  'Props: ${op.block!.props}',
                                   style: const TextStyle(fontSize: 11),
                                 ),
                               ],
+                              if (op.block!.children != null &&
+                                  op.block!.children!.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Children: ${op.block!.children!.length}',
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                              ],
+                            ] else ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                'Block: null',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontStyle: FontStyle.italic,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
                             ],
-                          ),
+                            if (op.index != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                'Index: ${op.index}',
+                                style: const TextStyle(fontSize: 11),
+                              ),
+                            ],
+                            if (op.parentId != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                'Parent ID: ${op.parentId}',
+                                style: const TextStyle(fontSize: 11),
+                              ),
+                            ],
+                          ],
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    );
+                  }),
                 ],
               ),
             ),

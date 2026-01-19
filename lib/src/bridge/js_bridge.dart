@@ -45,8 +45,14 @@ class JsBridge {
       // Send message via JavaScript evaluation
       // Use JSON.parse in JavaScript to properly handle nested JSON strings
       // This ensures proper parsing of escaped JSON strings
-      final escapedJson = json.replaceAll('\\', '\\\\').replaceAll("'", "\\'").replaceAll('\n', '\\n').replaceAll(r'$', r'\$');
-      await controller.evaluateJavascript(source: '''
+      final escapedJson = json
+          .replaceAll('\\', '\\\\')
+          .replaceAll("'", "\\'")
+          .replaceAll('\n', '\\n')
+          .replaceAll(r'$', r'\$');
+      await controller.evaluateJavascript(
+        source:
+            '''
         (function() {
           if (typeof window.handleFlutterMessage === 'function') {
             try {
@@ -62,7 +68,8 @@ class JsBridge {
             console.error('[BlockNote] handleFlutterMessage not available');
           }
         })();
-      ''');
+      ''',
+      );
     } catch (e) {
       if (debugLogging) {
         debugPrint('[JsBridge] Error sending message: $e');
@@ -82,11 +89,11 @@ class JsBridge {
 
       final json = jsonDecode(message) as Map<String, dynamic>;
       final messageType = json['type'] as String?;
-      
+
       if (debugLogging) {
         debugPrint('[JsBridge] Message type: $messageType');
       }
-      
+
       // Handle test messages (for debugging)
       if (messageType == 'test') {
         if (debugLogging) {
@@ -94,7 +101,7 @@ class JsBridge {
         }
         return;
       }
-      
+
       final jsMessage = JsToFlutterMessage.fromJson(json);
       if (debugLogging) {
         debugPrint('[JsBridge] Parsed message type: ${jsMessage.type}');
@@ -105,11 +112,7 @@ class JsBridge {
         debugPrint('[JsBridge] Error handling message: $e');
       }
       // Forward error to Flutter
-      onMessage(
-        ErrorMessage(
-          message: 'Failed to parse message: $e',
-        ),
-      );
+      onMessage(ErrorMessage(message: 'Failed to parse message: $e'));
     }
   }
 

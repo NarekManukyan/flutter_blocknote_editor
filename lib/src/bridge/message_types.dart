@@ -75,10 +75,7 @@ class LoadDocumentMessage extends FlutterToJsMessage {
 
   @override
   Map<String, dynamic> toJson() {
-    return {
-      'type': 'load_document',
-      'data': document,
-    };
+    return {'type': 'load_document', 'data': document};
   }
 }
 
@@ -95,10 +92,7 @@ class SetReadonlyMessage extends FlutterToJsMessage {
 
   @override
   Map<String, dynamic> toJson() {
-    return {
-      'type': 'set_readonly',
-      'value': value,
-    };
+    return {'type': 'set_readonly', 'value': value};
   }
 }
 
@@ -112,9 +106,7 @@ class FlushMessage extends FlutterToJsMessage {
 
   @override
   Map<String, dynamic> toJson() {
-    return {
-      'type': 'flush',
-    };
+    return {'type': 'flush'};
   }
 }
 
@@ -131,10 +123,7 @@ class SetThemeMessage extends FlutterToJsMessage {
 
   @override
   Map<String, dynamic> toJson() {
-    return {
-      'type': 'set_theme',
-      'data': theme,
-    };
+    return {'type': 'set_theme', 'data': theme};
   }
 }
 
@@ -151,10 +140,7 @@ class SetToolbarConfigMessage extends FlutterToJsMessage {
 
   @override
   Map<String, dynamic> toJson() {
-    return {
-      'type': 'set_toolbar_config',
-      'data': config,
-    };
+    return {'type': 'set_toolbar_config', 'data': config};
   }
 }
 
@@ -172,10 +158,7 @@ class SetSlashCommandConfigMessage extends FlutterToJsMessage {
 
   @override
   Map<String, dynamic> toJson() {
-    return {
-      'type': 'set_slash_command_config',
-      'data': config,
-    };
+    return {'type': 'set_slash_command_config', 'data': config};
   }
 }
 
@@ -194,8 +177,7 @@ class UpdateWebViewHeightMessage extends FlutterToJsMessage {
   final int keyboardHeight;
 
   @override
-  FlutterToJsMessageType get type =>
-      FlutterToJsMessageType.updateWebViewHeight;
+  FlutterToJsMessageType get type => FlutterToJsMessageType.updateWebViewHeight;
 
   @override
   Map<String, dynamic> toJson() {
@@ -220,10 +202,7 @@ class InjectCustomCssMessage extends FlutterToJsMessage {
 
   @override
   Map<String, dynamic> toJson() {
-    return {
-      'type': 'inject_custom_css',
-      'css': css,
-    };
+    return {'type': 'inject_custom_css', 'css': css};
   }
 }
 
@@ -271,18 +250,20 @@ abstract class JsToFlutterMessage {
   /// Creates a message from a JSON map.
   factory JsToFlutterMessage.fromJson(Map<String, dynamic> json) {
     final typeStr = json['type'] as String;
-    
+
     // Convert snake_case to camelCase for enum matching
     // e.g., 'toolbar_popup_request' -> 'toolbarPopupRequest'
     String enumName = typeStr;
     if (typeStr.contains('_')) {
       final parts = typeStr.split('_');
-      enumName = parts[0] + 
-          parts.sublist(1).map((p) => 
-            p.isEmpty ? '' : p[0].toUpperCase() + p.substring(1)
-          ).join();
+      enumName =
+          parts[0] +
+          parts
+              .sublist(1)
+              .map((p) => p.isEmpty ? '' : p[0].toUpperCase() + p.substring(1))
+              .join();
     }
-    
+
     final type = JsToFlutterMessageType.values.firstWhere(
       (e) => e.name == enumName,
       orElse: () => JsToFlutterMessageType.error,
@@ -313,10 +294,7 @@ class ReadyMessage extends JsToFlutterMessage {
 /// Message containing new transactions.
 class TransactionsMessage extends JsToFlutterMessage {
   /// Creates a new transactions message.
-  const TransactionsMessage({
-    required this.data,
-    this.timestamp,
-  });
+  const TransactionsMessage({required this.data, this.timestamp});
 
   /// The transaction data.
   final List<Map<String, dynamic>> data;
@@ -348,9 +326,7 @@ class ErrorMessage extends JsToFlutterMessage {
 
   /// Creates an ErrorMessage from a JSON map.
   factory ErrorMessage.fromJson(Map<String, dynamic> json) {
-    return ErrorMessage(
-      message: json['message'] as String? ?? 'Unknown error',
-    );
+    return ErrorMessage(message: json['message'] as String? ?? 'Unknown error');
   }
 
   @override
@@ -387,6 +363,5 @@ class ToolbarPopupRequestMessage extends JsToFlutterMessage {
   }
 
   @override
-  JsToFlutterMessageType get type =>
-      JsToFlutterMessageType.toolbarPopupRequest;
+  JsToFlutterMessageType get type => JsToFlutterMessageType.toolbarPopupRequest;
 }

@@ -1,3 +1,15 @@
+## 0.0.7
+
+* Improved WebView sizing by using layout constraints for available height.
+* Added a modal bottom sheet editor demo in the example app.
+* Added a React error boundary and `editable` handling for the embedded editor.
+* Refined selection auto-scroll to avoid unnecessary scrolls when the keyboard is not visible.
+* Improved toolbar popup block type fallback handling for non-JSON values.
+* Switched custom slash command execution to a `Function` handler.
+* Added analyzer excludes for generated Dart files.
+* Added ESLint/Prettier tooling and scripts for the web editor.
+* Rebuilt embedded web editor assets (`assets/web`).
+
 ## 0.0.6
 
 **Breaking Changes and Code Quality Improvements**

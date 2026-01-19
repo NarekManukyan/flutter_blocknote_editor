@@ -16,24 +16,24 @@ export function usePopupPortals() {
       if (bodyStyle.overflow === 'hidden') {
         document.body.style.overflow = 'visible';
       }
-      
+
       const htmlStyle = window.getComputedStyle(document.documentElement);
       if (htmlStyle.overflow === 'hidden') {
         document.documentElement.style.overflow = 'visible';
       }
     }
-    
+
     // Simple MutationObserver to just ensure popups are visible when created
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         mutation.addedNodes.forEach((node) => {
           if (node.nodeType === 1) {
             const element = node;
-            const isPopup = 
+            const isPopup =
               element.classList?.contains('mantine-Menu-dropdown') ||
               element.classList?.contains('mantine-Popover-dropdown') ||
               element.classList?.contains('bn-select');
-            
+
             if (isPopup) {
               // Just ensure basic visibility - let Mantine handle the rest
               requestAnimationFrame(() => {
@@ -44,26 +44,30 @@ export function usePopupPortals() {
                 }
               });
             }
-            
+
             // Check children too
             if (element.querySelectorAll) {
-              element.querySelectorAll('.mantine-Menu-dropdown, .mantine-Popover-dropdown').forEach((child) => {
-                requestAnimationFrame(() => {
-                  if (document.body.contains(child)) {
-                    child.style.zIndex = '10002';
-                    child.style.isolation = 'isolate';
-                    child.removeAttribute('hidden');
-                  }
+              element
+                .querySelectorAll(
+                  '.mantine-Menu-dropdown, .mantine-Popover-dropdown',
+                )
+                .forEach((child) => {
+                  requestAnimationFrame(() => {
+                    if (document.body.contains(child)) {
+                      child.style.zIndex = '10002';
+                      child.style.isolation = 'isolate';
+                      child.removeAttribute('hidden');
+                    }
+                  });
                 });
-              });
             }
           }
         });
       });
     });
-    
+
     observer.observe(document.body, { childList: true, subtree: true });
-    
+
     return () => {
       observer.disconnect();
     };

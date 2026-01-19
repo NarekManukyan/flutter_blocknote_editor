@@ -8,7 +8,7 @@
  * @param {Object} toolbarPopupCallbacksRef - Ref to store popup callbacks
  */
 export function handleToolbarPopupResponse(message, toolbarPopupCallbacksRef) {
-  const { requestId, popupType, selectedValue } = message;
+  const { requestId, selectedValue } = message;
   const callback = toolbarPopupCallbacksRef.current.get(requestId);
   if (callback) {
     // Handle the case where selectedValue might be a JSON string that needs parsing
@@ -16,7 +16,7 @@ export function handleToolbarPopupResponse(message, toolbarPopupCallbacksRef) {
     if (typeof selectedValue === 'string' && selectedValue.startsWith('{')) {
       try {
         processedValue = JSON.parse(selectedValue);
-      } catch (e) {
+      } catch {
         // If parsing fails, use the string as-is
         processedValue = selectedValue;
       }

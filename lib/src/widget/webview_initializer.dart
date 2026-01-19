@@ -52,9 +52,6 @@ class WebViewInitializer {
       }
     }
 
-    return WebViewInitializationResult(
-      url: url,
-      assetServer: assetServer,
-    );
+    return WebViewInitializationResult(url: url, assetServer: assetServer);
   }
 }

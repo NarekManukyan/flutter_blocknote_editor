@@ -5,6 +5,7 @@ React-based BlockNote editor for Flutter WebView integration.
 ## Setup
 
 1. Install dependencies:
+
 ```bash
 npm install
 ```
@@ -24,6 +25,7 @@ npm run build
 ```
 
 The build process will:
+
 - Bundle React, BlockNote, and all dependencies
 - Output to `assets/web/` directory
 - Create a single `index.html` file that can be loaded in Flutter WebView

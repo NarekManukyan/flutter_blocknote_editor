@@ -30,7 +30,7 @@ export default defineConfig({
     // Inline small assets
     assetsInlineLimit: 4096,
     // Increase chunk size warning limit since we're creating one big bundle
-    chunkSizeWarningLimit: 2000,
+    chunkSizeWarningLimit: 5000,
   },
   base: './',
 });

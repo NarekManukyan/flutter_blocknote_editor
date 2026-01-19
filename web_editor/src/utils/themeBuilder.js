@@ -17,7 +17,7 @@ export function buildBlockNoteTheme(theme) {
     console.log('[BlockNote] Processing theme:', theme);
     // Deep clone to avoid mutation issues
     const themeClone = JSON.parse(JSON.stringify(theme));
-    
+
     // BlockNote expects theme in a specific format
     // If light/dark are provided, use them; otherwise use colors directly
     let blockNoteTheme = {};
@@ -39,12 +39,12 @@ export function buildBlockNoteTheme(theme) {
       // Use theme as-is (it should already be in the correct format)
       blockNoteTheme = themeClone;
     }
-    
+
     // Ensure fontFamily is always set if provided in theme
     if (themeClone.fontFamily && !blockNoteTheme.fontFamily) {
       blockNoteTheme.fontFamily = themeClone.fontFamily;
     }
-    
+
     console.log('[BlockNote] Converted theme:', blockNoteTheme);
     return blockNoteTheme;
   } catch (error) {

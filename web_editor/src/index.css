@@ -10,7 +10,9 @@ body {
   /* Don't set overflow: hidden - popups (portals) need to render as direct children of body */
   /* Popups use position: fixed, so they won't cause scrolling issues */
   /* The #root container handles scrolling with overflow: auto */
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+    Cantarell, sans-serif;
 }
 
 #root {
@@ -23,8 +25,8 @@ body {
 /* Ensure popups can render outside clipped containers */
 .bn-ak-popover,
 [data-radix-portal],
-[role="dialog"],
-[role="menu"],
+[role='dialog'],
+[role='menu'],
 [data-ariakit-popover],
 .bn-form-popover,
 .mantine-Popover-dropdown,
@@ -38,7 +40,7 @@ body {
 
 /* Ensure toolbar buttons can receive clicks */
 .bn-toolbar button,
-.bn-toolbar [role="button"] {
+.bn-toolbar [role='button'] {
   pointer-events: auto !important;
   touch-action: manipulation !important;
 }

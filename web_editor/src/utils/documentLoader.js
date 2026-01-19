@@ -10,21 +10,29 @@
  * @param {Object} documentVersionRef - Ref object to track document version
  * @param {Object} hasLoadedDocumentRef - Ref object to track if document was loaded
  */
-export function loadDocument(editor, documentData, documentVersionRef, hasLoadedDocumentRef) {
+export function loadDocument(
+  editor,
+  documentData,
+  documentVersionRef,
+  hasLoadedDocumentRef,
+) {
   try {
     if (!editor) {
-      window.BlockNoteChannel.postMessage(JSON.stringify({
-        type: 'error',
-        data: { message: 'Editor not initialized' }
-      }));
+      window.BlockNoteChannel.postMessage(
+        JSON.stringify({
+          type: 'error',
+          data: { message: 'Editor not initialized' },
+        }),
+      );
       return;
     }
 
     console.log('[BlockNote] loadDocument called with:', documentData);
-    
-    const doc = typeof documentData === 'string' 
-      ? JSON.parse(documentData) 
-      : documentData;
+
+    const doc =
+      typeof documentData === 'string'
+        ? JSON.parse(documentData)
+        : documentData;
 
     console.log('[BlockNote] Parsed document:', doc);
     console.log('[BlockNote] Document blocks:', doc.blocks);
@@ -38,16 +46,18 @@ export function loadDocument(editor, documentData, documentVersionRef, hasLoaded
       // Ensure blocks array is not empty and has valid structure
       if (doc.blocks.length === 0) {
         console.warn('[BlockNote] Empty blocks array, using default block');
-        doc.blocks = [{
-          id: 'root',
-          type: 'paragraph',
-          content: [{ type: 'text', text: '', styles: {} }],
-          props: {},
-        }];
+        doc.blocks = [
+          {
+            id: 'root',
+            type: 'paragraph',
+            content: [{ type: 'text', text: '', styles: {} }],
+            props: {},
+          },
+        ];
       }
 
       // Clean up blocks - remove null/undefined values and ensure required fields
-      const cleanedBlocks = doc.blocks.map(block => {
+      const cleanedBlocks = doc.blocks.map((block) => {
         if (!block) {
           return {
             id: 'block_' + Date.now(),
@@ -56,39 +66,44 @@ export function loadDocument(editor, documentData, documentVersionRef, hasLoaded
             props: {},
           };
         }
-        
+
         // Clean content array - remove null values and ensure styles is an object
-        const cleanedContent = Array.isArray(block.content) 
-          ? block.content.map(item => {
+        const cleanedContent = Array.isArray(block.content)
+          ? block.content.map((item) => {
               if (!item) return { type: 'text', text: '', styles: {} };
-              
+
               const cleanedItem = {
                 type: item.type || 'text',
                 text: item.text || '',
-                styles: item.styles && typeof item.styles === 'object' ? item.styles : {},
+                styles:
+                  item.styles && typeof item.styles === 'object'
+                    ? item.styles
+                    : {},
               };
-              
+
               // Only include href and mentionId if they're not null
               if (item.href != null) cleanedItem.href = item.href;
-              if (item.mentionId != null) cleanedItem.mentionId = item.mentionId;
-              
+              if (item.mentionId != null)
+                cleanedItem.mentionId = item.mentionId;
+
               return cleanedItem;
             })
           : [{ type: 'text', text: '', styles: {} }];
-        
+
         // Build cleaned block
         const cleanedBlock = {
           id: block.id || 'block_' + Date.now(),
           type: block.type || 'paragraph',
           content: cleanedContent,
-          props: block.props && typeof block.props === 'object' ? block.props : {},
+          props:
+            block.props && typeof block.props === 'object' ? block.props : {},
         };
-        
+
         // Only include children if it's not null/undefined
         if (block.children != null) {
           cleanedBlock.children = block.children;
         }
-        
+
         return cleanedBlock;
       });
 
@@ -102,32 +117,40 @@ export function loadDocument(editor, documentData, documentVersionRef, hasLoaded
         editor.replaceBlocks(currentBlocks, cleanedBlocks);
         console.log('[BlockNote] Blocks replaced successfully');
       } else {
-        console.warn('[BlockNote] replaceBlocks not available, trying alternative method');
+        console.warn(
+          '[BlockNote] replaceBlocks not available, trying alternative method',
+        );
         if (editor.blocks) {
           editor.blocks = cleanedBlocks;
         }
       }
-      
+
       // Handle version safely
       if (doc.version) {
-        if (typeof doc.version === 'object' && doc.version.major !== undefined) {
+        if (
+          typeof doc.version === 'object' &&
+          doc.version.major !== undefined
+        ) {
           documentVersionRef.current = doc.version.major;
         } else if (typeof doc.version === 'number') {
           documentVersionRef.current = doc.version;
         }
       }
-      
+
       hasLoadedDocumentRef.current = true;
-      
+
       // Reset previous blocks reference after document load
       // This ensures the next change only sends incremental updates
-      if (window.resetPreviousBlocks && typeof window.resetPreviousBlocks === 'function') {
+      if (
+        window.resetPreviousBlocks &&
+        typeof window.resetPreviousBlocks === 'function'
+      ) {
         // Use a small delay to ensure editor state has updated
         setTimeout(() => {
           window.resetPreviousBlocks();
         }, 100);
       }
-      
+
       console.log('[BlockNote] Document loaded successfully');
     } else {
       throw new Error('Invalid document format: blocks must be an array');
@@ -135,9 +158,11 @@ export function loadDocument(editor, documentData, documentVersionRef, hasLoaded
   } catch (error) {
     console.error('[BlockNote] Error in loadDocument:', error);
     console.error('[BlockNote] Error stack:', error.stack);
-    window.BlockNoteChannel.postMessage(JSON.stringify({
-      type: 'error',
-      data: { message: 'Failed to load document: ' + error.message }
-    }));
+    window.BlockNoteChannel.postMessage(
+      JSON.stringify({
+        type: 'error',
+        data: { message: 'Failed to load document: ' + error.message },
+      }),
+    );
   }
 }

@@ -33,42 +33,43 @@ class ToolbarPopupHandler {
     // If custom handler provided, use it
     if (widget.onToolbarPopupRequest != null) {
       if (debugLogging) {
-        debugPrint('[BlockNoteEditor] Calling custom onToolbarPopupRequest handler');
+        debugPrint(
+          '[BlockNoteEditor] Calling custom onToolbarPopupRequest handler',
+        );
       }
-      widget.onToolbarPopupRequest!(
-        message.popupType,
-        message.options,
-      ).then((selectedValue) {
-        if (debugLogging) {
-          debugPrint(
-            '[BlockNoteEditor] Handler returned: selectedValue=$selectedValue',
-          );
-        }
-        if (mounted && bridge != null) {
-          bridge.sendToolbarPopupResponse(
-            requestId: message.requestId,
-            popupType: message.popupType,
-            selectedValue: selectedValue,
-          );
-          if (debugLogging) {
-            debugPrint('[BlockNoteEditor] Response sent to JS');
-          }
-        }
-      }).catchError((error) {
-        if (debugLogging) {
-          debugPrint(
-            '[BlockNoteEditor] Error in toolbar popup handler: $error',
-          );
-        }
-        // Send null response on error (cancelled)
-        if (mounted && bridge != null) {
-          bridge.sendToolbarPopupResponse(
-            requestId: message.requestId,
-            popupType: message.popupType,
-            selectedValue: null,
-          );
-        }
-      });
+      widget.onToolbarPopupRequest!(message.popupType, message.options)
+          .then((selectedValue) {
+            if (debugLogging) {
+              debugPrint(
+                '[BlockNoteEditor] Handler returned: selectedValue=$selectedValue',
+              );
+            }
+            if (mounted && bridge != null) {
+              bridge.sendToolbarPopupResponse(
+                requestId: message.requestId,
+                popupType: message.popupType,
+                selectedValue: selectedValue,
+              );
+              if (debugLogging) {
+                debugPrint('[BlockNoteEditor] Response sent to JS');
+              }
+            }
+          })
+          .catchError((error) {
+            if (debugLogging) {
+              debugPrint(
+                '[BlockNoteEditor] Error in toolbar popup handler: $error',
+              );
+            }
+            // Send null response on error (cancelled)
+            if (mounted && bridge != null) {
+              bridge.sendToolbarPopupResponse(
+                requestId: message.requestId,
+                popupType: message.popupType,
+                selectedValue: null,
+              );
+            }
+          });
       return;
     }
 
@@ -89,7 +90,8 @@ class ToolbarPopupHandler {
     // Get theme colors for modal styling
     final theme = widget.theme;
     // Use menu colors, fallback to editor colors, then default
-    final menuColors = theme?.colors?.menu ??
+    final menuColors =
+        theme?.colors?.menu ??
         theme?.light?.menu ??
         theme?.dark?.menu ??
         theme?.colors?.editor ??
@@ -99,74 +101,75 @@ class ToolbarPopupHandler {
           text: Color(0xFF000000),
           background: Color(0xFFFFFFFF),
         );
-    final hoveredColors = theme?.colors?.hovered ??
-        theme?.light?.hovered ??
-        theme?.dark?.hovered;
-    final selectedColors = theme?.colors?.selected ??
+    final hoveredColors =
+        theme?.colors?.hovered ?? theme?.light?.hovered ?? theme?.dark?.hovered;
+    final selectedColors =
+        theme?.colors?.selected ??
         theme?.light?.selected ??
         theme?.dark?.selected;
     final borderRadius = theme?.borderRadius ?? 8.0;
 
     // Show default modal bottom sheet
     showModalBottomSheet<dynamic>(
-      context: context,
-      backgroundColor: menuColors.background,
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(borderRadius),
-          topRight: Radius.circular(borderRadius),
-        ),
-      ),
-      builder: (BuildContext sheetContext) {
-        // Get highlight colors from theme
-        final highlights = theme?.colors?.highlights ??
-            theme?.light?.highlights ??
-            theme?.dark?.highlights;
+          context: context,
+          backgroundColor: menuColors.background,
+          isScrollControlled: true,
+          useSafeArea: true,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(borderRadius),
+              topRight: Radius.circular(borderRadius),
+            ),
+          ),
+          builder: (BuildContext sheetContext) {
+            // Get highlight colors from theme
+            final highlights =
+                theme?.colors?.highlights ??
+                theme?.light?.highlights ??
+                theme?.dark?.highlights;
 
-        return ToolbarPopupBottomSheet(
-          popupType: message.popupType,
-          options: message.options,
-          menuColors: menuColors,
-          hoveredColors: hoveredColors,
-          selectedColors: selectedColors,
-          highlights: highlights,
-          onSelected: (selectedValue) {
-            Navigator.of(sheetContext).pop(selectedValue);
+            return ToolbarPopupBottomSheet(
+              popupType: message.popupType,
+              options: message.options,
+              menuColors: menuColors,
+              hoveredColors: hoveredColors,
+              selectedColors: selectedColors,
+              highlights: highlights,
+              onSelected: (selectedValue) {
+                Navigator.of(sheetContext).pop(selectedValue);
+              },
+              onCancelled: () {
+                Navigator.of(sheetContext).pop(null);
+              },
+            );
           },
-          onCancelled: () {
-            Navigator.of(sheetContext).pop(null);
-          },
-        );
-      },
-    ).then((selectedValue) {
-      if (mounted && bridge != null) {
-        bridge.sendToolbarPopupResponse(
-          requestId: message.requestId,
-          popupType: message.popupType,
-          selectedValue: selectedValue,
-        );
-        if (debugLogging) {
-          debugPrint(
-            '[BlockNoteEditor] Default modal returned: selectedValue=$selectedValue',
-          );
-        }
-      }
-    }).catchError((error) {
-      if (debugLogging) {
-        debugPrint(
-          '[BlockNoteEditor] Error showing default modal: $error',
-        );
-      }
-      // Send null response on error (cancelled)
-      if (mounted && bridge != null) {
-        bridge.sendToolbarPopupResponse(
-          requestId: message.requestId,
-          popupType: message.popupType,
-          selectedValue: null,
-        );
-      }
-    });
+        )
+        .then((selectedValue) {
+          if (mounted && bridge != null) {
+            bridge.sendToolbarPopupResponse(
+              requestId: message.requestId,
+              popupType: message.popupType,
+              selectedValue: selectedValue,
+            );
+            if (debugLogging) {
+              debugPrint(
+                '[BlockNoteEditor] Default modal returned: selectedValue=$selectedValue',
+              );
+            }
+          }
+        })
+        .catchError((error) {
+          if (debugLogging) {
+            debugPrint('[BlockNoteEditor] Error showing default modal: $error');
+          }
+          // Send null response on error (cancelled)
+          if (mounted && bridge != null) {
+            bridge.sendToolbarPopupResponse(
+              requestId: message.requestId,
+              popupType: message.popupType,
+              selectedValue: null,
+            );
+          }
+        });
   }
 }

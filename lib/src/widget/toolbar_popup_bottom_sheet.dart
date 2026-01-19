@@ -153,38 +153,38 @@ class ToolbarPopupBottomSheet extends StatelessWidget {
           physics: const ClampingScrollPhysics(),
           itemCount: options.length,
           itemBuilder: (context, index) {
-              final option = options[index];
-              final label = option['label'] as String? ?? '';
-              final value = option['value'];
-              final iconId = option['id'] as String?;
+            final option = options[index];
+            final label = option['label'] as String? ?? '';
+            final value = option['value'];
+            final iconId = option['id'] as String?;
 
-              Widget? leadingIcon;
+            Widget? leadingIcon;
 
-              // For color styles, always show the colored square icon
-              if (popupType == 'colorStyle') {
-                final color = _getColorFromValue(value);
-                leadingIcon = _buildColorStyleIcon(color);
-              } else if (iconId != null) {
-                // For block types, try to get SVG icon by ID
-                final svgIcon = ToolbarIcons.getSvgIcon(
-                  iconId,
-                  color: menuColors.text,
-                  size: 20,
-                );
-                if (svgIcon != null) {
-                  leadingIcon = svgIcon;
-                }
-              }
-
-              return ListTile(
-                leading: leadingIcon,
-                title: Text(label, style: TextStyle(color: menuColors.text)),
-                onTap: () => onSelected(value),
-                hoverColor: hoveredColors?.background,
-                selectedTileColor: selectedColors?.background,
+            // For color styles, always show the colored square icon
+            if (popupType == 'colorStyle') {
+              final color = _getColorFromValue(value);
+              leadingIcon = _buildColorStyleIcon(color);
+            } else if (iconId != null) {
+              // For block types, try to get SVG icon by ID
+              final svgIcon = ToolbarIcons.getSvgIcon(
+                iconId,
+                color: menuColors.text,
+                size: 20,
               );
-            },
-          ),
+              if (svgIcon != null) {
+                leadingIcon = svgIcon;
+              }
+            }
+
+            return ListTile(
+              leading: leadingIcon,
+              title: Text(label, style: TextStyle(color: menuColors.text)),
+              onTap: () => onSelected(value),
+              hoverColor: hoveredColors?.background,
+              selectedTileColor: selectedColors?.background,
+            );
+          },
+        ),
       ],
     );
   }

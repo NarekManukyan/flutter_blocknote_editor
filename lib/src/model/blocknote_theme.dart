@@ -81,7 +81,7 @@ enum BlockNoteHighlightColorType {
   purple,
 
   /// Pink highlight color.
-  pink;
+  pink,
 }
 
 /// Highlight colors configuration.
@@ -170,10 +170,12 @@ sealed class BlockNoteColorScheme with _$BlockNoteColorScheme {
 }
 
 /// Helper to convert Color from JSON (nullable).
-Color? _colorFromJsonNullable(String? hex) => hex != null ? _hexToColor(hex) : null;
+Color? _colorFromJsonNullable(String? hex) =>
+    hex != null ? _hexToColor(hex) : null;
 
 /// Helper to convert Color to JSON (nullable).
-String? _colorToJsonNullable(Color? color) => color != null ? _colorToHex(color) : null;
+String? _colorToJsonNullable(Color? color) =>
+    color != null ? _colorToHex(color) : null;
 
 /// Font file format.
 enum BlockNoteFontFormat {
@@ -187,7 +189,7 @@ enum BlockNoteFontFormat {
   ttf,
 
   /// OpenType font format.
-  otf;
+  otf,
 }
 
 /// A font file for custom font configuration.

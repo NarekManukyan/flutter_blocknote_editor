@@ -43,7 +43,8 @@ class WebViewConfig {
     try {
       // Inject JavaScript to create bridge objects that map to handlers
       // This allows the existing JavaScript code to work without changes
-      await controller.evaluateJavascript(source: '''
+      await controller.evaluateJavascript(
+        source: '''
         (function() {
           // Create onMessage bridge object
           if (!window.onMessage) {
@@ -69,14 +70,17 @@ class WebViewConfig {
           
           console.log('[BlockNote] JavaScript handlers bridge installed');
         })();
-      ''');
+      ''',
+      );
 
       if (debugLogging) {
         debugPrint('[BlockNoteEditor] JavaScript bridge installed');
       }
     } catch (error) {
       if (debugLogging) {
-        debugPrint('[BlockNoteEditor] Error setting up JavaScript bridge: $error');
+        debugPrint(
+          '[BlockNoteEditor] Error setting up JavaScript bridge: $error',
+        );
       }
     }
   }

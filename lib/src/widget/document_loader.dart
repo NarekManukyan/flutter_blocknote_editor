@@ -40,9 +40,7 @@ class DocumentLoader {
 
       // Set slash command config if provided
       if (widget.slashCommandConfig != null) {
-        await bridge.setSlashCommandConfig(
-          widget.slashCommandConfig!.toJson(),
-        );
+        await bridge.setSlashCommandConfig(widget.slashCommandConfig!.toJson());
       }
 
       // Inject custom CSS if provided (from customCss parameter or theme font config)

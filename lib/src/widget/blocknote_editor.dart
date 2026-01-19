@@ -79,7 +79,8 @@ class BlockNoteEditor extends StatefulWidget {
   final Future<dynamic> Function(
     String popupType,
     List<Map<String, dynamic>> options,
-  )? onToolbarPopupRequest;
+  )?
+  onToolbarPopupRequest;
 
   /// Whether the editor should be in read-only mode.
   final bool readOnly;
@@ -179,9 +180,9 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
   /// Initializes the WebView and sets up the JavaScript bridge.
   Future<void> _initializeWebView() async {
     if (_isInitializing || _initialUrl != null) return;
-    
+
     _isInitializing = true;
-    
+
     // Create transaction batcher
     _batcher = TransactionBatcher(
       onBatch: (transactions) {
@@ -219,9 +220,9 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
     _hasLoadedDocument = true;
 
     // Load document immediately since editor is ready
-      if (!mounted) return;
+    if (!mounted) return;
 
-      try {
+    try {
       await DocumentLoader.loadInitialDocument(
         widget: widget,
         bridge: _bridge!,
@@ -229,17 +230,17 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
         debugLogging: widget.debugLogging,
       );
 
-        // Ensure WebView height is updated after document loads
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted || !_isReady || _bridge == null) return;
-          if (!context.mounted) return;
+      // Ensure WebView height is updated after document loads
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_isReady || _bridge == null) return;
+        if (!context.mounted) return;
 
-          final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
-          final screenHeight = MediaQuery.of(context).size.height;
-          final availableHeight = screenHeight - keyboardHeight;
-          _updateWebViewHeight(keyboardHeight, availableHeight);
-        });
-      } catch (e) {
+        final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+        final screenHeight = MediaQuery.of(context).size.height;
+        final availableHeight = screenHeight - keyboardHeight;
+        _updateWebViewHeight(keyboardHeight, availableHeight);
+      });
+    } catch (e) {
       MessageHandlers.handleError(
         message: 'Failed to load document: $e',
         debugLogging: widget.debugLogging,
@@ -373,108 +374,111 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
 
   @override
   Widget build(BuildContext context) {
-    // Get keyboard height from viewInsets
-    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
-    final screenHeight = MediaQuery.of(context).size.height;
-    final availableHeight = screenHeight - keyboardHeight;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Get keyboard height from viewInsets
+        final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+        final screenHeight = constraints.maxHeight;
+        final availableHeight = screenHeight - keyboardHeight;
 
-    // Show loading indicator while initializing
-    if (_initialUrl == null) {
-      return const Center(child: CircularProgressIndicator());
-    }
+        // Show loading indicator while initializing
+        if (_initialUrl == null) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-    // Update WebView height when editor is ready or when keyboard opens/closes
-    if (_isReady && _bridge != null && _controller != null) {
-      // Always update height when ready (even if keyboard hasn't changed)
-      // This ensures proper scrolling is enabled from the start
-      if (_lastAvailableHeight == 0 ||
-          (keyboardHeight - _lastKeyboardHeight).abs() > 1.0 ||
-          (availableHeight - _lastAvailableHeight).abs() > 1.0) {
-        _lastKeyboardHeight = keyboardHeight;
-        _lastAvailableHeight = availableHeight;
-        _updateWebViewHeight(keyboardHeight, availableHeight);
-      }
-    }
-
-    return SizedBox(
-      height: availableHeight,
-      child: InAppWebView(
-        initialUrlRequest: URLRequest(url: WebUri(_initialUrl!)),
-        initialSettings: WebViewConfig.getDefaultSettings(),
-        onWebViewCreated: (controller) {
-          _controller = controller;
-          // Create JavaScript bridge
-          _bridge = JsBridge(
-            controller: controller,
-            onMessage: _handleBridgeMessage,
-            debugLogging: widget.debugLogging,
-          );
-          // Set up JavaScript handlers
-          WebViewConfig.setupJavaScriptHandlers(
-            controller: controller,
-            onJsMessage: _handleJsMessage,
-            onConsoleMessage: (msg) {
-              if (msg.contains('[ERROR]')) {
-                debugPrint('[BlockNoteEditor] $msg');
-                MessageHandlers.handleError(
-                  message: msg,
-                  debugLogging: widget.debugLogging,
-                );
-              } else if (widget.debugLogging) {
-                debugPrint('[JS Console] $msg');
-              }
-            },
-            debugLogging: widget.debugLogging,
-          );
-        },
-        onLoadStop: (controller, url) async {
-          if (widget.debugLogging) {
-            debugPrint('[BlockNoteEditor] Page finished loading: $url');
+        // Update WebView height when editor is ready or when keyboard opens/closes
+        if (_isReady && _bridge != null && _controller != null) {
+          // Always update height when ready (even if keyboard hasn't changed)
+          // This ensures proper scrolling is enabled from the start
+          if (_lastAvailableHeight == 0 ||
+              (keyboardHeight - _lastKeyboardHeight).abs() > 1.0 ||
+              (availableHeight - _lastAvailableHeight).abs() > 1.0) {
+            _lastKeyboardHeight = keyboardHeight;
+            _lastAvailableHeight = availableHeight;
+            _updateWebViewHeight(keyboardHeight, availableHeight);
           }
-          // Set up JavaScript bridge objects for message communication
-          await WebViewConfig.setupJavaScriptBridge(
-            controller: controller,
-            debugLogging: widget.debugLogging,
-          );
-        },
-        onReceivedError: (controller, request, error) {
-          if (widget.debugLogging) {
-            debugPrint('[BlockNoteEditor] Web resource error: $error');
-          }
-          MessageHandlers.handleError(
-            message: 'WebView error: ${error.description}',
-            debugLogging: widget.debugLogging,
-          );
-        },
-        onContentSizeChanged: (controller, oldContentSize, newContentSize) {
-          WebViewHeightManager.handleContentSizeChange(
-            controller: controller,
-            oldContentSize: oldContentSize,
-            newContentSize: newContentSize,
-            isReady: _isReady,
-            debugLogging: widget.debugLogging,
-            onScrollToSelection: () {
-              if (_controller != null && mounted) {
-                WebViewHeightManager.triggerScrollToSelection(
-                  controller: _controller!,
-                  debugLogging: widget.debugLogging,
-                );
-                // Reset tracking
-                _lastSignificantChangeTime = null;
+        }
+        return SizedBox(
+          height: availableHeight,
+          child: InAppWebView(
+            initialUrlRequest: URLRequest(url: WebUri(_initialUrl!)),
+            initialSettings: WebViewConfig.getDefaultSettings(),
+            onWebViewCreated: (controller) {
+              _controller = controller;
+              // Create JavaScript bridge
+              _bridge = JsBridge(
+                controller: controller,
+                onMessage: _handleBridgeMessage,
+                debugLogging: widget.debugLogging,
+              );
+              // Set up JavaScript handlers
+              WebViewConfig.setupJavaScriptHandlers(
+                controller: controller,
+                onJsMessage: _handleJsMessage,
+                onConsoleMessage: (msg) {
+                  if (msg.contains('[ERROR]')) {
+                    debugPrint('[BlockNoteEditor] $msg');
+                    MessageHandlers.handleError(
+                      message: msg,
+                      debugLogging: widget.debugLogging,
+                    );
+                  } else if (widget.debugLogging) {
+                    debugPrint('[JS Console] $msg');
+                  }
+                },
+                debugLogging: widget.debugLogging,
+              );
+            },
+            onLoadStop: (controller, url) async {
+              if (widget.debugLogging) {
+                debugPrint('[BlockNoteEditor] Page finished loading: $url');
               }
+              // Set up JavaScript bridge objects for message communication
+              await WebViewConfig.setupJavaScriptBridge(
+                controller: controller,
+                debugLogging: widget.debugLogging,
+              );
             },
-            updateLastSignificantChangeTime: (time) {
-              _lastSignificantChangeTime = time;
+            onReceivedError: (controller, request, error) {
+              if (widget.debugLogging) {
+                debugPrint('[BlockNoteEditor] Web resource error: $error');
+              }
+              MessageHandlers.handleError(
+                message: 'WebView error: ${error.description}',
+                debugLogging: widget.debugLogging,
+              );
             },
-            updateDebounceTimer: (timer) {
-              _contentSizeChangeDebounceTimer?.cancel();
-              _contentSizeChangeDebounceTimer = timer;
+            onContentSizeChanged: (controller, oldContentSize, newContentSize) {
+              WebViewHeightManager.handleContentSizeChange(
+                controller: controller,
+                oldContentSize: oldContentSize,
+                newContentSize: newContentSize,
+                isReady: _isReady,
+                debugLogging: widget.debugLogging,
+                onScrollToSelection: () {
+                  if (_controller != null && mounted) {
+                    WebViewHeightManager.triggerScrollToSelection(
+                      controller: _controller!,
+                      debugLogging: widget.debugLogging,
+                    );
+                    // Reset tracking
+                    _lastSignificantChangeTime = null;
+                  }
+                },
+                updateLastSignificantChangeTime: (time) {
+                  _lastSignificantChangeTime = time;
+                },
+                updateDebounceTimer: (timer) {
+                  _contentSizeChangeDebounceTimer?.cancel();
+                  _contentSizeChangeDebounceTimer = timer;
+                },
+                lastSignificantChangeTime: _lastSignificantChangeTime,
+                contentSizeChangeDebounceTimer: _contentSizeChangeDebounceTimer,
+              );
             },
-            lastSignificantChangeTime: _lastSignificantChangeTime,
-            contentSizeChangeDebounceTimer: _contentSizeChangeDebounceTimer,
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 

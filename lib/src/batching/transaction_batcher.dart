@@ -85,9 +85,7 @@ class TransactionBatcher {
     _pendingTransactions.clear();
 
     if (debugLogging) {
-      debugPrint(
-        '[TransactionBatcher] Flushing ${batch.length} transactions',
-      );
+      debugPrint('[TransactionBatcher] Flushing ${batch.length} transactions');
     }
 
     onBatch(batch);

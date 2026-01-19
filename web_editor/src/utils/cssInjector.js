@@ -15,7 +15,7 @@ export function injectCustomCss(css) {
       styleElement.id = 'blocknote-custom-css';
       document.head.appendChild(styleElement);
     }
-    
+
     // Set the CSS content
     styleElement.textContent = css;
     console.log('[BlockNote] Custom CSS injected');

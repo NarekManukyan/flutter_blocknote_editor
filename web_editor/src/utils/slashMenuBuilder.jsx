@@ -4,7 +4,6 @@
  */
 
 import {
-  DefaultReactSuggestionItem,
   SuggestionMenuController,
   getDefaultReactSlashMenuItems,
 } from '@blocknote/react';
@@ -25,9 +24,8 @@ export function buildSlashMenuItems(slashCommandConfig, editor) {
     title: item.title,
     onItemClick: () => {
       try {
-        // Evaluate the onItemClick JavaScript code
-        // eslint-disable-next-line no-eval
-        eval(`(function(editor) { ${item.onItemClick} })(editor)`);
+        const handler = new Function('editor', item.onItemClick);
+        handler(editor);
       } catch (error) {
         console.error('[BlockNote] Error executing slash command:', error);
       }
@@ -39,10 +37,7 @@ export function buildSlashMenuItems(slashCommandConfig, editor) {
     icon: item.icon ? <span>{item.icon}</span> : undefined,
   }));
 
-  const allItems = [
-    ...getDefaultReactSlashMenuItems(editor),
-    ...customItems,
-  ];
+  const allItems = [...getDefaultReactSlashMenuItems(editor), ...customItems];
 
   return (
     <SuggestionMenuController

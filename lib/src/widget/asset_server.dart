@@ -39,11 +39,11 @@ class AssetServer {
       // Create static file handler with proper MIME types
       // Use absolute path to ensure files are found
       final absolutePath = _tempDir!.absolute.path;
-      
+
       if (debugLogging) {
         debugPrint('[AssetServer] Serving from: $absolutePath');
       }
-      
+
       var handler = createStaticHandler(
         absolutePath,
         defaultDocument: 'index.html',
@@ -73,9 +73,7 @@ class AssetServer {
       _actualPort = _server!.port;
 
       if (debugLogging) {
-        debugPrint(
-          '[AssetServer] Started on http://localhost:$_actualPort',
-        );
+        debugPrint('[AssetServer] Started on http://localhost:$_actualPort');
       }
 
       return 'http://localhost:$_actualPort';
@@ -94,7 +92,7 @@ class AssetServer {
     try {
       // Core required assets
       final requiredAssets = ['index.html', 'editor.js', 'editor.css'];
-      
+
       // Optional assets (fonts, chunks)
       final optionalAssets = [
         // Font files
@@ -142,7 +140,9 @@ class AssetServer {
           copiedCount++;
 
           if (debugLogging) {
-            debugPrint('[AssetServer] Copied: $fileName (${data.lengthInBytes} bytes)');
+            debugPrint(
+              '[AssetServer] Copied: $fileName (${data.lengthInBytes} bytes)',
+            );
           }
         } catch (e) {
           failedAssets.add(fileName);

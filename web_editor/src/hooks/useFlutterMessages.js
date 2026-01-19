@@ -27,22 +27,30 @@ export function useFlutterMessages(
   setSlashCommandConfig,
   documentVersionRef,
   hasLoadedDocumentRef,
-  toolbarPopupCallbacksRef
+  toolbarPopupCallbacksRef,
 ) {
   useEffect(() => {
     const handleFlutterMessage = (event) => {
       const message = event.detail;
-      
+
       switch (message.type) {
         case 'load_document':
-          loadDocument(editor, message.data, documentVersionRef, hasLoadedDocumentRef);
+          loadDocument(
+            editor,
+            message.data,
+            documentVersionRef,
+            hasLoadedDocumentRef,
+          );
           break;
         case 'set_readonly':
           setIsReadonly(message.value);
           break;
         case 'flush':
           // Force immediate transaction emission (bypass debounce)
-          if (window.sendPendingTransaction && typeof window.sendPendingTransaction === 'function') {
+          if (
+            window.sendPendingTransaction &&
+            typeof window.sendPendingTransaction === 'function'
+          ) {
             window.sendPendingTransaction();
           } else if (editor && editor.onChange) {
             // Fallback: trigger onChange if sendPendingTransaction not available
@@ -81,5 +89,14 @@ export function useFlutterMessages(
     return () => {
       window.removeEventListener('flutterMessage', handleFlutterMessage);
     };
-  }, [editor, setIsReadonly, setTheme, setToolbarConfig, setSlashCommandConfig, documentVersionRef, hasLoadedDocumentRef, toolbarPopupCallbacksRef]);
+  }, [
+    editor,
+    setIsReadonly,
+    setTheme,
+    setToolbarConfig,
+    setSlashCommandConfig,
+    documentVersionRef,
+    hasLoadedDocumentRef,
+    toolbarPopupCallbacksRef,
+  ]);
 }
