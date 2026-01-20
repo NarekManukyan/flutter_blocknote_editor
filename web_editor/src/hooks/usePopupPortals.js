@@ -34,7 +34,9 @@ export function usePopupPortals() {
               element.classList?.contains('mantine-Popover-dropdown') ||
               element.classList?.contains('bn-select');
 
-            if (isPopup) {
+            const isFlutterHidden =
+              element.getAttribute('data-bn-flutter-hidden') === 'true';
+            if (isPopup && !isFlutterHidden) {
               // Just ensure basic visibility - let Mantine handle the rest
               requestAnimationFrame(() => {
                 if (document.body.contains(element)) {
@@ -52,6 +54,11 @@ export function usePopupPortals() {
                   '.mantine-Menu-dropdown, .mantine-Popover-dropdown',
                 )
                 .forEach((child) => {
+                  const isChildFlutterHidden =
+                    child.getAttribute('data-bn-flutter-hidden') === 'true';
+                  if (isChildFlutterHidden) {
+                    return;
+                  }
                   requestAnimationFrame(() => {
                     if (document.body.contains(child)) {
                       child.style.zIndex = '10002';

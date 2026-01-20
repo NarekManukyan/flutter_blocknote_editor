@@ -18,14 +18,26 @@ enum BlockNoteBlockType {
   /// Heading block (h1, h2, h3).
   heading,
 
+  /// Quote block.
+  quote,
+
   /// Bullet list item.
   bulletListItem,
 
   /// Numbered list item.
   numberedListItem,
 
+  /// Check list item.
+  checkListItem,
+
+  /// Toggle list item.
+  toggleListItem,
+
   /// Code block.
   codeBlock,
+
+  /// Audio block.
+  audio,
 
   /// Image block.
   image,

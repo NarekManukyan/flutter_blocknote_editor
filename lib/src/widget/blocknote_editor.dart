@@ -6,6 +6,8 @@
 library;
 
 import 'dart:async';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../model/blocknote_document.dart';
@@ -401,6 +403,11 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
         return SizedBox(
           height: availableHeight,
           child: InAppWebView(
+            gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+              Factory<OneSequenceGestureRecognizer>(
+                () => EagerGestureRecognizer(),
+              ),
+            },
             initialUrlRequest: URLRequest(url: WebUri(_initialUrl!)),
             initialSettings: WebViewConfig.getDefaultSettings(),
             onWebViewCreated: (controller) {

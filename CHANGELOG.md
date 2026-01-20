@@ -1,3 +1,15 @@
+## 0.0.8
+
+* Added new block types to Dart models: quote, toggle list, check list, and audio.
+* Added typed slash command helpers with safe content escaping.
+* Updated example slash command usage to the new helpers.
+* Added eager gesture handling for the embedded WebView.
+* Updated toolbar popup handling to fully hide intercepted popups.
+* Prevented popup portal styling from touching Flutter-hidden popups.
+* Marked toggle heading options as toggleable in the web toolbar.
+* Updated embedded web editor bundle (`assets/web/editor.js`).
+* Disabled `unnecessary_ignore` to avoid generated-file lint noise.
+
 ## 0.0.7
 
 * Improved WebView sizing by using layout constraints for available height.

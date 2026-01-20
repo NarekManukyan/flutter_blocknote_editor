@@ -101,6 +101,22 @@ function App() {
   // Ensure popup portals can render correctly
   usePopupPortals();
 
+  // Determine if we should use custom toolbar
+  const useCustomToolbar =
+    toolbarConfig && toolbarConfig.buttons && toolbarConfig.enabled !== false;
+  const formattingToolbarComponent = useCustomToolbar
+    ? buildFormattingToolbar(toolbarConfig)
+    : null;
+
+  // Determine if we should use custom slash menu
+  const useCustomSlashMenu =
+    slashCommandConfig &&
+    slashCommandConfig.items &&
+    slashCommandConfig.enabled !== false;
+  const slashMenuComponent = useCustomSlashMenu
+    ? buildSlashMenuItems(slashCommandConfig, editor)
+    : null;
+
   if (error) {
     console.error('[BlockNote] App error:', error);
     return (
@@ -154,22 +170,6 @@ function App() {
   }
 
   console.log('[BlockNote] Rendering BlockNoteView with editor:', !!editor);
-
-  // Determine if we should use custom toolbar
-  const useCustomToolbar =
-    toolbarConfig && toolbarConfig.buttons && toolbarConfig.enabled !== false;
-  const formattingToolbarComponent = useCustomToolbar
-    ? buildFormattingToolbar(toolbarConfig)
-    : null;
-
-  // Determine if we should use custom slash menu
-  const useCustomSlashMenu =
-    slashCommandConfig &&
-    slashCommandConfig.items &&
-    slashCommandConfig.enabled !== false;
-  const slashMenuComponent = useCustomSlashMenu
-    ? buildSlashMenuItems(slashCommandConfig, editor)
-    : null;
 
   // Convert theme to BlockNote format if provided
   const blockNoteTheme = buildBlockNoteTheme(theme);

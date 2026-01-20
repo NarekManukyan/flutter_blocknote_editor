@@ -27,17 +27,26 @@ export const TOOLBAR_POPUP_OPTIONS = {
       id: 'heading_3',
     },
     {
-      value: JSON.stringify({ type: 'heading', props: { level: 1 } }),
+      value: JSON.stringify({
+        type: 'heading',
+        props: { level: 1, isToggleable: true },
+      }),
       label: 'Toggle Heading 1',
       id: 'toggle_heading_1',
     },
     {
-      value: JSON.stringify({ type: 'heading', props: { level: 2 } }),
+      value: JSON.stringify({
+        type: 'heading',
+        props: { level: 2, isToggleable: true },
+      }),
       label: 'Toggle Heading 2',
       id: 'toggle_heading_2',
     },
     {
-      value: JSON.stringify({ type: 'heading', props: { level: 3 } }),
+      value: JSON.stringify({
+        type: 'heading',
+        props: { level: 3, isToggleable: true },
+      }),
       label: 'Toggle Heading 3',
       id: 'toggle_heading_3',
     },

@@ -67,8 +67,32 @@ export function useToolbarPopup(editor, isReady, toolbarPopupCallbacksRef) {
               }
 
               if (popupType && options.length > 0) {
+                const hidePopupElement = (element) => {
+                  element.setAttribute('data-bn-flutter-hidden', 'true');
+                  element.style.setProperty('display', 'none', 'important');
+                  element.style.setProperty(
+                    'pointer-events',
+                    'none',
+                    'important',
+                  );
+                  element.style.setProperty(
+                    'visibility',
+                    'hidden',
+                    'important',
+                  );
+                  element.style.setProperty('opacity', '0', 'important');
+                };
+
+                const removeHiddenPopups = () => {
+                  document
+                    .querySelectorAll('[data-bn-flutter-hidden="true"]')
+                    .forEach((element) => {
+                      element.remove();
+                    });
+                };
+
                 // Hide the default popup
-                popup.style.display = 'none';
+                hidePopupElement(popup);
 
                 // Close any other popups
                 const existingPopups = document.querySelectorAll(
@@ -76,7 +100,7 @@ export function useToolbarPopup(editor, isReady, toolbarPopupCallbacksRef) {
                 );
                 existingPopups.forEach((p) => {
                   if (p !== popup) {
-                    p.style.display = 'none';
+                    hidePopupElement(p);
                   }
                 });
 
@@ -163,6 +187,7 @@ export function useToolbarPopup(editor, isReady, toolbarPopupCallbacksRef) {
                         }
                       }
                     }
+                    removeHiddenPopups();
                   },
                 );
               }

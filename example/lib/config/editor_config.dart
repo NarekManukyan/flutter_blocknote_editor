@@ -81,10 +81,9 @@ class EditorConfig {
   static BlockNoteSlashCommandConfig createCustomSlashCommands() {
     return BlockNoteSlashCommandConfig(
       items: [
-        BlockNoteSlashCommandItem(
+        BlockNoteSlashCommandItem.paragraph(
           title: 'Insert Hello World',
-          onItemClick:
-              "editor.insertBlocks([{type: 'paragraph', content: [{type: 'text', text: 'Hello World', styles: {bold: true}}]}], editor.getTextCursorPosition().block, 'after');",
+          content: 'Hello World',
           aliases: ['helloworld', 'hw'],
           group: 'Custom',
           subtext: 'Inserts a "Hello World" paragraph',

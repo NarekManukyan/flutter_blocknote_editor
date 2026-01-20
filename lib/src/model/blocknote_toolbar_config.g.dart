@@ -68,9 +68,13 @@ Map<String, dynamic> _$BlockNoteBlockTypeItemToJson(
 const _$BlockNoteBlockTypeEnumMap = {
   BlockNoteBlockType.paragraph: 'paragraph',
   BlockNoteBlockType.heading: 'heading',
+  BlockNoteBlockType.quote: 'quote',
   BlockNoteBlockType.bulletListItem: 'bulletListItem',
   BlockNoteBlockType.numberedListItem: 'numberedListItem',
+  BlockNoteBlockType.checkListItem: 'checkListItem',
+  BlockNoteBlockType.toggleListItem: 'toggleListItem',
   BlockNoteBlockType.codeBlock: 'codeBlock',
+  BlockNoteBlockType.audio: 'audio',
   BlockNoteBlockType.image: 'image',
   BlockNoteBlockType.video: 'video',
   BlockNoteBlockType.file: 'file',
