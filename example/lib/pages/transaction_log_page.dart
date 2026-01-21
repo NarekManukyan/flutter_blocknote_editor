@@ -139,14 +139,45 @@ class _TransactionCardState extends State<_TransactionCard> {
   String _extractBlockText(BlockNoteBlock? block) {
     if (block == null) return 'null';
 
-    if (block.content != null && block.content!.isNotEmpty) {
-      return block.content!
-          .map((item) => item.text)
+    final content = block.content;
+    if (content is BlockNoteInlineContentList &&
+        content.content.isNotEmpty) {
+      return content.content
+          .map(_extractInlineText)
           .where((text) => text.isNotEmpty)
           .join(' ');
     }
 
     return '(no text)';
+  }
+
+  String _extractInlineText(BlockNoteInlineContent content) {
+    if (content is BlockNoteTextContent) {
+      return content.text;
+    }
+    if (content is BlockNoteLinkContent) {
+      return content.content.map((item) => item.text).join(' ');
+    }
+    if (content is BlockNoteCustomInlineContent) {
+      return content.content?.map((item) => item.text).join(' ') ?? '';
+    }
+    return '';
+  }
+
+  int? _inlineContentCount(BlockNoteBlock block) {
+    final content = block.content;
+    if (content is BlockNoteInlineContentList) {
+      return content.content.length;
+    }
+    return null;
+  }
+
+  int? _tableRowCount(BlockNoteBlock block) {
+    final content = block.content;
+    if (content is BlockNoteTableBlockContent) {
+      return content.content.rows.length;
+    }
+    return null;
   }
 
   /// Formats block type for display.
@@ -266,11 +297,17 @@ class _TransactionCardState extends State<_TransactionCard> {
                                 'Text: ${_extractBlockText(op.block)}',
                                 style: const TextStyle(fontSize: 12),
                               ),
-                              if (op.block!.content != null &&
-                                  op.block!.content!.isNotEmpty) ...[
+                              if (_inlineContentCount(op.block!) != null) ...[
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Content items: ${op.block!.content!.length}',
+                                  'Content items: ${_inlineContentCount(op.block!)}',
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                              ],
+                              if (_tableRowCount(op.block!) != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Table rows: ${_tableRowCount(op.block!)}',
                                   style: const TextStyle(fontSize: 11),
                                 ),
                               ],

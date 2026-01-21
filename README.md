@@ -169,15 +169,14 @@ BlockNoteEditor(
       BlockNoteBlock(
         id: 'block1',
         type: BlockNoteBlockType.paragraph,
-        content: [
-          BlockNoteInlineContent(
-            type: BlockNoteInlineContentType.text,
-            text: 'Hello, BlockNote!',
-            styles: {
-              BlockNoteTextStyle.bold: true,
-            },
-          ),
-        ],
+        content: BlockNoteBlockContent.inline(
+          content: [
+            BlockNoteInlineContent.text(
+              text: 'Hello, BlockNote!',
+              styles: {'bold': true},
+            ),
+          ],
+        ),
       ),
       BlockNoteBlock(
         id: 'block2',
@@ -185,12 +184,11 @@ BlockNoteEditor(
         props: {
           'level': 1,
         },
-        content: [
-          BlockNoteInlineContent(
-            type: BlockNoteInlineContentType.text,
-            text: 'This is a heading',
-          ),
-        ],
+        content: BlockNoteBlockContent.inline(
+          content: [
+            BlockNoteInlineContent.text(text: 'This is a heading'),
+          ],
+        ),
       ),
     ],
   ),

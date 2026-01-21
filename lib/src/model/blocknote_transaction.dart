@@ -5,11 +5,7 @@
 /// batched before being sent to Flutter to prevent excessive rebuilds.
 library;
 
-import 'package:freezed_annotation/freezed_annotation.dart';
 import 'blocknote_block.dart';
-
-part 'blocknote_transaction.freezed.dart';
-part 'blocknote_transaction.g.dart';
 
 /// Transaction operation types.
 enum BlockNoteTransactionOperation {
@@ -29,29 +25,102 @@ enum BlockNoteTransactionOperation {
 /// A single transaction operation.
 ///
 /// Represents one operation in a transaction (insert, update, delete, move).
-@freezed
-sealed class BlockNoteTransactionOp with _$BlockNoteTransactionOp {
+class BlockNoteTransactionOp {
   /// Creates a new transaction operation.
-  const factory BlockNoteTransactionOp({
-    /// The type of operation.
-    required BlockNoteTransactionOperation operation,
+  const BlockNoteTransactionOp({
+    required this.operation,
+    required this.blockId,
+    this.block,
+    this.index,
+    this.parentId,
+  });
 
-    /// The ID of the block being operated on.
-    required String blockId,
+  /// The type of operation.
+  final BlockNoteTransactionOperation operation;
 
-    /// The block data (for insert/update operations).
-    BlockNoteBlock? block,
+  /// The ID of the block being operated on.
+  final String blockId;
 
-    /// The index position (for insert/move operations).
-    int? index,
+  /// The block data (for insert/update operations).
+  final BlockNoteBlock? block;
 
-    /// The parent block ID (for nested structures).
-    String? parentId,
-  }) = _BlockNoteTransactionOp;
+  /// The index position (for insert/move operations).
+  final int? index;
+
+  /// The parent block ID (for nested structures).
+  final String? parentId;
 
   /// Creates a BlockNoteTransactionOp from a JSON map.
-  factory BlockNoteTransactionOp.fromJson(Map<String, dynamic> json) =>
-      _$BlockNoteTransactionOpFromJson(json);
+  factory BlockNoteTransactionOp.fromJson(Map<String, dynamic> json) {
+    return BlockNoteTransactionOp(
+      operation:
+          BlockNoteTransactionOperation.values.byName(json['operation'] as String),
+      blockId: json['blockId'] as String? ?? '',
+      block: json['block'] == null
+          ? null
+          : BlockNoteBlock.fromJson(
+              Map<String, dynamic>.from(json['block'] as Map),
+            ),
+      index: json['index'] as int?,
+      parentId: json['parentId'] as String?,
+    );
+  }
+
+  /// Converts this transaction op to JSON.
+  Map<String, dynamic> toJson() {
+    final json = <String, dynamic>{
+      'operation': operation.name,
+      'blockId': blockId,
+    };
+    if (block != null) {
+      json['block'] = block!.toJson();
+    }
+    if (index != null) {
+      json['index'] = index;
+    }
+    if (parentId != null) {
+      json['parentId'] = parentId;
+    }
+    return json;
+  }
+
+  BlockNoteTransactionOp copyWith({
+    BlockNoteTransactionOperation? operation,
+    String? blockId,
+    Object? block = _unset,
+    Object? index = _unset,
+    Object? parentId = _unset,
+  }) {
+    return BlockNoteTransactionOp(
+      operation: operation ?? this.operation,
+      blockId: blockId ?? this.blockId,
+      block: identical(block, _unset) ? this.block : block as BlockNoteBlock?,
+      index: identical(index, _unset) ? this.index : index as int?,
+      parentId: identical(parentId, _unset)
+          ? this.parentId
+          : parentId as String?,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'BlockNoteTransactionOp(operation: $operation, blockId: $blockId, block: $block, index: $index, parentId: $parentId)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is BlockNoteTransactionOp &&
+            other.operation == operation &&
+            other.blockId == blockId &&
+            other.block == block &&
+            other.index == index &&
+            other.parentId == parentId;
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(operation, blockId, block, index, parentId);
 }
 
 /// A BlockNote transaction containing one or more operations.
@@ -60,21 +129,95 @@ sealed class BlockNoteTransactionOp with _$BlockNoteTransactionOp {
 /// emitted from the JavaScript editor and batched before being sent to
 /// Flutter. Each transaction includes a base version number for conflict
 /// resolution.
-@freezed
-sealed class BlockNoteTransaction with _$BlockNoteTransaction {
+class BlockNoteTransaction {
   /// Creates a new transaction instance.
-  const factory BlockNoteTransaction({
-    /// The base document version this transaction is based on.
-    required int baseVersion,
+  const BlockNoteTransaction({
+    required this.baseVersion,
+    required this.operations,
+    this.timestamp,
+  });
 
-    /// The operations in this transaction.
-    required List<BlockNoteTransactionOp> operations,
+  /// The base document version this transaction is based on.
+  final int baseVersion;
 
-    /// Optional timestamp when this transaction was created.
-    int? timestamp,
-  }) = _BlockNoteTransaction;
+  /// The operations in this transaction.
+  final List<BlockNoteTransactionOp> operations;
+
+  /// Optional timestamp when this transaction was created.
+  final int? timestamp;
 
   /// Creates a BlockNoteTransaction from a JSON map.
-  factory BlockNoteTransaction.fromJson(Map<String, dynamic> json) =>
-      _$BlockNoteTransactionFromJson(json);
+  factory BlockNoteTransaction.fromJson(Map<String, dynamic> json) {
+    return BlockNoteTransaction(
+      baseVersion: json['baseVersion'] as int? ?? 0,
+      operations: (json['operations'] as List<dynamic>? ?? [])
+          .whereType<Map>()
+          .map((op) => BlockNoteTransactionOp.fromJson(
+                Map<String, dynamic>.from(op),
+              ))
+          .toList(),
+      timestamp: json['timestamp'] as int?,
+    );
+  }
+
+  /// Converts this transaction to JSON.
+  Map<String, dynamic> toJson() {
+    final json = <String, dynamic>{
+      'baseVersion': baseVersion,
+      'operations': operations.map((op) => op.toJson()).toList(),
+    };
+    if (timestamp != null) {
+      json['timestamp'] = timestamp;
+    }
+    return json;
+  }
+
+  BlockNoteTransaction copyWith({
+    int? baseVersion,
+    List<BlockNoteTransactionOp>? operations,
+    Object? timestamp = _unset,
+  }) {
+    return BlockNoteTransaction(
+      baseVersion: baseVersion ?? this.baseVersion,
+      operations: operations ?? this.operations,
+      timestamp: identical(timestamp, _unset) ? this.timestamp : timestamp as int?,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'BlockNoteTransaction(baseVersion: $baseVersion, operations: $operations, timestamp: $timestamp)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is BlockNoteTransaction &&
+            other.baseVersion == baseVersion &&
+            _listEquals(other.operations, operations) &&
+            other.timestamp == timestamp;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        baseVersion,
+        _listHash(operations),
+        timestamp,
+      );
+}
+
+const Object _unset = Object();
+
+bool _listEquals<T>(List<T>? a, List<T>? b) {
+  if (identical(a, b)) return true;
+  if (a == null || b == null || a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
+}
+
+int _listHash<T>(List<T>? list) {
+  if (list == null) return 0;
+  return Object.hashAll(list);
 }

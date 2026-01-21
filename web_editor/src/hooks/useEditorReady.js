@@ -26,64 +26,126 @@ export function useEditorReady(
   // Debounce delay in milliseconds (300ms default)
   const DEBOUNCE_DELAY = 300;
 
-  // Helper function to serialize a block for transmission
-  const serializeBlock = useCallback((block) => {
-    const serializeBlockInner = (node) => {
-      if (!node) return null;
-
-      const serialized = {
-        id: node.id,
-        type: node.type,
-      };
-
-      // Include content if present
-      if (node.content && Array.isArray(node.content)) {
-        serialized.content = node.content.map((item) => {
-          const contentItem = {
-            type: item.type || 'text',
-            text: item.text || '',
-          };
-
-          // Include styles if present
-          if (item.styles && typeof item.styles === 'object') {
-            contentItem.styles = item.styles;
-          }
-
-          // Include href for links
-          if (item.href != null) {
-            contentItem.href = item.href;
-          }
-
-          // Include mentionId for mentions
-          if (item.mentionId != null) {
-            contentItem.mentionId = item.mentionId;
-          }
-
-          return contentItem;
-        });
-      }
-
-      // Include props if present
-      if (node.props && typeof node.props === 'object') {
-        serialized.props = node.props;
-      }
-
-      // Include children if present (recursively)
-      if (
-        node.children &&
-        Array.isArray(node.children) &&
-        node.children.length > 0
-      ) {
-        serialized.children = node.children
-          .map((child) => serializeBlockInner(child))
-          .filter(Boolean);
-      }
-
-      return serialized;
+  const serializeStyledText = useCallback((item) => {
+    if (!item) return null;
+    const serialized = {
+      type: 'text',
+      text: item.text || '',
     };
 
-    return serializeBlockInner(block);
+    if (item.styles && typeof item.styles === 'object') {
+      serialized.styles = item.styles;
+    }
+
+    return serialized;
   }, []);
+
+  const serializeInlineContent = useCallback(
+    (item) => {
+      if (!item) return null;
+      const itemType = item.type || 'text';
+
+      if (itemType === 'text') {
+        return serializeStyledText(item);
+      }
+
+      if (itemType === 'link') {
+        const linkContent = Array.isArray(item.content)
+          ? item.content
+              .map((entry) => serializeStyledText(entry))
+              .filter(Boolean)
+          : [];
+
+        return {
+          type: 'link',
+          content: linkContent,
+          href: item.href || '',
+        };
+      }
+
+      const customContent = Array.isArray(item.content)
+        ? item.content
+            .map((entry) => serializeStyledText(entry))
+            .filter(Boolean)
+        : null;
+
+      return {
+        type: itemType,
+        ...(customContent ? { content: customContent } : {}),
+        props: item.props && typeof item.props === 'object' ? item.props : {},
+      };
+    },
+    [serializeStyledText],
+  );
+
+  const serializeTableContent = useCallback(
+    (tableContent) => {
+      const rows = Array.isArray(tableContent?.rows) ? tableContent.rows : [];
+      return {
+        type: 'tableContent',
+        rows: rows.map((row) => {
+          const cells = Array.isArray(row?.cells) ? row.cells : [];
+          return {
+            cells: cells.map((cell) => {
+              if (!Array.isArray(cell)) return [];
+              return cell
+                .map((cellItem) => serializeInlineContent(cellItem))
+                .filter(Boolean);
+            }),
+          };
+        }),
+      };
+    },
+    [serializeInlineContent],
+  );
+
+  // Helper function to serialize a block for transmission
+  const serializeBlock = useCallback(
+    (block) => {
+      const serializeBlockInner = (node) => {
+        if (!node) return null;
+
+        const serialized = {
+          id: node.id,
+          type: node.type,
+        };
+
+        // Include content if present
+        if (node.content && Array.isArray(node.content)) {
+          serialized.content = node.content
+            .map((item) => serializeInlineContent(item))
+            .filter(Boolean);
+        } else if (
+          node.content &&
+          typeof node.content === 'object' &&
+          node.content.type === 'tableContent'
+        ) {
+          serialized.content = serializeTableContent(node.content);
+        }
+
+        // Include props if present
+        if (node.props && typeof node.props === 'object') {
+          serialized.props = node.props;
+        }
+
+        // Include children if present (recursively)
+        if (
+          node.children &&
+          Array.isArray(node.children) &&
+          node.children.length > 0
+        ) {
+          serialized.children = node.children
+            .map((child) => serializeBlockInner(child))
+            .filter(Boolean);
+        }
+
+        return serialized;
+      };
+
+      return serializeBlockInner(block);
+    },
+    [serializeInlineContent, serializeTableContent],
+  );
 
   const getSelectionVisibility = useCallback((view, root) => {
     if (!view || !root) return null;
@@ -114,8 +176,8 @@ export function useEditorReady(
       if (left.type !== right.type) return false;
 
       // Compare content
-      const content1 = JSON.stringify(left.content || []);
-      const content2 = JSON.stringify(right.content || []);
+      const content1 = JSON.stringify(left.content ?? null);
+      const content2 = JSON.stringify(right.content ?? null);
       if (content1 !== content2) return false;
 
       // Compare props
