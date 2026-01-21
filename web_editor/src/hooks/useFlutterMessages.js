@@ -9,20 +9,27 @@ import { injectCustomCss } from '../utils/cssInjector';
 import { handleToolbarPopupResponse } from '../utils/toolbarPopupHandler';
 
 /**
- * Custom hook to handle messages from Flutter.
- * @param {Object} editor - The BlockNote editor instance
- * @param {Function} setIsReadonly - Function to set read-only state
- * @param {Function} setTheme - Function to set theme
- * @param {Function} setToolbarConfig - Function to set toolbar config
- * @param {Function} setSlashCommandConfig - Function to set slash command config
- * @param {Function} setSchemaConfig - Function to set schema config
- * @param {Function} setSchemaConfigReady - Function to set schema config ready
- * @param {Function} setSchemaConfigRequired - Function to set schema required
- * @param {Object} documentVersionRef - Ref to track document version
- * @param {Object} hasLoadedDocumentRef - Ref to track if document was loaded
- * @param {Object} toolbarPopupCallbacksRef - Ref to store popup callbacks
- * @param {Object} pendingDocumentRef - Ref to store pending documents
- * @param {Object} schemaChangePendingRef - Ref to track schema updates
+ * Wire incoming Flutter messages to the editor and UI state handlers.
+ *
+ * Registers a window 'flutterMessage' listener and dispatches message payloads
+ * to editor-related handlers. Supports document loading (with optional
+ * deferral while a schema update is pending), applying schema configuration
+ * and readiness flags, forcing transaction flushes, theme/config updates,
+ * webview height updates, injecting CSS, and routing toolbar popup responses.
+ *
+ * @param {Object} editor - The BlockNote editor instance.
+ * @param {Function} setIsReadonly - Setter for read-only state.
+ * @param {Function} setTheme - Setter for theme.
+ * @param {Function} setToolbarConfig - Setter for toolbar configuration.
+ * @param {Function} setSlashCommandConfig - Setter for slash command configuration.
+ * @param {Function} setSchemaConfig - Setter for schema configuration (may receive null).
+ * @param {Function} setSchemaConfigReady - Setter to mark schema config as ready.
+ * @param {Function} setSchemaConfigRequired - Setter to mark whether schema config is required.
+ * @param {Object} documentVersionRef - Ref used to track the current document version.
+ * @param {Object} hasLoadedDocumentRef - Ref indicating whether a document has been loaded.
+ * @param {Object} toolbarPopupCallbacksRef - Ref storing callbacks for toolbar popup responses.
+ * @param {Object} pendingDocumentRef - Ref used to hold a document payload when loading is deferred.
+ * @param {Object} schemaChangePendingRef - Ref indicating whether a schema update is in progress.
  */
 export function useFlutterMessages(
   editor,

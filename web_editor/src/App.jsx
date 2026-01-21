@@ -62,6 +62,14 @@ BlockNoteErrorBoundary.propTypes = {
   children: PropTypes.node.isRequired,
 };
 
+/**
+ * Creates a BlockNote editor instance from a schema configuration and forwards the instance to a parent via callback.
+ *
+ * Calls `onEditorChange` with the created editor when available and calls `onEditorChange(null)` on cleanup or when the editor changes.
+ *
+ * @param {Object|null} schemaConfig - Configuration object used to initialize the BlockNote editor; may be null to indicate no schema.
+ * @param {(editor: Object|null) => void} onEditorChange - Callback invoked with the editor instance or `null` when the editor is disposed or unavailable.
+ */
 function EditorHost({ schemaConfig, onEditorChange }) {
   const editor = useBlockNoteEditor(schemaConfig);
 
@@ -80,6 +88,14 @@ EditorHost.propTypes = {
   onEditorChange: PropTypes.func.isRequired,
 };
 
+/**
+ * Top-level React component that initializes and coordinates the BlockNote editor, its configuration, and related UI states.
+ *
+ * Manages editor lifecycle and readiness, applies theme and custom toolbar/slash-menu configurations, handles incoming messages
+ * (e.g., from Flutter) and document loading, and renders the editor or appropriate loading/error UI.
+ *
+ * @returns {JSX.Element} The root UI element containing the BlockNote editor, or a loading/error view when applicable.
+ */
 function App() {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);

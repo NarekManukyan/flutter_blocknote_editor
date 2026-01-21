@@ -7,8 +7,11 @@ import { useEffect, useMemo } from 'react';
 import { buildSchemaFromConfig } from '../utils/schemaRegistry';
 
 /**
- * Custom hook to initialize BlockNote editor and set up lifecycle.
- * @returns {Object} Editor instance
+ * Initialize a BlockNote editor instance using the provided schema configuration and expose it on window.editor while mounted.
+ *
+ * Exposes the created editor on `window.editor` for external (e.g., Flutter) access and removes that reference on cleanup.
+ * @param {Object} schemaConfig - Configuration used to build the editor schema.
+ * @returns {Object|undefined} The BlockNote editor instance, or `undefined` if the editor has not been created yet.
  */
 export function useBlockNoteEditor(schemaConfig) {
   const schema = useMemo(

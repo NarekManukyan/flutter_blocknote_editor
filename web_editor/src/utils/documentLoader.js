@@ -4,11 +4,18 @@
  */
 
 /**
- * Loads a document into the BlockNote editor.
- * @param {Object} editor - The BlockNote editor instance
- * @param {Object|string} documentData - Document data (object or JSON string)
- * @param {Object} documentVersionRef - Ref object to track document version
- * @param {Object} hasLoadedDocumentRef - Ref object to track if document was loaded
+ * Load and apply document data into a BlockNote editor instance.
+ *
+ * Parses and validates `documentData` (object or JSON string), normalizes blocks
+ * and inline content, replaces the editor's blocks when possible, updates
+ * `documentVersionRef.current` when a version is present, sets
+ * `hasLoadedDocumentRef.current` to true after a successful load, and posts an
+ * error message to `window.BlockNoteChannel` on failure.
+ *
+ * @param {Object} editor - The BlockNote editor instance to receive the document.
+ * @param {Object|string} documentData - Document payload as an object or a JSON string.
+ * @param {Object} documentVersionRef - Ref object whose `current` will be set to the document version (major or numeric) when available.
+ * @param {Object} hasLoadedDocumentRef - Ref object whose `current` will be set to `true` after the document is loaded.
  */
 export function loadDocument(
   editor,
