@@ -200,6 +200,10 @@ window.handleFlutterMessage = function (messageData) {
       message = messageData;
     }
 
+    if (message?.type === 'set_schema_config') {
+      window.__blockNotePendingSchemaConfig = message;
+    }
+
     // Dispatch custom event for React components to listen to
     window.dispatchEvent(
       new CustomEvent('flutterMessage', { detail: message }),

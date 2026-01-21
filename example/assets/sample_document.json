@@ -37,6 +37,37 @@
       }
     },
     {
+      "id": "block_agenda_1",
+      "type": "agenda_item",
+      "props": {
+        "id": "7673d6b03bb3431fb64a2e700eb58758",
+        "permission": "edit",
+        "label": "block",
+        "block_type": "agenda_item",
+        "resources": [],
+        "children": [],
+        "associated_to": [],
+        "$version": 2,
+        "content": {
+          "expires_at": null,
+          "user_id": 46839,
+          "updated_at": "2026-01-19T08:27:08+00:00",
+          "deleted_at": null,
+          "title": "showing the notes data on mobile - quick easy and cheap - Narek",
+          "created_by": {
+            "last_name": "Gyumjibashyan",
+            "photo": "https://lh3.googleusercontent.com/a/ACg8ocKoV-M9InQWGokK6_UJhydNoFMLW-7iNyl8KtjB6oNju2OH8t0=s96-c",
+            "id": 46839,
+            "first_name": "Karapet",
+            "email": "karapet@krisp.ai"
+          },
+          "completed": true,
+          "workspace_id": 380,
+          "created_at": "2026-01-19T05:04:41+00:00"
+        }
+      }
+    },
+    {
       "id": "block4",
       "type": "bulletListItem",
       "content": [

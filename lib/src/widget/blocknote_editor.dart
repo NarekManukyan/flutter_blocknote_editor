@@ -55,7 +55,13 @@ class BlockNoteEditor extends StatefulWidget {
     this.theme,
     this.toolbarConfig,
     this.slashCommandConfig,
+    this.schemaConfig,
+    this.schemaConfigs,
+    this.activeSchemaId,
+    this.customJavaScript,
+    this.customJavaScriptAssetPaths,
     this.customCss,
+    this.customCssAssetPaths,
     this.onToolbarPopupRequest,
     super.key,
   });
@@ -104,6 +110,26 @@ class BlockNoteEditor extends StatefulWidget {
   /// Slash command configuration for customizing slash menu items.
   final BlockNoteSlashCommandConfig? slashCommandConfig;
 
+  /// Schema configuration for enabling custom blocks, inline content, or styles.
+  final Map<String, dynamic>? schemaConfig;
+
+  /// Schema configurations keyed by an identifier.
+  ///
+  /// Use [activeSchemaId] to select which schema config to apply.
+  final Map<String, Map<String, dynamic>>? schemaConfigs;
+
+  /// Active schema identifier used with [schemaConfigs].
+  final String? activeSchemaId;
+
+  /// Custom JavaScript to run in the editor context.
+  ///
+  /// Use this to register custom BlockNote blocks or schema extensions
+  /// without forking the web editor bundle.
+  final String? customJavaScript;
+
+  /// Asset paths containing custom JavaScript to load into the editor context.
+  final List<String>? customJavaScriptAssetPaths;
+
   /// Custom CSS to inject into the editor (e.g., for @font-face declarations).
   ///
   /// This CSS is injected into the document head and can be used to define
@@ -119,6 +145,9 @@ class BlockNoteEditor extends StatefulWidget {
   /// ```
   final String? customCss;
 
+  /// Asset paths containing custom CSS to inject into the editor.
+  final List<String>? customCssAssetPaths;
+
   @override
   State<BlockNoteEditor> createState() => _BlockNoteEditorState();
 }
@@ -130,6 +159,9 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
   AssetServer? _assetServer;
   bool _isReady = false;
   bool _hasLoadedDocument = false;
+  bool _hasPreloadedCustomJavaScript = false;
+  bool _hasPreloadedCustomCss = false;
+  bool _hasPreloadedSchemaConfig = false;
   double _lastKeyboardHeight = 0;
   double _lastAvailableHeight = 0;
   String? _initialUrl;
@@ -226,10 +258,19 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
 
     try {
       await DocumentLoader.loadInitialDocument(
-        widget: widget,
-        bridge: _bridge!,
-        context: context,
-        debugLogging: widget.debugLogging,
+        DocumentLoadRequest(
+          widget: widget,
+          bridge: _bridge!,
+          context: context,
+          debugLogging: widget.debugLogging,
+          options: DocumentLoadOptions(
+            applySchemaConfig: !_hasPreloadedSchemaConfig,
+            applyCustomJavaScript: !_hasPreloadedCustomJavaScript,
+            applyCustomJavaScriptAssets: !_hasPreloadedCustomJavaScript,
+            applyCustomCss: !_hasPreloadedCustomCss,
+            applyCustomCssAssets: !_hasPreloadedCustomCss,
+          ),
+        ),
       );
 
       // Ensure WebView height is updated after document loads
@@ -364,6 +405,20 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
       }
     }
 
+    // Update schema config if it changed
+    if ((oldWidget.schemaConfig != widget.schemaConfig ||
+            oldWidget.schemaConfigs != widget.schemaConfigs ||
+            oldWidget.activeSchemaId != widget.activeSchemaId) &&
+        _bridge != null) {
+      _hasLoadedDocument = false;
+      _isReady = false;
+      _hasPreloadedSchemaConfig = false;
+      final resolvedSchemaConfig = _resolveSchemaConfig();
+      if (resolvedSchemaConfig != null) {
+        _bridge!.setSchemaConfig(resolvedSchemaConfig);
+      }
+    }
+
     // Update custom CSS if it changed (from customCss or theme font)
     final oldCss = CssUtils.getEffectiveCss(oldWidget);
     final newCss = CssUtils.getEffectiveCss(widget);
@@ -372,6 +427,112 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
         _bridge!.injectCustomCss(newCss);
       }
     }
+
+    // Update custom JavaScript if it changed
+    if (oldWidget.customJavaScript != widget.customJavaScript &&
+        _bridge != null) {
+      final script = widget.customJavaScript;
+      if (script != null && script.isNotEmpty) {
+        _hasPreloadedCustomJavaScript = false;
+        _bridge!.evaluateJavaScript(script);
+      }
+    }
+
+    // Update custom JavaScript assets if they changed
+    if (oldWidget.customJavaScriptAssetPaths !=
+            widget.customJavaScriptAssetPaths &&
+        _bridge != null) {
+      _hasPreloadedCustomJavaScript = false;
+      _applyCustomJavaScriptAssets();
+    }
+
+    // Update custom CSS assets if they changed
+    if (oldWidget.customCssAssetPaths != widget.customCssAssetPaths &&
+        _bridge != null) {
+      _hasPreloadedCustomCss = false;
+      _applyCustomCssAssets();
+    }
+  }
+
+  Future<void> _preloadEditorConfiguration() async {
+    if (_bridge == null) {
+      return;
+    }
+
+    if (!_hasPreloadedCustomJavaScript) {
+      final script = widget.customJavaScript;
+      if (script != null && script.isNotEmpty) {
+        await _bridge!.evaluateJavaScript(script);
+      }
+      await _applyCustomJavaScriptAssets();
+      _hasPreloadedCustomJavaScript = true;
+    }
+
+    if (!_hasPreloadedCustomCss) {
+      final css = widget.customCss;
+      if (css != null && css.isNotEmpty) {
+        await _bridge!.injectCustomCss(css);
+      }
+      await _applyCustomCssAssets();
+      _hasPreloadedCustomCss = true;
+    }
+
+    if (!_hasPreloadedSchemaConfig) {
+      final resolvedSchemaConfig = _resolveSchemaConfig();
+      final hasSchemaConfig = resolvedSchemaConfig != null ||
+          (widget.schemaConfigs != null && widget.schemaConfigs!.isNotEmpty);
+      await _bridge!.setSchemaConfig(
+        resolvedSchemaConfig,
+        isRequired: hasSchemaConfig,
+      );
+      _hasPreloadedSchemaConfig = true;
+    }
+  }
+
+  Map<String, dynamic>? _resolveSchemaConfig() {
+    final configs = widget.schemaConfigs;
+    if (configs != null && configs.isNotEmpty) {
+      final activeId = widget.activeSchemaId;
+      if (activeId != null && configs.containsKey(activeId)) {
+        return configs[activeId];
+      }
+      return configs.values.first;
+    }
+    return widget.schemaConfig;
+  }
+
+  Future<void> _applyCustomJavaScriptAssets() async {
+    final bridge = _bridge;
+    if (bridge == null) {
+      return;
+    }
+    final scripts = await DocumentLoader.loadAssets(
+      widget.customJavaScriptAssetPaths,
+    );
+    for (final script in scripts) {
+      if (script.isEmpty) {
+        continue;
+      }
+      await bridge.evaluateJavaScript(script);
+    }
+  }
+
+  Future<void> _applyCustomCssAssets() async {
+    final bridge = _bridge;
+    if (bridge == null) {
+      return;
+    }
+    final stylesheets = await DocumentLoader.loadAssets(
+      widget.customCssAssetPaths,
+    );
+    if (stylesheets.isEmpty) {
+      return;
+    }
+    final combinedCss = stylesheets.where((css) => css.isNotEmpty).join('\n');
+    if (combinedCss.isEmpty) {
+      return;
+    }
+    await bridge.injectCustomCss(combinedCss);
   }
 
   @override
@@ -445,6 +606,7 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
                 controller: controller,
                 debugLogging: widget.debugLogging,
               );
+              await _preloadEditorConfiguration();
             },
             onReceivedError: (controller, request, error) {
               if (widget.debugLogging) {

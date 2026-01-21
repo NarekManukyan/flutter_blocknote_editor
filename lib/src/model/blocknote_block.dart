@@ -524,6 +524,7 @@ class BlockNoteBlock {
   const BlockNoteBlock({
     required this.id,
     required this.type,
+    this.customType,
     this.content,
     this.props,
     this.children,
@@ -534,6 +535,9 @@ class BlockNoteBlock {
 
   /// The type of this block.
   final BlockNoteBlockType type;
+
+  /// Custom block type name when [type] is [BlockNoteBlockType.custom].
+  final String? customType;
 
   /// Content of this block (inline content or table content).
   final BlockNoteBlockContent? content;
@@ -546,9 +550,15 @@ class BlockNoteBlock {
 
   /// Creates a BlockNoteBlock from a JSON map.
   factory BlockNoteBlock.fromJson(Map<String, dynamic> json) {
+    final typeName = json['type'] as String? ?? '';
+    final parsedType = BlockNoteBlockType.values.firstWhere(
+      (type) => type.name == typeName,
+      orElse: () => BlockNoteBlockType.custom,
+    );
     return BlockNoteBlock(
       id: json['id'] as String? ?? '',
-      type: BlockNoteBlockType.values.byName(json['type'] as String),
+      type: parsedType,
+      customType: parsedType == BlockNoteBlockType.custom ? typeName : null,
       content: _blockContentFromJson(json['content']),
       props: _mapFromJson(json['props']),
       children: (json['children'] as List<dynamic>?)
@@ -562,9 +572,13 @@ class BlockNoteBlock {
 
   /// Converts this block to JSON.
   Map<String, dynamic> toJson() {
+    final resolvedType =
+        type == BlockNoteBlockType.custom && customType != null
+            ? customType!
+            : type.name;
     final json = <String, dynamic>{
       'id': id,
-      'type': type.name,
+      'type': resolvedType,
     };
     final contentJson = _blockContentToJson(content);
     if (contentJson != null) {
@@ -582,6 +596,7 @@ class BlockNoteBlock {
   BlockNoteBlock copyWith({
     String? id,
     BlockNoteBlockType? type,
+    Object? customType = _unset,
     Object? content = _unset,
     Object? props = _unset,
     Object? children = _unset,
@@ -589,6 +604,9 @@ class BlockNoteBlock {
     return BlockNoteBlock(
       id: id ?? this.id,
       type: type ?? this.type,
+      customType: identical(customType, _unset)
+          ? this.customType
+          : customType as String?,
       content: identical(content, _unset)
           ? this.content
           : content as BlockNoteBlockContent?,
@@ -603,7 +621,7 @@ class BlockNoteBlock {
 
   @override
   String toString() {
-    return 'BlockNoteBlock(id: $id, type: $type, content: $content, props: $props, children: $children)';
+    return 'BlockNoteBlock(id: $id, type: $type, customType: $customType, content: $content, props: $props, children: $children)';
   }
 
   @override
@@ -612,6 +630,7 @@ class BlockNoteBlock {
         other is BlockNoteBlock &&
             other.id == id &&
             other.type == type &&
+            other.customType == customType &&
             other.content == content &&
             _mapEquals(other.props, props) &&
             _listEquals(other.children, children);
@@ -621,6 +640,7 @@ class BlockNoteBlock {
   int get hashCode => Object.hash(
         id,
         type,
+        customType,
         content,
         _mapHash(props),
         _listHash(children),

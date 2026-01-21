@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef } from 'react';
  * @param {Object} documentVersionRef - Ref to track document version
  * @param {Function} setIsLoading - Function to set loading state
  * @param {Function} setError - Function to set error state
+ * @param {boolean} allowMissingEditor - Whether to skip error if editor missing
  * @returns {boolean} Whether editor is ready
  */
 export function useEditorReady(
@@ -17,6 +18,7 @@ export function useEditorReady(
   documentVersionRef,
   setIsLoading,
   setError,
+  allowMissingEditor,
 ) {
   const isReadyRef = useRef(false);
   const debounceTimeoutRef = useRef(null);
@@ -386,6 +388,10 @@ export function useEditorReady(
 
   useEffect(() => {
     if (!editor) {
+      if (allowMissingEditor) {
+        setIsLoading(true);
+        return;
+      }
       setError('Editor not created');
       setIsLoading(false);
       return;
@@ -532,6 +538,7 @@ export function useEditorReady(
     setIsLoading,
     setError,
     sendTransactions,
+    allowMissingEditor,
   ]);
 
   return isReady;
