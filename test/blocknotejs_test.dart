@@ -1,6 +1,28 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_blocknote_editor/flutter_blocknote_editor.dart';
 
+List<BlockNoteInlineContent>? _inlineContent(BlockNoteBlock block) {
+  final content = block.content;
+  if (content is BlockNoteInlineContentList) {
+    return content.content;
+  }
+  return null;
+}
+
+String? _inlineText(BlockNoteInlineContent? content) {
+  if (content is BlockNoteTextContent) {
+    return content.text;
+  }
+  return null;
+}
+
+Map<String, dynamic>? _inlineStyles(BlockNoteInlineContent? content) {
+  if (content is BlockNoteTextContent) {
+    return content.styles;
+  }
+  return null;
+}
+
 void main() {
   group('BlockNoteEditor', () {
     test('should create empty document', () {
@@ -15,25 +37,22 @@ void main() {
           BlockNoteBlock(
             id: 'block1',
             type: BlockNoteBlockType.paragraph,
-            content: [
-              BlockNoteInlineContent(
-                type: BlockNoteInlineContentType.text,
-                text: 'Test content',
-              ),
-            ],
+            content: BlockNoteBlockContent.inline(
+              content: [
+                BlockNoteInlineContent.text(text: 'Test content'),
+              ],
+            ),
           ),
         ],
       );
 
       final json = document.toJson();
       final deserialized = BlockNoteDocument.fromJson(json);
+      final inlineContent = _inlineContent(deserialized.blocks.first);
 
       expect(deserialized.blocks.length, equals(1));
       expect(deserialized.blocks.first.id, equals('block1'));
-      expect(
-        deserialized.blocks.first.content?.first.text,
-        equals('Test content'),
-      );
+      expect(_inlineText(inlineContent?.first), equals('Test content'));
     });
 
     test('should serialize and deserialize transaction', () {
@@ -46,12 +65,11 @@ void main() {
             block: BlockNoteBlock(
               id: 'block1',
               type: BlockNoteBlockType.paragraph,
-              content: [
-                BlockNoteInlineContent(
-                  type: BlockNoteInlineContentType.text,
-                  text: 'New block',
-                ),
-              ],
+              content: BlockNoteBlockContent.inline(
+                content: [
+                  BlockNoteInlineContent.text(text: 'New block'),
+                ],
+              ),
             ),
             index: 0,
           ),
@@ -76,22 +94,24 @@ void main() {
       final block = BlockNoteBlock(
         id: 'block1',
         type: BlockNoteBlockType.heading,
-        content: [
-          BlockNoteInlineContent(
-            type: BlockNoteInlineContentType.text,
-            text: 'Heading',
-            styles: {'bold': true},
-          ),
-        ],
+        content: BlockNoteBlockContent.inline(
+          content: [
+            BlockNoteInlineContent.text(
+              text: 'Heading',
+              styles: {'bold': true},
+            ),
+          ],
+        ),
         props: {'level': 1},
       );
 
       final json = block.toJson();
       final deserialized = BlockNoteBlock.fromJson(json);
+      final inlineContent = _inlineContent(deserialized);
 
       expect(deserialized.type, equals(BlockNoteBlockType.heading));
-      expect(deserialized.content?.first.text, equals('Heading'));
-      expect(deserialized.content?.first.styles?['bold'], isTrue);
+      expect(_inlineText(inlineContent?.first), equals('Heading'));
+      expect(_inlineStyles(inlineContent?.first)?['bold'], isTrue);
       expect(deserialized.props?['level'], equals(1));
     });
 
@@ -99,22 +119,20 @@ void main() {
       final block = BlockNoteBlock(
         id: 'parent',
         type: BlockNoteBlockType.bulletListItem,
-        content: [
-          BlockNoteInlineContent(
-            type: BlockNoteInlineContentType.text,
-            text: 'Parent item',
-          ),
-        ],
+        content: BlockNoteBlockContent.inline(
+          content: [
+            BlockNoteInlineContent.text(text: 'Parent item'),
+          ],
+        ),
         children: [
           BlockNoteBlock(
             id: 'child',
             type: BlockNoteBlockType.bulletListItem,
-            content: [
-              BlockNoteInlineContent(
-                type: BlockNoteInlineContentType.text,
-                text: 'Child item',
-              ),
-            ],
+            content: BlockNoteBlockContent.inline(
+              content: [
+                BlockNoteInlineContent.text(text: 'Child item'),
+              ],
+            ),
           ),
         ],
       );
@@ -132,12 +150,11 @@ void main() {
           BlockNoteBlock(
             id: 'block1',
             type: BlockNoteBlockType.paragraph,
-            content: [
-              BlockNoteInlineContent(
-                type: BlockNoteInlineContentType.text,
-                text: 'Test',
-              ),
-            ],
+            content: BlockNoteBlockContent.inline(
+              content: [
+                BlockNoteInlineContent.text(text: 'Test'),
+              ],
+            ),
           ),
         ],
         version: const BlockNoteDocumentVersion(major: 1, minor: 0, patch: 0),
@@ -175,12 +192,13 @@ void main() {
       };
 
       final document = BlockNoteDocument.fromJson(jsonData);
+      final inlineContent = _inlineContent(document.blocks[1]);
 
       expect(document.blocks.length, equals(2));
       expect(document.blocks.first.type, equals(BlockNoteBlockType.heading));
-      expect(document.blocks[1].content?.first.text, equals('Test content'));
+      expect(_inlineText(inlineContent?.first), equals('Test content'));
       // Empty styles map should be treated as null or empty map
-      expect(document.blocks[1].content?.first.styles, anyOf(isNull, isEmpty));
+      expect(_inlineStyles(inlineContent?.first), anyOf(isNull, isEmpty));
     });
 
     test('should parse complex document with various block types', () {
@@ -307,6 +325,7 @@ void main() {
       };
 
       final document = BlockNoteDocument.fromJson(jsonData);
+      final block8Content = _inlineContent(document.blocks[7]);
 
       expect(document.blocks.length, equals(11));
       expect(document.blocks[0].type, equals(BlockNoteBlockType.heading));
@@ -316,10 +335,10 @@ void main() {
         document.blocks[3].type,
         equals(BlockNoteBlockType.bulletListItem),
       );
-      expect(document.blocks[7].content?.length, equals(7));
-      expect(document.blocks[7].content?[1].styles?['bold'], isTrue);
-      expect(document.blocks[7].content?[3].styles?['italic'], isTrue);
-      expect(document.blocks[7].content?[5].styles?['underline'], isTrue);
+      expect(block8Content?.length, equals(7));
+      expect(_inlineStyles(block8Content?[1])?['bold'], isTrue);
+      expect(_inlineStyles(block8Content?[3])?['italic'], isTrue);
+      expect(_inlineStyles(block8Content?[5])?['underline'], isTrue);
       expect(
         document.blocks[8].type,
         equals(BlockNoteBlockType.numberedListItem),
@@ -345,11 +364,12 @@ void main() {
       };
 
       final document = BlockNoteDocument.fromJson(jsonData);
+      final inlineContent = _inlineContent(document.blocks.first);
 
-      expect(document.blocks.first.content?.length, equals(2));
-      expect(document.blocks.first.content?.first.styles, isNull);
-      expect(document.blocks.first.content?[1].styles?['bold'], isTrue);
-      expect(document.blocks.first.content?[1].styles?['italic'], isFalse);
+      expect(inlineContent?.length, equals(2));
+      expect(_inlineStyles(inlineContent?.first), isNull);
+      expect(_inlineStyles(inlineContent?[1])?['bold'], isTrue);
+      expect(_inlineStyles(inlineContent?[1])?['italic'], isFalse);
     });
 
     test('should handle blocks without content', () {
@@ -432,11 +452,12 @@ void main() {
       final document = BlockNoteDocument.fromJson(originalJson);
       final serialized = document.toJson();
       final deserialized = BlockNoteDocument.fromJson(serialized);
+      final inlineContent = _inlineContent(deserialized.blocks[1]);
 
       expect(deserialized.blocks.length, equals(2));
       expect(deserialized.blocks[0].type, equals(BlockNoteBlockType.heading));
-      expect(deserialized.blocks[1].content?.length, equals(3));
-      expect(deserialized.blocks[1].content?[1].styles?['bold'], isTrue);
+      expect(inlineContent?.length, equals(3));
+      expect(_inlineStyles(inlineContent?[1])?['bold'], isTrue);
     });
   });
 }

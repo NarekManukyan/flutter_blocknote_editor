@@ -4,42 +4,44 @@
 /// types "/" in the editor.
 library;
 
-import 'package:freezed_annotation/freezed_annotation.dart';
-
-part 'blocknote_slash_command.freezed.dart';
-part 'blocknote_slash_command.g.dart';
-
 /// Slash command item configuration.
-@freezed
-sealed class BlockNoteSlashCommandItem with _$BlockNoteSlashCommandItem {
+class BlockNoteSlashCommandItem {
   /// Creates a new slash command item.
-  const factory BlockNoteSlashCommandItem({
-    /// Title of the command item.
-    required String title,
+  const BlockNoteSlashCommandItem({
+    required this.title,
+    required this.onItemClick,
+    this.subtext,
+    this.badge,
+    this.aliases,
+    this.group,
+    this.icon,
+  });
 
-    /// JavaScript function code to execute when the item is clicked.
-    ///
-    /// This should be a string containing JavaScript code that will be
-    /// evaluated. The code has access to the `editor` variable.
-    ///
-    /// Example: "editor.insertBlocks([{type: 'paragraph', content: 'Hello'}], editor.getTextCursorPosition().block, 'after');"
-    required String onItemClick,
+  /// Title of the command item.
+  final String title;
 
-    /// Subtitle text (optional).
-    String? subtext,
+  /// JavaScript function code to execute when the item is clicked.
+  ///
+  /// This should be a string containing JavaScript code that will be
+  /// evaluated. The code has access to the `editor` variable.
+  ///
+  /// Example: "editor.insertBlocks([{type: 'paragraph', content: 'Hello'}], editor.getTextCursorPosition().block, 'after');"
+  final String onItemClick;
 
-    /// Badge text (optional, typically shows keyboard shortcut).
-    String? badge,
+  /// Subtitle text (optional).
+  final String? subtext;
 
-    /// Aliases for filtering (optional).
-    List<String>? aliases,
+  /// Badge text (optional, typically shows keyboard shortcut).
+  final String? badge;
 
-    /// Group name (optional).
-    String? group,
+  /// Aliases for filtering (optional).
+  final List<String>? aliases;
 
-    /// Icon identifier (optional).
-    String? icon,
-  }) = _BlockNoteSlashCommandItem;
+  /// Group name (optional).
+  final String? group;
+
+  /// Icon identifier (optional).
+  final String? icon;
 
   /// Creates a slash command that inserts a paragraph block.
   factory BlockNoteSlashCommandItem.paragraph({
@@ -320,26 +322,185 @@ sealed class BlockNoteSlashCommandItem with _$BlockNoteSlashCommandItem {
   }
 
   /// Creates a BlockNoteSlashCommandItem from a JSON map.
-  factory BlockNoteSlashCommandItem.fromJson(Map<String, dynamic> json) =>
-      _$BlockNoteSlashCommandItemFromJson(json);
+  factory BlockNoteSlashCommandItem.fromJson(Map<String, dynamic> json) {
+    return BlockNoteSlashCommandItem(
+      title: json['title'] as String? ?? '',
+      onItemClick: json['onItemClick'] as String? ?? '',
+      subtext: json['subtext'] as String?,
+      badge: json['badge'] as String?,
+      aliases: (json['aliases'] as List<dynamic>?)
+          ?.whereType<String>()
+          .toList(),
+      group: json['group'] as String?,
+      icon: json['icon'] as String?,
+    );
+  }
+
+  /// Converts this slash command item to JSON.
+  Map<String, dynamic> toJson() {
+    final json = <String, dynamic>{
+      'title': title,
+      'onItemClick': onItemClick,
+    };
+    if (subtext != null) {
+      json['subtext'] = subtext;
+    }
+    if (badge != null) {
+      json['badge'] = badge;
+    }
+    if (aliases != null) {
+      json['aliases'] = aliases;
+    }
+    if (group != null) {
+      json['group'] = group;
+    }
+    if (icon != null) {
+      json['icon'] = icon;
+    }
+    return json;
+  }
+
+  BlockNoteSlashCommandItem copyWith({
+    String? title,
+    String? onItemClick,
+    Object? subtext = _unset,
+    Object? badge = _unset,
+    Object? aliases = _unset,
+    Object? group = _unset,
+    Object? icon = _unset,
+  }) {
+    return BlockNoteSlashCommandItem(
+      title: title ?? this.title,
+      onItemClick: onItemClick ?? this.onItemClick,
+      subtext: identical(subtext, _unset) ? this.subtext : subtext as String?,
+      badge: identical(badge, _unset) ? this.badge : badge as String?,
+      aliases: identical(aliases, _unset)
+          ? this.aliases
+          : aliases as List<String>?,
+      group: identical(group, _unset) ? this.group : group as String?,
+      icon: identical(icon, _unset) ? this.icon : icon as String?,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'BlockNoteSlashCommandItem(title: $title, onItemClick: $onItemClick, subtext: $subtext, badge: $badge, aliases: $aliases, group: $group, icon: $icon)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is BlockNoteSlashCommandItem &&
+            other.title == title &&
+            other.onItemClick == onItemClick &&
+            other.subtext == subtext &&
+            other.badge == badge &&
+            _listEquals(other.aliases, aliases) &&
+            other.group == group &&
+            other.icon == icon;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        title,
+        onItemClick,
+        subtext,
+        badge,
+        _listHash(aliases),
+        group,
+        icon,
+      );
 }
 
 /// Slash command configuration.
-@freezed
-sealed class BlockNoteSlashCommandConfig with _$BlockNoteSlashCommandConfig {
+class BlockNoteSlashCommandConfig {
   /// Creates a new slash command configuration.
-  const factory BlockNoteSlashCommandConfig({
-    /// Custom slash command items (extends default if provided).
-    List<BlockNoteSlashCommandItem>? items,
+  const BlockNoteSlashCommandConfig({
+    this.items,
+    this.enabled = true,
+    this.triggerCharacter = '/',
+  });
 
-    /// Whether the slash menu is enabled (default: true).
-    @Default(true) bool enabled,
+  /// Custom slash command items (extends default if provided).
+  final List<BlockNoteSlashCommandItem>? items;
 
-    /// Trigger character (default: '/').
-    @Default('/') String triggerCharacter,
-  }) = _BlockNoteSlashCommandConfig;
+  /// Whether the slash menu is enabled (default: true).
+  final bool enabled;
+
+  /// Trigger character (default: '/').
+  final String triggerCharacter;
 
   /// Creates a BlockNoteSlashCommandConfig from a JSON map.
-  factory BlockNoteSlashCommandConfig.fromJson(Map<String, dynamic> json) =>
-      _$BlockNoteSlashCommandConfigFromJson(json);
+  factory BlockNoteSlashCommandConfig.fromJson(Map<String, dynamic> json) {
+    return BlockNoteSlashCommandConfig(
+      items: (json['items'] as List<dynamic>?)
+          ?.whereType<Map>()
+          .map((item) => BlockNoteSlashCommandItem.fromJson(
+                Map<String, dynamic>.from(item),
+              ))
+          .toList(),
+      enabled: json['enabled'] as bool? ?? true,
+      triggerCharacter: json['triggerCharacter'] as String? ?? '/',
+    );
+  }
+
+  /// Converts this slash command config to JSON.
+  Map<String, dynamic> toJson() {
+    final json = <String, dynamic>{
+      'enabled': enabled,
+      'triggerCharacter': triggerCharacter,
+    };
+    if (items != null) {
+      json['items'] = items!.map((item) => item.toJson()).toList();
+    }
+    return json;
+  }
+
+  BlockNoteSlashCommandConfig copyWith({
+    Object? items = _unset,
+    bool? enabled,
+    String? triggerCharacter,
+  }) {
+    return BlockNoteSlashCommandConfig(
+      items: identical(items, _unset)
+          ? this.items
+          : items as List<BlockNoteSlashCommandItem>?,
+      enabled: enabled ?? this.enabled,
+      triggerCharacter: triggerCharacter ?? this.triggerCharacter,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'BlockNoteSlashCommandConfig(items: $items, enabled: $enabled, triggerCharacter: $triggerCharacter)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is BlockNoteSlashCommandConfig &&
+            _listEquals(other.items, items) &&
+            other.enabled == enabled &&
+            other.triggerCharacter == triggerCharacter;
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(_listHash(items), enabled, triggerCharacter);
+}
+
+const Object _unset = Object();
+
+bool _listEquals<T>(List<T>? a, List<T>? b) {
+  if (identical(a, b)) return true;
+  if (a == null || b == null || a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
+}
+
+int _listHash<T>(List<T>? list) {
+  if (list == null) return 0;
+  return Object.hashAll(list);
 }

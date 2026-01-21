@@ -23,3 +23,5 @@ flutter:
   uses-material-design: true
   assets:
     - assets/sample_document.json
+    - assets/custom_schema.js
+    - assets/custom_schema.css

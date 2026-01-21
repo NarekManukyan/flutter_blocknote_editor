@@ -21,8 +21,15 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
   bool _useCustomToolbar = false;
   bool _useCustomSlashCommands = false;
   bool _useCustomFont = false;
+  bool _isDocumentLoaded = false;
   final List<BlockNoteTransaction> _transactions = [];
   BlockNoteDocument _document = BlockNoteDocument.empty();
+  final List<String> _customSchemaScriptAssets = const [
+    'assets/custom_schema.js',
+  ];
+  final List<String> _customSchemaCssAssets = const [
+    'assets/custom_schema.css',
+  ];
 
   @override
   void initState() {
@@ -38,11 +45,13 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
       final Map<String, dynamic> jsonData = json.decode(jsonString);
       setState(() {
         _document = BlockNoteDocument.fromJson(jsonData);
+        _isDocumentLoaded = true;
       });
     } catch (e) {
       // If loading fails, fall back to empty document
       setState(() {
         _document = BlockNoteDocument.empty();
+        _isDocumentLoaded = true;
       });
     }
   }
@@ -203,34 +212,46 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
         children: [
           _buildStatusBar(),
           Expanded(
-            child: BlockNoteEditor(
-              initialDocument: _document,
-              onReady: () {
-                setState(() {
-                  _isReady = true;
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Editor is ready!'),
-                    duration: Duration(seconds: 2),
+            child: _isDocumentLoaded
+                ? BlockNoteEditor(
+                    initialDocument: _document,
+                    onReady: () {
+                      setState(() {
+                        _isReady = true;
+                      });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Editor is ready!'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                    onTransactions: (transactions) {
+                      setState(() {
+                        _transactions.addAll(transactions);
+                      });
+                    },
+                    readOnly: _readOnly,
+                    debugLogging: true,
+                    theme: _buildTheme(),
+                    customJavaScriptAssetPaths: _customSchemaScriptAssets,
+                    customCssAssetPaths: _customSchemaCssAssets,
+                    schemaConfigs: const {
+                      'agenda': {
+                        'blockSpecs': ['agenda_item'],
+                      },
+                    },
+                    activeSchemaId: 'agenda',
+                    toolbarConfig: _useCustomToolbar
+                        ? EditorConfig.createCustomToolbar()
+                        : null,
+                    slashCommandConfig: _useCustomSlashCommands
+                        ? EditorConfig.createCustomSlashCommands()
+                        : null,
+                  )
+                : const Center(
+                    child: CircularProgressIndicator(),
                   ),
-                );
-              },
-              onTransactions: (transactions) {
-                setState(() {
-                  _transactions.addAll(transactions);
-                });
-              },
-              readOnly: _readOnly,
-              debugLogging: true,
-              theme: _buildTheme(),
-              toolbarConfig: _useCustomToolbar
-                  ? EditorConfig.createCustomToolbar()
-                  : null,
-              slashCommandConfig: _useCustomSlashCommands
-                  ? EditorConfig.createCustomSlashCommands()
-                  : null,
-            ),
           ),
         ],
       ),
@@ -385,35 +406,49 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
             ),
             const Divider(),
             Expanded(
-              child: BlockNoteEditor(
-                initialDocument: _document,
-                onReady: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Editor is ready in modal!'),
-                      duration: Duration(seconds: 2),
+              child: _isDocumentLoaded
+                  ? BlockNoteEditor(
+                      initialDocument: _document,
+                      onReady: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Editor is ready in modal!'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                      onTransactions: (transactions) {
+                        setState(() {
+                          _transactions.addAll(transactions);
+                        });
+                      },
+                      readOnly: _readOnly,
+                      debugLogging: true,
+                      theme: _buildTheme(),
+                      customJavaScriptAssetPaths: _customSchemaScriptAssets,
+                      customCssAssetPaths: _customSchemaCssAssets,
+                      schemaConfigs: const {
+                        'agenda': {
+                          'blockSpecs': ['agenda_item'],
+                        },
+                      },
+                      activeSchemaId: 'agenda',
+                      toolbarConfig: _useCustomToolbar
+                          ? EditorConfig.createCustomToolbar()
+                          : null,
+                      slashCommandConfig: _useCustomSlashCommands
+                          ? EditorConfig.createCustomSlashCommands()
+                          : null,
+                    )
+                  : const Center(
+                      child: CircularProgressIndicator(),
                     ),
-                  );
-                },
-                onTransactions: (transactions) {
-                  setState(() {
-                    _transactions.addAll(transactions);
-                  });
-                },
-                readOnly: _readOnly,
-                debugLogging: true,
-                theme: _buildTheme(),
-                toolbarConfig: _useCustomToolbar
-                    ? EditorConfig.createCustomToolbar()
-                    : null,
-                slashCommandConfig: _useCustomSlashCommands
-                    ? EditorConfig.createCustomSlashCommands()
-                    : null,
-              ),
             ),
           ],
         ),
       ),
     );
   }
+
+  
 }

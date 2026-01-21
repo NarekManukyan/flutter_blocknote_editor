@@ -39,6 +39,7 @@ A Flutter package that embeds [BlockNoteJS](https://github.com/TypeCellOS/BlockN
 - ✅ **Custom Themes**: Customize editor colors, fonts, and styling
 - ✅ **Custom Toolbar**: Configure formatting toolbar buttons
 - ✅ **Custom Slash Commands**: Add custom slash menu items
+- ✅ **Custom Schemas**: Register custom blocks, inline content, and styles
 - ✅ **Read-only Mode**: Toggle editor between editable and read-only states
 - ✅ **Document Loading**: Load initial documents with blocks and content
 - ✅ **Transaction Handling**: Receive and process editor changes via transactions
@@ -169,15 +170,14 @@ BlockNoteEditor(
       BlockNoteBlock(
         id: 'block1',
         type: BlockNoteBlockType.paragraph,
-        content: [
-          BlockNoteInlineContent(
-            type: BlockNoteInlineContentType.text,
-            text: 'Hello, BlockNote!',
-            styles: {
-              BlockNoteTextStyle.bold: true,
-            },
-          ),
-        ],
+        content: BlockNoteBlockContent.inline(
+          content: [
+            BlockNoteInlineContent.text(
+              text: 'Hello, BlockNote!',
+              styles: {'bold': true},
+            ),
+          ],
+        ),
       ),
       BlockNoteBlock(
         id: 'block2',
@@ -185,12 +185,11 @@ BlockNoteEditor(
         props: {
           'level': 1,
         },
-        content: [
-          BlockNoteInlineContent(
-            type: BlockNoteInlineContentType.text,
-            text: 'This is a heading',
-          ),
-        ],
+        content: BlockNoteBlockContent.inline(
+          content: [
+            BlockNoteInlineContent.text(text: 'This is a heading'),
+          ],
+        ),
       ),
     ],
   ),
@@ -308,6 +307,62 @@ BlockNoteEditor(
   },
 )
 ```
+
+### Custom Schemas (Custom Blocks)
+
+Register custom blocks with JavaScript and enable them via schema config:
+
+```dart
+final customBlockScript = '''
+(function() {
+  const { createReactBlockSpec, React, registerBlockNoteCustomBlocks } =
+    window.BlockNoteCustomSchema;
+
+  const AgendaItemBlock = createReactBlockSpec(
+    {
+      type: 'agenda_item',
+      content: 'none',
+      propSchema: {
+        title: { default: '' },
+      },
+    },
+    {
+      render: ({ block }) => {
+        return React.createElement(
+          'div',
+          { className: 'agenda-item' },
+          block.props.title || 'Agenda Item'
+        );
+      },
+      toExternalHTML: ({ block }) => {
+        const element = document.createElement('div');
+        element.setAttribute('data-block-type', block.type);
+        element.textContent = block.props.title || '';
+        return { dom: element };
+      },
+    }
+  );
+
+  registerBlockNoteCustomBlocks({
+    agenda_item: AgendaItemBlock,
+  });
+})();
+''';
+
+BlockNoteEditor(
+  initialDocument: BlockNoteDocument.empty(),
+  customJavaScript: customBlockScript,
+  schemaConfig: {
+    'blockSpecs': ['agenda_item'],
+  },
+  onReady: () {
+    print('Editor with custom schema is ready');
+  },
+)
+```
+
+The `schemaConfig` map also supports `inlineContentSpecs` and `styleSpecs` with
+the same array format to enable registered inline content and styles.
 
 ### Debug Logging
 

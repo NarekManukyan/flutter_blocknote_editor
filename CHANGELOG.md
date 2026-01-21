@@ -1,3 +1,11 @@
+## 0.0.9
+
+* Added custom schema support with schema config, custom JavaScript/CSS injection, and asset-based scripts/styles for custom blocks, inline content, and styles.
+* Added schema config messaging and JavaScript evaluation support in the WebView bridge.
+* Refactored Dart models to remove Freezed codegen, add manual JSON serialization, and introduce `BlockNoteBlockContent` for inline/table content with custom block types.
+* Updated document loading to preload schema config and custom assets when required.
+* Updated embedded web editor bundle and example assets for custom schema demos.
+
 ## 0.0.8
 
 * Added new block types to Dart models: quote, toggle list, check list, and audio.

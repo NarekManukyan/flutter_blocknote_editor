@@ -25,6 +25,9 @@ enum FlutterToJsMessageType {
   /// Set the slash command configuration.
   setSlashCommandConfig,
 
+  /// Set the editor schema configuration.
+  setSchemaConfig,
+
   /// Update WebView height for keyboard handling.
   updateWebViewHeight,
 
@@ -159,6 +162,33 @@ class SetSlashCommandConfigMessage extends FlutterToJsMessage {
   @override
   Map<String, dynamic> toJson() {
     return {'type': 'set_slash_command_config', 'data': config};
+  }
+}
+
+/// Message to set the editor schema configuration.
+class SetSchemaConfigMessage extends FlutterToJsMessage {
+  /// Creates a new set schema config message.
+  const SetSchemaConfigMessage({
+    this.config,
+    this.isRequired = false,
+  });
+
+  /// The schema configuration.
+  final Map<String, dynamic>? config;
+
+  /// Whether the editor should wait for schema config before initializing.
+  final bool isRequired;
+
+  @override
+  FlutterToJsMessageType get type => FlutterToJsMessageType.setSchemaConfig;
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      'type': 'set_schema_config',
+      'data': config,
+      'required': isRequired,
+    };
   }
 }
 

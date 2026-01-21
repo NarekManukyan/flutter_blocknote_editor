@@ -5,11 +5,7 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:freezed_annotation/freezed_annotation.dart';
 import 'blocknote_block.dart';
-
-part 'blocknote_toolbar_config.freezed.dart';
-part 'blocknote_toolbar_config.g.dart';
 
 /// Basic text styles for formatting toolbar buttons.
 enum BlockNoteBasicTextStyle {
@@ -117,38 +113,102 @@ String _generateToolbarButtonKey(
 }
 
 /// Toolbar button configuration.
-@freezed
-sealed class BlockNoteToolbarButton with _$BlockNoteToolbarButton {
+class BlockNoteToolbarButton {
   /// Creates a new toolbar button configuration.
   ///
   /// If [key] is not provided, it will be auto-generated based on the button
   /// type and properties (e.g., "basicTextStyleButton_bold").
-  const factory BlockNoteToolbarButton({
-    /// Unique key for the button (used by React for list reconciliation).
-    ///
-    /// If not provided, will be auto-generated based on type and properties.
-    String? key,
+  const BlockNoteToolbarButton({
+    this.key,
+    required this.type,
+    this.basicTextStyle,
+    this.textAlignment,
+  });
 
-    /// Button type.
-    required BlockNoteToolbarButtonType type,
+  /// Unique key for the button (used by React for list reconciliation).
+  ///
+  /// If not provided, will be auto-generated based on type and properties.
+  final String? key;
 
-    /// Basic text style (for BasicTextStyleButton).
-    BlockNoteBasicTextStyle? basicTextStyle,
+  /// Button type.
+  final BlockNoteToolbarButtonType type;
 
-    /// Text alignment (for TextAlignButton).
-    ///
-    /// Only left, center, and right are supported by BlockNote.
-    // ignore: invalid_annotation_target
-    @JsonKey(
-      fromJson: _textAlignFromBlockNoteNullable,
-      toJson: _textAlignToBlockNoteNullable,
-    )
-    TextAlign? textAlignment,
-  }) = _BlockNoteToolbarButton;
+  /// Basic text style (for BasicTextStyleButton).
+  final BlockNoteBasicTextStyle? basicTextStyle;
+
+  /// Text alignment (for TextAlignButton).
+  ///
+  /// Only left, center, and right are supported by BlockNote.
+  final TextAlign? textAlignment;
 
   /// Creates a BlockNoteToolbarButton from a JSON map.
-  factory BlockNoteToolbarButton.fromJson(Map<String, dynamic> json) =>
-      _$BlockNoteToolbarButtonFromJson(json);
+  factory BlockNoteToolbarButton.fromJson(Map<String, dynamic> json) {
+    return BlockNoteToolbarButton(
+      key: json['key'] as String?,
+      type: BlockNoteToolbarButtonType.values.byName(json['type'] as String),
+      basicTextStyle: json['basicTextStyle'] == null
+          ? null
+          : BlockNoteBasicTextStyle.values
+              .byName(json['basicTextStyle'] as String),
+      textAlignment: _textAlignFromBlockNoteNullable(
+        json['textAlignment'] as String?,
+      ),
+    );
+  }
+
+  /// Converts this toolbar button to JSON.
+  Map<String, dynamic> toJson() {
+    final json = <String, dynamic>{
+      'type': type.name,
+    };
+    if (key != null) {
+      json['key'] = key;
+    }
+    if (basicTextStyle != null) {
+      json['basicTextStyle'] = basicTextStyle!.name;
+    }
+    if (textAlignment != null) {
+      json['textAlignment'] = _textAlignToBlockNoteNullable(textAlignment);
+    }
+    return json;
+  }
+
+  BlockNoteToolbarButton copyWith({
+    Object? key = _unset,
+    BlockNoteToolbarButtonType? type,
+    Object? basicTextStyle = _unset,
+    Object? textAlignment = _unset,
+  }) {
+    return BlockNoteToolbarButton(
+      key: identical(key, _unset) ? this.key : key as String?,
+      type: type ?? this.type,
+      basicTextStyle: identical(basicTextStyle, _unset)
+          ? this.basicTextStyle
+          : basicTextStyle as BlockNoteBasicTextStyle?,
+      textAlignment: identical(textAlignment, _unset)
+          ? this.textAlignment
+          : textAlignment as TextAlign?,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'BlockNoteToolbarButton(key: $key, type: $type, basicTextStyle: $basicTextStyle, textAlignment: $textAlignment)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is BlockNoteToolbarButton &&
+            other.key == key &&
+            other.type == type &&
+            other.basicTextStyle == basicTextStyle &&
+            other.textAlignment == textAlignment;
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(key, type, basicTextStyle, textAlignment);
 }
 
 /// Extension to add effectiveKey getter.
@@ -173,47 +233,170 @@ TextAlign? _textAlignFromBlockNoteNullable(String? align) {
 }
 
 /// Block type select item configuration.
-@freezed
-sealed class BlockNoteBlockTypeItem with _$BlockNoteBlockTypeItem {
+class BlockNoteBlockTypeItem {
   /// Creates a new block type item configuration.
-  const factory BlockNoteBlockTypeItem({
-    /// Block type.
-    required BlockNoteBlockType type,
+  const BlockNoteBlockTypeItem({
+    required this.type,
+    required this.title,
+    this.icon,
+    this.group,
+  });
 
-    /// Display title.
-    required String title,
+  /// Block type.
+  final BlockNoteBlockType type;
 
-    /// Icon name or identifier (optional).
-    String? icon,
+  /// Display title.
+  final String title;
 
-    /// Group name (optional).
-    String? group,
-  }) = _BlockNoteBlockTypeItem;
+  /// Icon name or identifier (optional).
+  final String? icon;
+
+  /// Group name (optional).
+  final String? group;
 
   /// Creates a BlockNoteBlockTypeItem from a JSON map.
-  factory BlockNoteBlockTypeItem.fromJson(Map<String, dynamic> json) =>
-      _$BlockNoteBlockTypeItemFromJson(json);
+  factory BlockNoteBlockTypeItem.fromJson(Map<String, dynamic> json) {
+    return BlockNoteBlockTypeItem(
+      type: BlockNoteBlockType.values.byName(json['type'] as String),
+      title: json['title'] as String? ?? '',
+      icon: json['icon'] as String?,
+      group: json['group'] as String?,
+    );
+  }
+
+  /// Converts this block type item to JSON.
+  Map<String, dynamic> toJson() {
+    final json = <String, dynamic>{
+      'type': type.name,
+      'title': title,
+    };
+    if (icon != null) {
+      json['icon'] = icon;
+    }
+    if (group != null) {
+      json['group'] = group;
+    }
+    return json;
+  }
+
+  BlockNoteBlockTypeItem copyWith({
+    BlockNoteBlockType? type,
+    String? title,
+    Object? icon = _unset,
+    Object? group = _unset,
+  }) {
+    return BlockNoteBlockTypeItem(
+      type: type ?? this.type,
+      title: title ?? this.title,
+      icon: identical(icon, _unset) ? this.icon : icon as String?,
+      group: identical(group, _unset) ? this.group : group as String?,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'BlockNoteBlockTypeItem(type: $type, title: $title, icon: $icon, group: $group)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is BlockNoteBlockTypeItem &&
+            other.type == type &&
+            other.title == title &&
+            other.icon == icon &&
+            other.group == group;
+  }
+
+  @override
+  int get hashCode => Object.hash(type, title, icon, group);
 }
 
 /// Toolbar configuration.
-@freezed
-sealed class BlockNoteToolbarConfig with _$BlockNoteToolbarConfig {
+class BlockNoteToolbarConfig {
   /// Creates a new toolbar configuration.
-  const factory BlockNoteToolbarConfig({
-    /// Custom toolbar buttons (replaces default if provided).
-    // ignore: invalid_annotation_target
-    @JsonKey(toJson: _buttonsToJson) List<BlockNoteToolbarButton>? buttons,
+  const BlockNoteToolbarConfig({
+    this.buttons,
+    this.blockTypeSelectItems,
+    this.enabled = true,
+  });
 
-    /// Custom block type select items (extends default if provided).
-    List<BlockNoteBlockTypeItem>? blockTypeSelectItems,
+  /// Custom toolbar buttons (replaces default if provided).
+  final List<BlockNoteToolbarButton>? buttons;
 
-    /// Whether the toolbar is enabled (default: true).
-    @Default(true) bool enabled,
-  }) = _BlockNoteToolbarConfig;
+  /// Custom block type select items (extends default if provided).
+  final List<BlockNoteBlockTypeItem>? blockTypeSelectItems;
+
+  /// Whether the toolbar is enabled (default: true).
+  final bool enabled;
 
   /// Creates a BlockNoteToolbarConfig from a JSON map.
-  factory BlockNoteToolbarConfig.fromJson(Map<String, dynamic> json) =>
-      _$BlockNoteToolbarConfigFromJson(json);
+  factory BlockNoteToolbarConfig.fromJson(Map<String, dynamic> json) {
+    return BlockNoteToolbarConfig(
+      buttons: (json['buttons'] as List<dynamic>?)
+          ?.whereType<Map>()
+          .map((button) => BlockNoteToolbarButton.fromJson(
+                Map<String, dynamic>.from(button),
+              ))
+          .toList(),
+      blockTypeSelectItems: (json['blockTypeSelectItems'] as List<dynamic>?)
+          ?.whereType<Map>()
+          .map((item) => BlockNoteBlockTypeItem.fromJson(
+                Map<String, dynamic>.from(item),
+              ))
+          .toList(),
+      enabled: json['enabled'] as bool? ?? true,
+    );
+  }
+
+  /// Converts this toolbar config to JSON.
+  Map<String, dynamic> toJson() {
+    final json = <String, dynamic>{
+      'enabled': enabled,
+    };
+    if (buttons != null) {
+      json['buttons'] = _buttonsToJson(buttons);
+    }
+    if (blockTypeSelectItems != null) {
+      json['blockTypeSelectItems'] =
+          blockTypeSelectItems!.map((item) => item.toJson()).toList();
+    }
+    return json;
+  }
+
+  BlockNoteToolbarConfig copyWith({
+    Object? buttons = _unset,
+    Object? blockTypeSelectItems = _unset,
+    bool? enabled,
+  }) {
+    return BlockNoteToolbarConfig(
+      buttons: identical(buttons, _unset)
+          ? this.buttons
+          : buttons as List<BlockNoteToolbarButton>?,
+      blockTypeSelectItems: identical(blockTypeSelectItems, _unset)
+          ? this.blockTypeSelectItems
+          : blockTypeSelectItems as List<BlockNoteBlockTypeItem>?,
+      enabled: enabled ?? this.enabled,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'BlockNoteToolbarConfig(buttons: $buttons, blockTypeSelectItems: $blockTypeSelectItems, enabled: $enabled)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is BlockNoteToolbarConfig &&
+            _listEquals(other.buttons, buttons) &&
+            _listEquals(other.blockTypeSelectItems, blockTypeSelectItems) &&
+            other.enabled == enabled;
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(_listHash(buttons), _listHash(blockTypeSelectItems), enabled);
 }
 
 /// Helper to convert buttons to JSON with effectiveKey.
@@ -229,4 +412,20 @@ List<Map<String, dynamic>>? _buttonsToJson(
     }
     return json;
   }).toList();
+}
+
+const Object _unset = Object();
+
+bool _listEquals<T>(List<T>? a, List<T>? b) {
+  if (identical(a, b)) return true;
+  if (a == null || b == null || a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
+}
+
+int _listHash<T>(List<T>? list) {
+  if (list == null) return 0;
+  return Object.hashAll(list);
 }

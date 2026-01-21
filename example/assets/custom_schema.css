@@ -1,0 +1,115 @@
+.agenda-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.agenda-item__status {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+}
+
+.agenda-item__status--done {
+  background-color: transparent;
+}
+
+.agenda-item__content {
+  flex: 1;
+  width: 100%;
+}
+
+.agenda-item__title {
+  min-height: 20px;
+  width: 100%;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.agenda-item__title:empty::before {
+  content: attr(data-placeholder);
+  color: #9ca3af;
+}
+
+.checkbox-v2 {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+}
+
+.checkbox-v2 input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.checkbox-v2 .checkmark {
+  background-color: transparent;
+  border: 1px solid var(--border-neutral-light-2, #d1d5db);
+  position: absolute;
+  transition: 0.2s;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  box-sizing: border-box;
+  z-index: 1;
+}
+
+.checkbox-v2 .checkmark.indeterminate,
+.checkbox-v2 input:checked ~ .checkmark {
+  background-color: var(--background-primary-dark-1-nudge, #10b981);
+  border-color: transparent;
+}
+
+.checkbox-v2-lg .checkmark {
+  width: 24px;
+  height: 24px;
+}
+
+.checkbox-v2 input:checked ~ .checkmark::after {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 4px;
+  width: 7px;
+  height: 12px;
+  border: solid #ffffff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.rounded-v2-100p {
+  border-radius: 100%;
+}
+
+.mw-24-px {
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+}
+
+.mb-0 {
+  margin-bottom: 0;
+}
+
+.agenda-item__meta {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.agenda-item__avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  object-fit: cover;
+}

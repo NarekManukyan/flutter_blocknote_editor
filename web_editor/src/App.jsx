@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
 import '@blocknote/core/fonts/inter.css';
@@ -8,6 +8,7 @@ import { useEditorReady } from './hooks/useEditorReady';
 import { useFlutterMessages } from './hooks/useFlutterMessages';
 import { useToolbarPopup } from './hooks/useToolbarPopup';
 import { usePopupPortals } from './hooks/usePopupPortals';
+import { loadDocument } from './utils/documentLoader';
 import { buildFormattingToolbar } from './utils/toolbarBuilder.jsx';
 import { buildSlashMenuItems } from './utils/slashMenuBuilder.jsx';
 import { buildBlockNoteTheme } from './utils/themeBuilder';
@@ -61,6 +62,24 @@ BlockNoteErrorBoundary.propTypes = {
   children: PropTypes.node.isRequired,
 };
 
+function EditorHost({ schemaConfig, onEditorChange }) {
+  const editor = useBlockNoteEditor(schemaConfig);
+
+  useEffect(() => {
+    onEditorChange(editor);
+    return () => {
+      onEditorChange(null);
+    };
+  }, [editor, onEditorChange]);
+
+  return null;
+}
+
+EditorHost.propTypes = {
+  schemaConfig: PropTypes.object,
+  onEditorChange: PropTypes.func.isRequired,
+};
+
 function App() {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -68,12 +87,26 @@ function App() {
   const [theme, setTheme] = useState(null);
   const [toolbarConfig, setToolbarConfig] = useState(null);
   const [slashCommandConfig, setSlashCommandConfig] = useState(null);
+  const [schemaConfig, setSchemaConfig] = useState(null);
+  const [schemaConfigReady, setSchemaConfigReady] = useState(false);
+  const [schemaConfigRequired, setSchemaConfigRequired] = useState(true);
+  const [editor, setEditor] = useState(null);
   const documentVersionRef = useRef(0);
   const hasLoadedDocumentRef = useRef(false);
   const toolbarPopupCallbacksRef = useRef(new Map());
+  const pendingDocumentRef = useRef(null);
+  const schemaChangePendingRef = useRef(false);
 
-  // Initialize editor
-  const editor = useBlockNoteEditor();
+  const shouldRenderEditor = useMemo(
+    () => schemaConfigReady || !schemaConfigRequired,
+    [schemaConfigReady, schemaConfigRequired],
+  );
+
+  const updateEditor = (nextEditor) => {
+    setEditor(nextEditor ?? null);
+  };
+
+  const allowMissingEditor = !shouldRenderEditor || !editor;
 
   // Handle editor ready state
   const isReady = useEditorReady(
@@ -81,6 +114,7 @@ function App() {
     documentVersionRef,
     setIsLoading,
     setError,
+    allowMissingEditor,
   );
 
   // Set up Flutter message handling
@@ -90,10 +124,30 @@ function App() {
     setTheme,
     setToolbarConfig,
     setSlashCommandConfig,
+    setSchemaConfig,
+    setSchemaConfigReady,
+    setSchemaConfigRequired,
     documentVersionRef,
     hasLoadedDocumentRef,
     toolbarPopupCallbacksRef,
+    pendingDocumentRef,
+    schemaChangePendingRef,
   );
+
+  useEffect(() => {
+    if (!editor || !pendingDocumentRef.current) {
+      return;
+    }
+
+    loadDocument(
+      editor,
+      pendingDocumentRef.current,
+      documentVersionRef,
+      hasLoadedDocumentRef,
+    );
+    pendingDocumentRef.current = null;
+    schemaChangePendingRef.current = false;
+  }, [editor, documentVersionRef, hasLoadedDocumentRef]);
 
   // Set up toolbar popup interception
   useToolbarPopup(editor, isReady, toolbarPopupCallbacksRef);
@@ -117,59 +171,14 @@ function App() {
     ? buildSlashMenuItems(slashCommandConfig, editor)
     : null;
 
-  if (error) {
-    console.error('[BlockNote] App error:', error);
-    return (
-      <div
-        style={{
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexDirection: 'column',
-          padding: '20px',
-          color: 'red',
-          backgroundColor: '#fff',
-        }}
-      >
-        <h2>Error Loading Editor</h2>
-        <p style={{ margin: '10px 0', wordBreak: 'break-word' }}>{error}</p>
-        <button
-          onClick={() => window.location.reload()}
-          style={{ padding: '10px 20px', marginTop: '10px' }}
-        >
-          Reload
-        </button>
-      </div>
-    );
-  }
-
-  if (isLoading || !editor) {
-    console.log(
-      '[BlockNote] Loading state - isLoading:',
-      isLoading,
-      'editor:',
-      !!editor,
-    );
-    return (
-      <div
-        style={{
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#fff',
-          color: '#333',
-        }}
-      >
-        <div>Loading BlockNote editor...</div>
-      </div>
-    );
-  }
-
-  console.log('[BlockNote] Rendering BlockNoteView with editor:', !!editor);
+  useEffect(() => {
+    if (!shouldRenderEditor) {
+      return;
+    }
+    return () => {
+      updateEditor(null);
+    };
+  }, [shouldRenderEditor]);
 
   // Convert theme to BlockNote format if provided
   const blockNoteTheme = buildBlockNoteTheme(theme);
@@ -184,16 +193,89 @@ function App() {
           overflow: 'visible',
         }}
       >
-        <BlockNoteView
-          editor={editor}
-          editable={!isReadonly}
-          {...(blockNoteTheme ? { theme: blockNoteTheme } : {})}
-          formattingToolbar={useCustomToolbar ? false : undefined}
-          slashMenu={useCustomSlashMenu ? false : undefined}
-        >
-          {formattingToolbarComponent}
-          {slashMenuComponent}
-        </BlockNoteView>
+        {shouldRenderEditor && (
+          <EditorHost
+            schemaConfig={schemaConfig}
+            onEditorChange={updateEditor}
+          />
+        )}
+        {error ? (
+          <>
+            {(() => {
+              console.error('[BlockNote] App error:', error);
+              return null;
+            })()}
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'column',
+                padding: '20px',
+                color: 'red',
+                backgroundColor: '#fff',
+              }}
+            >
+              <h2>Error Loading Editor</h2>
+              <p style={{ margin: '10px 0', wordBreak: 'break-word' }}>
+                {error}
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                style={{ padding: '10px 20px', marginTop: '10px' }}
+              >
+                Reload
+              </button>
+            </div>
+          </>
+        ) : !shouldRenderEditor || isLoading || !editor ? (
+          <>
+            {(() => {
+              console.log(
+                '[BlockNote] Loading state - isLoading:',
+                isLoading,
+                'editor:',
+                !!editor,
+              );
+              return null;
+            })()}
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: '#fff',
+                color: '#333',
+              }}
+            >
+              <div>Loading BlockNote editor...</div>
+            </div>
+          </>
+        ) : (
+          <>
+            {(() => {
+              console.log(
+                '[BlockNote] Rendering BlockNoteView with editor:',
+                !!editor,
+              );
+              return null;
+            })()}
+            <BlockNoteView
+              editor={editor}
+              editable={!isReadonly}
+              {...(blockNoteTheme ? { theme: blockNoteTheme } : {})}
+              formattingToolbar={useCustomToolbar ? false : undefined}
+              slashMenu={useCustomSlashMenu ? false : undefined}
+            >
+              {formattingToolbarComponent}
+              {slashMenuComponent}
+            </BlockNoteView>
+          </>
+        )}
       </div>
     </BlockNoteErrorBoundary>
   );

@@ -3,15 +3,21 @@
  */
 
 import { useCreateBlockNote } from '@blocknote/react';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
+import { buildSchemaFromConfig } from '../utils/schemaRegistry';
 
 /**
  * Custom hook to initialize BlockNote editor and set up lifecycle.
  * @returns {Object} Editor instance
  */
-export function useBlockNoteEditor() {
-  // BlockNote requires at least one block, so we provide a default paragraph
+export function useBlockNoteEditor(schemaConfig) {
+  const schema = useMemo(
+    () => buildSchemaFromConfig(schemaConfig),
+    [schemaConfig],
+  );
+
   const editor = useCreateBlockNote({
+    schema,
     initialContent: [
       {
         id: 'root',

@@ -78,6 +78,18 @@ class JsBridge {
     }
   }
 
+  /// Evaluates raw JavaScript in the WebView context.
+  Future<void> evaluateJavaScript(String script) async {
+    try {
+      await controller.evaluateJavascript(source: script);
+    } catch (e) {
+      if (debugLogging) {
+        debugPrint('[JsBridge] Error evaluating JavaScript: $e');
+      }
+      rethrow;
+    }
+  }
+
   /// Handles a message received from JavaScript.
   ///
   /// Messages are JSON-decoded and routed to the appropriate handler.
@@ -144,6 +156,16 @@ class JsBridge {
   /// Sets the slash command configuration.
   Future<void> setSlashCommandConfig(Map<String, dynamic> config) async {
     await sendMessage(SetSlashCommandConfigMessage(config: config));
+  }
+
+  /// Sets the schema configuration.
+  Future<void> setSchemaConfig(
+    Map<String, dynamic>? config, {
+    bool isRequired = false,
+  }) async {
+    await sendMessage(
+      SetSchemaConfigMessage(config: config, isRequired: isRequired),
+    );
   }
 
   /// Updates the WebView height for keyboard handling.
