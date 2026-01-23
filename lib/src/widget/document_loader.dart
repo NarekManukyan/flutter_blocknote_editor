@@ -4,7 +4,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../bridge/js_bridge.dart';
-import '../utils/theme_utils.dart';
 import 'blocknote_editor.dart';
 import 'css_utils.dart';
 
@@ -113,19 +112,13 @@ class DocumentLoader {
   ) async {
     final widget = request.widget;
     final bridge = request.bridge;
-    final context = request.context;
     final options = request.options;
 
     await _applyReadonly(widget: widget, bridge: bridge);
-    
-    // Apply theme based on app appearance
-    final effectiveTheme = ThemeUtils.getEffectiveTheme(
-      widget.theme,
-      context,
+    await _applyIfPresent(
+      value: widget.theme,
+      apply: (theme) => bridge.setTheme(theme.toJson()),
     );
-    if (effectiveTheme != null) {
-      await bridge.setTheme(effectiveTheme);
-    }
     await _applyIfPresent(
       value: widget.toolbarConfig,
       apply: (config) => bridge.setToolbarConfig(config.toJson()),

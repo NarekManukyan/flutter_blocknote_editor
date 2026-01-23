@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import '../bridge/js_bridge.dart';
 import '../bridge/message_types.dart';
 import '../model/blocknote_theme.dart';
-import '../utils/theme_utils.dart';
 import 'blocknote_editor.dart';
 import 'toolbar_popup_bottom_sheet.dart';
 
@@ -88,20 +87,26 @@ class ToolbarPopupHandler {
       debugPrint('[BlockNoteEditor] Showing default toolbar popup modal');
     }
 
-    // Get theme colors for modal styling based on app appearance
+    // Get theme colors for modal styling
     final theme = widget.theme;
-    final colors = ThemeUtils.getColorSchemeForAppearance(theme, context);
-
     // Use menu colors, fallback to editor colors, then default
     final menuColors =
-        colors?.menu ??
-        colors?.editor ??
+        theme?.colors?.menu ??
+        theme?.light?.menu ??
+        theme?.dark?.menu ??
+        theme?.colors?.editor ??
+        theme?.light?.editor ??
+        theme?.dark?.editor ??
         const BlockNoteColorPair(
           text: Color(0xFF000000),
           background: Color(0xFFFFFFFF),
         );
-    final hoveredColors = colors?.hovered;
-    final selectedColors = colors?.selected;
+    final hoveredColors =
+        theme?.colors?.hovered ?? theme?.light?.hovered ?? theme?.dark?.hovered;
+    final selectedColors =
+        theme?.colors?.selected ??
+        theme?.light?.selected ??
+        theme?.dark?.selected;
     final borderRadius = theme?.borderRadius ?? 8.0;
 
     // Show default modal bottom sheet
@@ -117,12 +122,11 @@ class ToolbarPopupHandler {
             ),
           ),
           builder: (BuildContext sheetContext) {
-            // Get highlight colors from theme based on app appearance
-            final currentColors = ThemeUtils.getColorSchemeForAppearance(
-              theme,
-              context,
-            );
-            final highlights = currentColors?.highlights;
+            // Get highlight colors from theme
+            final highlights =
+                theme?.colors?.highlights ??
+                theme?.light?.highlights ??
+                theme?.dark?.highlights;
 
             return ToolbarPopupBottomSheet(
               popupType: message.popupType,

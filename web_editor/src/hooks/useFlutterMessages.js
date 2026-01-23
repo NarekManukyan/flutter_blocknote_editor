@@ -3,10 +3,17 @@
  */
 
 import { useEffect } from 'react';
-import { loadDocument } from '../utils/documentLoader';
 import { updateWebViewHeight } from '../utils/webViewHeightManager';
 import { injectCustomCss } from '../utils/cssInjector';
 import { handleToolbarPopupResponse } from '../utils/toolbarPopupHandler';
+import {
+  handleLoadDocument,
+  handleSetSchemaConfig,
+  handleFlush,
+  handleSetTheme,
+  handleSetDebounceDuration,
+  handleGetDocument,
+} from '../handlers/messageHandlers';
 
 /**
  * Custom hook to handle messages from Flutter.
@@ -43,59 +50,36 @@ export function useFlutterMessages(
     const handleFlutterMessage = (message) => {
       switch (message.type) {
         case 'load_document':
-          if (!editor || schemaChangePendingRef.current) {
-            pendingDocumentRef.current = message.data;
-            break;
-          }
-          loadDocument(
+          handleLoadDocument(
             editor,
             message.data,
             documentVersionRef,
             hasLoadedDocumentRef,
+            pendingDocumentRef,
+            schemaChangePendingRef,
           );
           break;
         case 'set_readonly':
           setIsReadonly(message.value);
           break;
         case 'set_schema_config':
-          setSchemaConfigRequired(
-            message.required !== undefined
-              ? Boolean(message.required)
-              : Boolean(message.data),
+          handleSetSchemaConfig(
+            editor,
+            message,
+            setSchemaConfig,
+            setSchemaConfigReady,
+            setSchemaConfigRequired,
+            documentVersionRef,
+            hasLoadedDocumentRef,
+            pendingDocumentRef,
+            schemaChangePendingRef,
           );
-          schemaChangePendingRef.current = true;
-          setSchemaConfig(message.data ?? null);
-          setSchemaConfigReady(true);
-          schemaChangePendingRef.current = false;
-          if (editor && pendingDocumentRef.current) {
-            loadDocument(
-              editor,
-              pendingDocumentRef.current,
-              documentVersionRef,
-              hasLoadedDocumentRef,
-            );
-            pendingDocumentRef.current = null;
-          }
           break;
         case 'flush':
-          // Force immediate transaction emission (bypass debounce)
-          if (
-            window.sendPendingTransaction &&
-            typeof window.sendPendingTransaction === 'function'
-          ) {
-            window.sendPendingTransaction();
-          } else if (editor && editor.onChange) {
-            // Fallback: trigger onChange if sendPendingTransaction not available
-            editor.onChange();
-          }
+          handleFlush(editor);
           break;
         case 'set_theme':
-          try {
-            console.log('[BlockNote] Setting theme:', message.data);
-            setTheme(message.data);
-          } catch (error) {
-            console.error('[BlockNote] Error setting theme:', error);
-          }
+          handleSetTheme(message, setTheme);
           break;
         case 'set_toolbar_config':
           setToolbarConfig(message.data);
@@ -113,20 +97,10 @@ export function useFlutterMessages(
           handleToolbarPopupResponse(message, toolbarPopupCallbacksRef);
           break;
         case 'set_debounce_duration':
-          // Update debounce duration globally
-          if (
-            typeof message.durationMs === 'number' &&
-            message.durationMs >= 0
-          ) {
-            window.__blockNoteDebounceDuration = message.durationMs;
-            // If editor is already initialized, update the debounce delay
-            if (
-              window.updateDebounceDuration &&
-              typeof window.updateDebounceDuration === 'function'
-            ) {
-              window.updateDebounceDuration(message.durationMs);
-            }
-          }
+          handleSetDebounceDuration(message);
+          break;
+        case 'get_document':
+          handleGetDocument(editor, message);
           break;
         default:
           console.warn('[BlockNote] Unknown message type:', message.type);

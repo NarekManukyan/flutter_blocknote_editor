@@ -17,8 +17,8 @@ import '../model/blocknote_toolbar_config.dart';
 import '../model/blocknote_slash_command.dart';
 import '../bridge/js_bridge.dart';
 import '../bridge/message_types.dart';
+import 'blocknote_controller.dart';
 import '../batching/transaction_batcher.dart';
-import '../utils/theme_utils.dart';
 import 'asset_server.dart';
 import 'webview_initializer.dart';
 import 'document_loader.dart';
@@ -50,6 +50,7 @@ class BlockNoteEditor extends StatefulWidget {
     required this.initialDocument,
     this.onTransactions,
     this.onReady,
+    this.onControllerReady,
     this.readOnly = false,
     this.debugLogging = false,
     this.localhostUrl,
@@ -80,6 +81,12 @@ class BlockNoteEditor extends StatefulWidget {
 
   /// Callback invoked when the editor is ready and initialized.
   final VoidCallback? onReady;
+
+  /// Callback invoked when the controller is ready.
+  ///
+  /// The controller provides programmatic access to the editor, including
+  /// methods to get the full document, set configuration, and load documents.
+  final ValueChanged<BlockNoteController>? onControllerReady;
 
   /// Callback invoked when a toolbar popup is clicked.
   ///
@@ -166,6 +173,7 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
   JsBridge? _bridge;
   TransactionBatcher? _batcher;
   AssetServer? _assetServer;
+  BlockNoteController? _blockNoteController;
   bool _isReady = false;
   bool _hasLoadedDocument = false;
   bool _hasPreloadedCustomJavaScript = false;
@@ -177,7 +185,6 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
   bool _isInitializing = false;
   Timer? _contentSizeChangeDebounceTimer;
   DateTime? _lastSignificantChangeTime;
-  Brightness? _lastBrightness;
 
   @override
   void initState() {
@@ -314,8 +321,34 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
         debugLogging: widget.debugLogging,
       ),
       onToolbarPopupRequest: _handleToolbarPopupRequest,
+      onDocument: _handleDocument,
       mounted: mounted,
     );
+  }
+
+  /// Handles document response from JavaScript.
+  void _handleDocument(DocumentMessage message) {
+    if (_blockNoteController == null) {
+      if (widget.debugLogging) {
+        debugPrint(
+          '[BlockNoteEditor] Received document message but controller is null',
+        );
+      }
+      return;
+    }
+
+    try {
+      final document = BlockNoteDocument.fromJson(message.document);
+      _blockNoteController!.handleDocumentResponse(message.requestId, document);
+    } catch (e) {
+      if (widget.debugLogging) {
+        debugPrint('[BlockNoteEditor] Error parsing document: $e');
+      }
+      _blockNoteController!.handleDocumentError(
+        message.requestId,
+        'Failed to parse document: $e',
+      );
+    }
   }
 
   /// Handles raw JavaScript messages (fallback).
@@ -337,9 +370,17 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
       debugPrint('[BlockNoteEditor] Editor is ready');
     }
 
-    // Initialize brightness tracking
-    if (mounted && context.mounted) {
-      _lastBrightness = Theme.of(context).brightness;
+    // Initialize controller
+    if (_bridge != null && _blockNoteController == null) {
+      _blockNoteController = BlockNoteController(
+        debugLogging: widget.debugLogging,
+      );
+      _blockNoteController!.initialize(_bridge!);
+
+      // Notify controller ready callback
+      if (widget.onControllerReady != null) {
+        widget.onControllerReady!(_blockNoteController!);
+      }
     }
 
     // Load initial document now that editor is ready
@@ -398,16 +439,9 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
     }
 
     // Update theme if it changed
-    // Note: We check theme change here, but brightness changes are handled
-    // by the build method which will trigger a rebuild when brightness changes
     if (oldWidget.theme != widget.theme && _bridge != null && _isReady) {
-      if (!context.mounted) return;
-      final effectiveTheme = ThemeUtils.getEffectiveTheme(
-        widget.theme,
-        context,
-      );
-      if (effectiveTheme != null) {
-        _bridge!.setTheme(effectiveTheme);
+      if (widget.theme != null) {
+        _bridge!.setTheme(widget.theme!.toJson());
       }
     }
 
@@ -584,25 +618,6 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
           return const Center(child: CircularProgressIndicator());
         }
 
-        // Get current brightness
-        final brightness = Theme.of(context).brightness;
-        
-        // Update theme if brightness changed
-        if (_isReady &&
-            _bridge != null &&
-            widget.theme != null &&
-            _lastBrightness != null &&
-            _lastBrightness != brightness) {
-          final effectiveTheme = ThemeUtils.getEffectiveTheme(
-            widget.theme,
-            context,
-          );
-          if (effectiveTheme != null) {
-            _bridge!.setTheme(effectiveTheme);
-          }
-        }
-        _lastBrightness = brightness;
-
         // Update WebView height when editor is ready or when keyboard opens/closes
         if (_isReady && _bridge != null && _controller != null) {
           // Always update height when ready (even if keyboard hasn't changed)
@@ -616,13 +631,9 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
           }
         }
         // Extract editor background color from theme if available
-        // Use theme based on app appearance
         Color? editorBackgroundColor;
         if (widget.theme != null) {
-          final colors = ThemeUtils.getColorSchemeForAppearance(
-            widget.theme,
-            context,
-          );
+          final colors = widget.theme!.colors ?? widget.theme!.light ?? widget.theme!.dark;
           if (colors != null && colors.editor != null) {
             editorBackgroundColor = colors.editor!.background;
           }
@@ -648,6 +659,16 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
                 onMessage: _handleBridgeMessage,
                 debugLogging: widget.debugLogging,
               );
+              // Initialize controller if bridge is ready
+              if (_isReady && _blockNoteController == null) {
+                _blockNoteController = BlockNoteController(
+                  debugLogging: widget.debugLogging,
+                );
+                _blockNoteController!.initialize(_bridge!);
+                if (widget.onControllerReady != null) {
+                  widget.onControllerReady!(_blockNoteController!);
+                }
+              }
               // Set up JavaScript handlers
               WebViewConfig.setupJavaScriptHandlers(
                 controller: controller,

@@ -8,10 +8,13 @@ import { useEditorReady } from './hooks/useEditorReady';
 import { useFlutterMessages } from './hooks/useFlutterMessages';
 import { useToolbarPopup } from './hooks/useToolbarPopup';
 import { usePopupPortals } from './hooks/usePopupPortals';
+import { useThemeBackground } from './hooks/useThemeBackground';
 import { loadDocument } from './utils/documentLoader';
 import { buildFormattingToolbar } from './utils/toolbarBuilder.jsx';
 import { buildSlashMenuItems } from './utils/slashMenuBuilder.jsx';
 import { buildBlockNoteTheme } from './utils/themeBuilder';
+import { ErrorDisplay } from './components/ErrorDisplay';
+import { LoadingDisplay } from './components/LoadingDisplay';
 
 class BlockNoteErrorBoundary extends React.Component {
   constructor(props) {
@@ -184,37 +187,7 @@ function App() {
   const blockNoteTheme = buildBlockNoteTheme(theme);
 
   // Apply theme background color to page elements
-  useEffect(() => {
-    if (!theme || !blockNoteTheme) {
-      return;
-    }
-
-    // Extract editor background color from theme (prefer light, fallback to dark)
-    const colors = theme.light || theme.dark;
-    const editorBackground = colors?.editor?.background;
-
-    if (editorBackground) {
-      // Convert hex color to CSS format (already in hex from Flutter)
-      const bgColor = editorBackground.startsWith('#')
-        ? editorBackground
-        : `#${editorBackground}`;
-
-      // Apply to html, body, and root elements
-      const html = document.documentElement;
-      const body = document.body;
-      const root = document.getElementById('root');
-
-      if (html) {
-        html.style.backgroundColor = bgColor;
-      }
-      if (body) {
-        body.style.backgroundColor = bgColor;
-      }
-      if (root) {
-        root.style.backgroundColor = bgColor;
-      }
-    }
-  }, [theme, blockNoteTheme]);
+  useThemeBackground(theme, blockNoteTheme);
 
   return (
     <BlockNoteErrorBoundary>
@@ -238,30 +211,7 @@ function App() {
               console.error('[BlockNote] App error:', error);
               return null;
             })()}
-            <div
-              style={{
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexDirection: 'column',
-                padding: '20px',
-                color: 'red',
-                backgroundColor: '#fff',
-              }}
-            >
-              <h2>Error Loading Editor</h2>
-              <p style={{ margin: '10px 0', wordBreak: 'break-word' }}>
-                {error}
-              </p>
-              <button
-                onClick={() => window.location.reload()}
-                style={{ padding: '10px 20px', marginTop: '10px' }}
-              >
-                Reload
-              </button>
-            </div>
+            <ErrorDisplay error={error} />
           </>
         ) : !shouldRenderEditor || isLoading || !editor ? (
           <>
@@ -274,19 +224,7 @@ function App() {
               );
               return null;
             })()}
-            <div
-              style={{
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: '#fff',
-                color: '#333',
-              }}
-            >
-              <div>Loading BlockNote editor...</div>
-            </div>
+            <LoadingDisplay />
           </>
         ) : (
           <>

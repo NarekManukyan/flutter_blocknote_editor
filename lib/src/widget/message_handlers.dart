@@ -6,6 +6,7 @@ import '../bridge/js_bridge.dart';
 import '../bridge/message_types.dart';
 import '../batching/transaction_batcher.dart';
 import '../model/blocknote_transaction.dart';
+import '../model/blocknote_document.dart';
 
 /// Handles messages from the JavaScript bridge.
 class MessageHandlers {
@@ -16,6 +17,7 @@ class MessageHandlers {
     required Function(TransactionsMessage) onTransactions,
     required Function(String) onError,
     required Function(ToolbarPopupRequestMessage) onToolbarPopupRequest,
+    Function(DocumentMessage)? onDocument,
     required bool mounted,
   }) {
     if (!mounted) return;
@@ -32,6 +34,11 @@ class MessageHandlers {
         break;
       case JsToFlutterMessageType.toolbarPopupRequest:
         onToolbarPopupRequest(message as ToolbarPopupRequestMessage);
+        break;
+      case JsToFlutterMessageType.document:
+        if (onDocument != null) {
+          onDocument(message as DocumentMessage);
+        }
         break;
     }
   }

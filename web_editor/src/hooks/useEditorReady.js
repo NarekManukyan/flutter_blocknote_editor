@@ -3,6 +3,22 @@
  */
 
 import { useCallback, useEffect, useRef } from 'react';
+import {
+  serializeStyledText,
+  serializeInlineContent,
+  serializeTableContent,
+  createSerializeBlock,
+} from '../utils/blockSerialization';
+import { blocksEqual, computeBlockDifferences } from '../utils/blockDiff';
+import {
+  getSelectionVisibility,
+  scrollSelectionIntoView,
+  setupFocusListeners,
+} from '../utils/selectionVisibility';
+import {
+  createInitialOperations,
+  sendTransactionsToFlutter,
+} from '../utils/transactionSender';
 
 /**
  * Custom hook to handle editor ready state and send ready message.
@@ -42,313 +58,41 @@ export function useEditorReady(
     };
   }, [editor, isReady]);
 
-  const serializeStyledText = useCallback((item) => {
-    if (!item) return null;
-    const serialized = {
-      type: 'text',
-      text: item.text || '',
-    };
-
-    if (item.styles && typeof item.styles === 'object') {
-      serialized.styles = item.styles;
-    }
-
-    return serialized;
-  }, []);
-
-  const serializeInlineContent = useCallback(
-    (item) => {
-      if (!item) return null;
-      const itemType = item.type || 'text';
-
-      if (itemType === 'text') {
-        return serializeStyledText(item);
-      }
-
-      if (itemType === 'link') {
-        const linkContent = Array.isArray(item.content)
-          ? item.content
-              .map((entry) => serializeStyledText(entry))
-              .filter(Boolean)
-          : [];
-
-        return {
-          type: 'link',
-          content: linkContent,
-          href: item.href || '',
-        };
-      }
-
-      const customContent = Array.isArray(item.content)
-        ? item.content
-            .map((entry) => serializeStyledText(entry))
-            .filter(Boolean)
-        : null;
-
-      return {
-        type: itemType,
-        ...(customContent ? { content: customContent } : {}),
-        props: item.props && typeof item.props === 'object' ? item.props : {},
-      };
-    },
-    [serializeStyledText],
+  // Create serialization functions with proper dependencies
+  const serializeStyledTextFn = useCallback(
+    (item) => serializeStyledText(item),
+    [],
+  );
+  const serializeInlineContentFn = useCallback(
+    (item) => serializeInlineContent(item, serializeStyledTextFn),
+    [serializeStyledTextFn],
+  );
+  const serializeTableContentFn = useCallback(
+    (tableContent) =>
+      serializeTableContent(tableContent, serializeInlineContentFn),
+    [serializeInlineContentFn],
+  );
+  const serializeBlockFn = useCallback(
+    (block) =>
+      createSerializeBlock(
+        serializeInlineContentFn,
+        serializeTableContentFn,
+      )(block),
+    [serializeInlineContentFn, serializeTableContentFn],
   );
 
-  const serializeTableContent = useCallback(
-    (tableContent) => {
-      const rows = Array.isArray(tableContent?.rows) ? tableContent.rows : [];
-      return {
-        type: 'tableContent',
-        rows: rows.map((row) => {
-          const cells = Array.isArray(row?.cells) ? row.cells : [];
-          return {
-            cells: cells.map((cell) => {
-              if (!Array.isArray(cell)) return [];
-              return cell
-                .map((cellItem) => serializeInlineContent(cellItem))
-                .filter(Boolean);
-            }),
-          };
-        }),
-      };
-    },
-    [serializeInlineContent],
+  const blocksEqualFn = useCallback(
+    (block1, block2) => blocksEqual(block1, block2),
+    [],
   );
-
-  // Helper function to serialize a block for transmission
-  const serializeBlock = useCallback(
-    (block) => {
-      const serializeBlockInner = (node) => {
-        if (!node) return null;
-
-        const serialized = {
-          id: node.id,
-          type: node.type,
-        };
-
-        // Include content if present
-        if (node.content && Array.isArray(node.content)) {
-          serialized.content = node.content
-            .map((item) => serializeInlineContent(item))
-            .filter(Boolean);
-        } else if (
-          node.content &&
-          typeof node.content === 'object' &&
-          node.content.type === 'tableContent'
-        ) {
-          serialized.content = serializeTableContent(node.content);
-        }
-
-        // Include props if present
-        if (node.props && typeof node.props === 'object') {
-          serialized.props = node.props;
-        }
-
-        // Include children if present (recursively)
-        if (
-          node.children &&
-          Array.isArray(node.children) &&
-          node.children.length > 0
-        ) {
-          serialized.children = node.children
-            .map((child) => serializeBlockInner(child))
-            .filter(Boolean);
-        }
-
-        return serialized;
-      };
-
-      return serializeBlockInner(block);
-    },
-    [serializeInlineContent, serializeTableContent],
+  const computeBlockDifferencesFn = useCallback(
+    (previousBlocks, currentBlocks) =>
+      computeBlockDifferences(previousBlocks, currentBlocks, blocksEqualFn),
+    [blocksEqualFn],
   );
-
-  const getSelectionVisibility = useCallback((view, root) => {
-    if (!view || !root) return null;
-    const selection = view.state?.selection;
-    if (!selection) return null;
-    const fromCoords = view.coordsAtPos(selection.from);
-    const toCoords = view.coordsAtPos(selection.to);
-    const selectionTop = Math.min(fromCoords.top, toCoords.top);
-    const selectionBottom = Math.max(fromCoords.bottom, toCoords.bottom);
-    const rootRect = root.getBoundingClientRect();
-    const isVisible =
-      selectionTop >= rootRect.top && selectionBottom <= rootRect.bottom;
-    return {
-      isVisible,
-      selectionTop,
-      selectionBottom,
-      rootTop: rootRect.top,
-      rootBottom: rootRect.bottom,
-    };
-  }, []);
-
-  // Helper function to check if two blocks are equal
-  const blocksEqual = useCallback((block1, block2) => {
-    const blocksEqualInner = (left, right) => {
-      if (!left && !right) return true;
-      if (!left || !right) return false;
-      if (left.id !== right.id) return false;
-      if (left.type !== right.type) return false;
-
-      // Compare content
-      const content1 = JSON.stringify(left.content ?? null);
-      const content2 = JSON.stringify(right.content ?? null);
-      if (content1 !== content2) return false;
-
-      // Compare props
-      const props1 = JSON.stringify(left.props || {});
-      const props2 = JSON.stringify(right.props || {});
-      if (props1 !== props2) return false;
-
-      // Compare children recursively
-      const children1 = left.children || [];
-      const children2 = right.children || [];
-      if (children1.length !== children2.length) return false;
-      for (let i = 0; i < children1.length; i++) {
-        if (!blocksEqualInner(children1[i], children2[i])) return false;
-      }
-
-      return true;
-    };
-
-    return blocksEqualInner(block1, block2);
-  }, []);
-
-  // Function to compute differences between previous and current blocks
-  const computeBlockDifferences = useCallback(
-    (previousBlocks, currentBlocks) => {
-      const operations = [];
-
-      // Create maps for quick lookup
-      const previousMap = new Map();
-      const currentMap = new Map();
-
-      if (previousBlocks) {
-        previousBlocks.forEach((block, index) => {
-          if (block && block.id) {
-            previousMap.set(block.id, { block, index });
-          }
-        });
-      }
-
-      if (currentBlocks) {
-        currentBlocks.forEach((block, index) => {
-          if (block && block.id) {
-            currentMap.set(block.id, { block, index });
-          }
-        });
-      }
-
-      // Helper function to get adjacent block IDs for a given index
-      const getAdjacentBlockIds = (index) => {
-        if (!currentBlocks || currentBlocks.length === 0) {
-          return { beforeChildId: null, afterChildId: null };
-        }
-
-        // Ensure index is within valid range
-        if (index < 0 || index >= currentBlocks.length) {
-          return { beforeChildId: null, afterChildId: null };
-        }
-
-        // Check if this is the last block
-        const isLastBlock = index === currentBlocks.length - 1;
-
-        const beforeIndex = index - 1;
-        const afterIndex = index + 1;
-
-        const beforeChildId =
-          beforeIndex >= 0 && currentBlocks[beforeIndex]?.id
-            ? currentBlocks[beforeIndex].id
-            : null;
-
-        // Ensure afterChildId is null if this is the last block
-        const afterChildId = isLastBlock
-          ? null
-          : afterIndex < currentBlocks.length && currentBlocks[afterIndex]?.id
-            ? currentBlocks[afterIndex].id
-            : null;
-
-        return { beforeChildId, afterChildId };
-      };
-
-      // Find deleted blocks (in previous but not in current)
-      for (const blockId of previousMap.keys()) {
-        if (!currentMap.has(blockId)) {
-          const prevEntry = previousMap.get(blockId);
-          // For delete operations, use the previous index to find adjacent blocks
-          // We need to reconstruct what the adjacent blocks were before deletion
-          const prevIndex = prevEntry ? prevEntry.index : -1;
-          const { beforeChildId, afterChildId } =
-            getAdjacentBlockIds(prevIndex);
-
-          operations.push({
-            operation: 'delete',
-            blockId: blockId,
-            beforeChildId: beforeChildId,
-            afterChildId: afterChildId,
-          });
-        }
-      }
-
-      // Find inserted and updated blocks
-      // Iterate through currentBlocks in order to ensure correct indices
-      if (currentBlocks) {
-        currentBlocks.forEach((currBlock, currIndex) => {
-          if (!currBlock || !currBlock.id) return;
-
-          const blockId = currBlock.id;
-          const prevEntry = previousMap.get(blockId);
-
-          // Get adjacent block IDs using the actual index in the array
-          const { beforeChildId, afterChildId } =
-            getAdjacentBlockIds(currIndex);
-
-          if (!prevEntry) {
-            // New block - insert
-            operations.push({
-              operation: 'insert',
-              blockId: blockId,
-              block: currBlock,
-              index: currIndex,
-              beforeChildId: beforeChildId,
-              afterChildId: afterChildId,
-            });
-          } else {
-            // Existing block - check if it changed
-            const prevBlock = prevEntry.block;
-            const prevIndex = prevEntry.index;
-
-            // Check if block content changed
-            if (!blocksEqual(prevBlock, currBlock)) {
-              // Block content changed - update
-              operations.push({
-                operation: 'update',
-                blockId: blockId,
-                block: currBlock,
-                beforeChildId: beforeChildId,
-                afterChildId: afterChildId,
-              });
-            }
-
-            // Check if block moved (position changed)
-            // Note: We send move separately even if content also changed
-            if (prevIndex !== currIndex) {
-              operations.push({
-                operation: 'move',
-                blockId: blockId,
-                index: currIndex,
-                beforeChildId: beforeChildId,
-                afterChildId: afterChildId,
-              });
-            }
-          }
-        });
-      }
-
-      return operations;
-    },
-    [blocksEqual],
+  const getSelectionVisibilityFn = useCallback(
+    (view, root) => getSelectionVisibility(view, root),
+    [],
   );
 
   // Function to send transactions immediately
@@ -359,75 +103,18 @@ export function useEditorReady(
       const currentBlocks = editor.topLevelBlocks || [];
       const serializedCurrentBlocks =
         currentBlocks.length > 0
-          ? currentBlocks.map((block) => serializeBlock(block))
+          ? currentBlocks.map((block) => serializeBlockFn(block))
           : null;
 
-      let operations = [];
+      const operations =
+        previousBlocksRef.current === null
+          ? createInitialOperations(serializedCurrentBlocks)
+          : computeBlockDifferencesFn(
+              previousBlocksRef.current,
+              serializedCurrentBlocks,
+            );
 
-      if (previousBlocksRef.current === null) {
-        // First time - send all blocks as updates
-        operations = serializedCurrentBlocks
-          ? serializedCurrentBlocks.map((block, index) => {
-              // Get adjacent block IDs
-              const isLastBlock = index === serializedCurrentBlocks.length - 1;
-              const beforeIndex = index - 1;
-              const afterIndex = index + 1;
-              const beforeChildId =
-                beforeIndex >= 0 && serializedCurrentBlocks[beforeIndex]?.id
-                  ? serializedCurrentBlocks[beforeIndex].id
-                  : null;
-              // Ensure afterChildId is null if this is the last block
-              const afterChildId = isLastBlock
-                ? null
-                : afterIndex < serializedCurrentBlocks.length &&
-                    serializedCurrentBlocks[afterIndex]?.id
-                  ? serializedCurrentBlocks[afterIndex].id
-                  : null;
-
-              return {
-                operation: 'update',
-                blockId: block.id || `block_${index}`,
-                block: block,
-                beforeChildId: beforeChildId,
-                afterChildId: afterChildId,
-              };
-            })
-          : [
-              {
-                operation: 'update',
-                blockId: 'root',
-                block: null,
-                beforeChildId: null,
-                afterChildId: null,
-              },
-            ];
-      } else {
-        // Compute differences
-        operations = computeBlockDifferences(
-          previousBlocksRef.current,
-          serializedCurrentBlocks,
-        );
-      }
-
-      // Only send if there are changes
-      if (operations.length > 0) {
-        const transactions = [
-          {
-            baseVersion: documentVersionRef.current,
-            operations: operations,
-          },
-        ];
-
-        documentVersionRef.current++;
-
-        window.BlockNoteChannel.postMessage(
-          JSON.stringify({
-            type: 'transactions',
-            data: transactions,
-            timestamp: Date.now(),
-          }),
-        );
-      }
+      sendTransactionsToFlutter(operations, documentVersionRef);
 
       // Update previous blocks reference for next comparison
       previousBlocksRef.current = serializedCurrentBlocks;
@@ -439,7 +126,7 @@ export function useEditorReady(
         }),
       );
     }
-  }, [editor, documentVersionRef, serializeBlock, computeBlockDifferences]);
+  }, [editor, documentVersionRef, serializeBlockFn, computeBlockDifferencesFn]);
 
   // Function to flush pending transactions immediately (clears debounce)
   const flushTransactions = useCallback(() => {
@@ -459,15 +146,16 @@ export function useEditorReady(
     const currentBlocks = editor.topLevelBlocks || [];
     previousBlocksRef.current =
       currentBlocks.length > 0
-        ? currentBlocks.map((block) => serializeBlock(block))
+        ? currentBlocks.map((block) => serializeBlockFn(block))
         : null;
-  }, [editor, serializeBlock]);
+  }, [editor, serializeBlockFn]);
 
   // Expose functions for external use
   useEffect(() => {
     if (editor && isReady) {
       window.sendPendingTransaction = flushTransactions;
       window.resetPreviousBlocks = resetPreviousBlocks;
+      window.serializeBlock = serializeBlockFn;
     }
     return () => {
       if (window.sendPendingTransaction === flushTransactions) {
@@ -476,8 +164,17 @@ export function useEditorReady(
       if (window.resetPreviousBlocks === resetPreviousBlocks) {
         delete window.resetPreviousBlocks;
       }
+      if (window.serializeBlock === serializeBlockFn) {
+        delete window.serializeBlock;
+      }
     };
-  }, [editor, isReady, flushTransactions, resetPreviousBlocks]);
+  }, [
+    editor,
+    isReady,
+    flushTransactions,
+    resetPreviousBlocks,
+    serializeBlockFn,
+  ]);
 
   useEffect(() => {
     if (!editor) {
@@ -510,7 +207,7 @@ export function useEditorReady(
       const initialBlocks = editor.topLevelBlocks || [];
       previousBlocksRef.current =
         initialBlocks.length > 0
-          ? initialBlocks.map((block) => serializeBlock(block))
+          ? initialBlocks.map((block) => serializeBlockFn(block))
           : null;
 
       // Set up change listener with debouncing
@@ -533,30 +230,12 @@ export function useEditorReady(
 
         // Listen for selection updates
         tiptapEditor.on('selectionUpdate', () => {
-          // Use a small delay to ensure DOM has updated
           setTimeout(() => {
             try {
               const proseMirrorView = tiptapEditor.view;
               if (proseMirrorView) {
-                const visualViewport = window.visualViewport;
-                if (!visualViewport) {
-                  return;
-                }
-                if (visualViewport.height >= window.innerHeight - 24) {
-                  return;
-                }
                 const root = document.getElementById('root');
-                const visibility = getSelectionVisibility(
-                  proseMirrorView,
-                  root,
-                );
-                if (visibility && visibility.isVisible) {
-                  return;
-                }
-                // Trigger ProseMirror's built-in scroll-to-selection
-                proseMirrorView.dispatch(
-                  proseMirrorView.state.tr.scrollIntoView(),
-                );
+                scrollSelectionIntoView(proseMirrorView, root);
               }
             } catch {
               // Silently fail - BlockNote should handle this automatically
@@ -564,55 +243,8 @@ export function useEditorReady(
           }, 10);
         });
 
-        // Also listen for focus events on the editor DOM
-        const setupFocusListeners = () => {
-          try {
-            const proseMirrorView = tiptapEditor.view;
-            if (!proseMirrorView || !proseMirrorView.dom) {
-              // Editor not mounted yet, try again later
-              setTimeout(setupFocusListeners, 100);
-              return;
-            }
-
-            const editorDOM = proseMirrorView.dom;
-            const handleFocus = () => {
-              // Small delay to let selection update
-              setTimeout(() => {
-                try {
-                  const currentView = tiptapEditor.view;
-                  if (currentView && currentView.dom) {
-                    const visualViewport = window.visualViewport;
-                    if (!visualViewport) {
-                      return;
-                    }
-                    if (visualViewport.height >= window.innerHeight - 24) {
-                      return;
-                    }
-                    const root = document.getElementById('root');
-                    const visibility = getSelectionVisibility(
-                      currentView,
-                      root,
-                    );
-                    if (visibility && visibility.isVisible) {
-                      return;
-                    }
-                    currentView.dispatch(currentView.state.tr.scrollIntoView());
-                  }
-                } catch {
-                  // Silently fail
-                }
-              }, 50);
-            };
-
-            editorDOM.addEventListener('focus', handleFocus, true);
-            editorDOM.addEventListener('click', handleFocus, true);
-          } catch {
-            setTimeout(setupFocusListeners, 200);
-          }
-        };
-
-        // Try to set up listeners immediately, but retry if editor isn't ready
-        setupFocusListeners();
+        // Set up focus listeners
+        setupFocusListeners(tiptapEditor, getSelectionVisibilityFn);
       }
     }
 
@@ -626,8 +258,8 @@ export function useEditorReady(
   }, [
     editor,
     documentVersionRef,
-    getSelectionVisibility,
-    serializeBlock,
+    getSelectionVisibilityFn,
+    serializeBlockFn,
     setIsLoading,
     setError,
     sendTransactions,

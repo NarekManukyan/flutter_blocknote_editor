@@ -7,6 +7,7 @@ class TransactionLogPage extends StatelessWidget {
   const TransactionLogPage({
     required this.transactions,
     required this.onClear,
+    this.controller,
     super.key,
   });
 
@@ -15,6 +16,9 @@ class TransactionLogPage extends StatelessWidget {
 
   /// Callback when clear button is pressed.
   final VoidCallback onClear;
+
+  /// Optional controller to retrieve full document for block lookup.
+  final BlockNoteController? controller;
 
   @override
   Widget build(BuildContext context) {
@@ -107,6 +111,7 @@ class TransactionLogPage extends StatelessWidget {
                       return _TransactionCard(
                         transaction: transaction,
                         index: index,
+                        controller: controller,
                       );
                     },
                   ),
@@ -120,7 +125,11 @@ class TransactionLogPage extends StatelessWidget {
 /// Expandable card widget for displaying transaction details.
 class _TransactionCard extends StatefulWidget {
   /// Creates a new transaction card.
-  const _TransactionCard({required this.transaction, required this.index});
+  const _TransactionCard({
+    required this.transaction,
+    required this.index,
+    this.controller,
+  });
 
   /// The transaction to display.
   final BlockNoteTransaction transaction;
@@ -128,12 +137,17 @@ class _TransactionCard extends StatefulWidget {
   /// The index of this transaction.
   final int index;
 
+  /// Optional controller to retrieve full document for block lookup.
+  final BlockNoteController? controller;
+
   @override
   State<_TransactionCard> createState() => _TransactionCardState();
 }
 
 class _TransactionCardState extends State<_TransactionCard> {
   bool _isExpanded = false;
+  BlockNoteDocument? _document;
+  bool _isLoadingDocument = false;
 
   /// Extracts text content from a block.
   String _extractBlockText(BlockNoteBlock? block) {
@@ -184,14 +198,71 @@ class _TransactionCardState extends State<_TransactionCard> {
     return type.name;
   }
 
-  /// Finds a block by ID from the transaction operations.
+  /// Finds a block by ID from the transaction operations or the full document.
   BlockNoteBlock? _findBlockById(String blockId) {
+    // First, try to find in transaction operations
     for (final op in widget.transaction.operations) {
       if (op.blockId == blockId && op.block != null) {
         return op.block;
       }
     }
+
+    // If not found in transaction, search in the full document
+    if (_document != null) {
+      return _findBlockInDocument(_document!.blocks, blockId);
+    }
+
     return null;
+  }
+
+  /// Recursively searches for a block by ID in a list of blocks.
+  BlockNoteBlock? _findBlockInDocument(
+    List<BlockNoteBlock> blocks,
+    String blockId,
+  ) {
+    for (final block in blocks) {
+      if (block.id == blockId) {
+        return block;
+      }
+      // Search in children recursively
+      if (block.children != null && block.children!.isNotEmpty) {
+        final found = _findBlockInDocument(block.children!, blockId);
+        if (found != null) {
+          return found;
+        }
+      }
+    }
+    return null;
+  }
+
+  /// Fetches the full document from the controller if available.
+  Future<void> _fetchDocument() async {
+    if (widget.controller == null ||
+        !widget.controller!.isReady ||
+        _isLoadingDocument ||
+        _document != null) {
+      return;
+    }
+
+    setState(() {
+      _isLoadingDocument = true;
+    });
+
+    try {
+      final document = await widget.controller!.getDocument();
+      if (mounted) {
+        setState(() {
+          _document = document;
+          _isLoadingDocument = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingDocument = false;
+        });
+      }
+    }
   }
 
   /// Builds a widget showing the content of a block by ID.
@@ -206,8 +277,32 @@ class _TransactionCardState extends State<_TransactionCard> {
         overflow: TextOverflow.ellipsis,
       );
     }
+
+    // Show appropriate message based on document loading state
+    if (_isLoadingDocument) {
+      return Text(
+        'Content: (loading document...)',
+        style: TextStyle(
+          fontSize: 10,
+          color: Colors.grey[500],
+          fontStyle: FontStyle.italic,
+        ),
+      );
+    }
+
+    if (widget.controller != null && _document == null) {
+      return Text(
+        'Content: (not found in transaction, document not loaded)',
+        style: TextStyle(
+          fontSize: 10,
+          color: Colors.grey[500],
+          fontStyle: FontStyle.italic,
+        ),
+      );
+    }
+
     return Text(
-      'Content: (not found in transaction)',
+      'Content: (not found)',
       style: TextStyle(
         fontSize: 10,
         color: Colors.grey[500],
@@ -261,6 +356,10 @@ class _TransactionCardState extends State<_TransactionCard> {
               setState(() {
                 _isExpanded = !_isExpanded;
               });
+              // Fetch document when expanded if controller is available
+              if (_isExpanded && widget.controller != null) {
+                _fetchDocument();
+              }
             },
             isThreeLine: true,
           ),

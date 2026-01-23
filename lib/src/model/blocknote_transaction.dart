@@ -99,6 +99,11 @@ class BlockNoteTransactionOp {
     return json;
   }
 
+  /// Creates a copy of this transaction operation with the given fields replaced.
+  ///
+  /// This method follows the standard Dart pattern for immutable classes.
+  /// The number of parameters matches the number of fields in this class.
+  // ignore: code_scene.excess_number_of_function_arguments
   BlockNoteTransactionOp copyWith({
     BlockNoteTransactionOperation? operation,
     String? blockId,
@@ -132,15 +137,15 @@ class BlockNoteTransactionOp {
 
   @override
   bool operator ==(Object other) {
-    return identical(this, other) ||
-        other is BlockNoteTransactionOp &&
-            other.operation == operation &&
-            other.blockId == blockId &&
-            other.block == block &&
-            other.index == index &&
-            other.parentId == parentId &&
-            other.afterChildId == afterChildId &&
-            other.beforeChildId == beforeChildId;
+    if (identical(this, other)) return true;
+    if (other is! BlockNoteTransactionOp) return false;
+    return other.operation == operation &&
+        other.blockId == blockId &&
+        other.block == block &&
+        other.index == index &&
+        other.parentId == parentId &&
+        other.afterChildId == afterChildId &&
+        other.beforeChildId == beforeChildId;
   }
 
   @override

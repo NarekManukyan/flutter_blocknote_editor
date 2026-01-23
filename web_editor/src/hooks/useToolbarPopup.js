@@ -4,6 +4,13 @@
 
 import { useEffect } from 'react';
 import { TOOLBAR_POPUP_OPTIONS } from '../constants/toolbarOptions';
+import {
+  hidePopupElement,
+  removeHiddenPopups,
+  identifyPopupType,
+  isPopupNearToolbar,
+  applyPopupSelection,
+} from '../utils/popupHelpers';
 
 /**
  * Custom hook to intercept toolbar popups and send requests to Flutter.
@@ -37,60 +44,26 @@ export function useToolbarPopup(editor, isReady, toolbarPopupCallbacksRef) {
               popup.classList?.contains('mantine-Popover-dropdown');
 
             if (isMantinePopup) {
-              // Identify popup type directly from popup classes
               const popupClasses = Array.from(popup.classList || []);
-              let popupType = null;
-              let options = [];
+              const { type: popupType } = identifyPopupType(popupClasses);
 
-              // Check for block type select popup
-              if (popupClasses.includes('bn-select')) {
-                popupType = 'blockTypeSelect';
-                options = TOOLBAR_POPUP_OPTIONS.blockTypeSelect;
-              }
-              // Check for color picker popup
-              else if (popupClasses.includes('bn-color-picker-dropdown')) {
-                popupType = 'colorStyle';
-                options = TOOLBAR_POPUP_OPTIONS.colorStyle;
-              }
+              if (!popupType) return;
+
+              // Get options for the popup type
+              const options =
+                popupType === 'blockTypeSelect'
+                  ? TOOLBAR_POPUP_OPTIONS.blockTypeSelect
+                  : TOOLBAR_POPUP_OPTIONS.colorStyle;
 
               // Only intercept toolbar popups (not side menu or other popups)
-              if (popupType === 'blockTypeSelect') {
-                const toolbarRect = toolbar.getBoundingClientRect();
-                const popupRect = popup.getBoundingClientRect();
-                const isNearToolbar =
-                  Math.abs(popupRect.top - toolbarRect.bottom) < 100 ||
-                  Math.abs(popupRect.bottom - toolbarRect.top) < 100;
-
-                if (!isNearToolbar) {
-                  popupType = null; // Don't intercept if not near toolbar
-                }
+              if (
+                popupType === 'blockTypeSelect' &&
+                !isPopupNearToolbar(toolbar, popup)
+              ) {
+                return;
               }
 
-              if (popupType && options.length > 0) {
-                const hidePopupElement = (element) => {
-                  element.setAttribute('data-bn-flutter-hidden', 'true');
-                  element.style.setProperty('display', 'none', 'important');
-                  element.style.setProperty(
-                    'pointer-events',
-                    'none',
-                    'important',
-                  );
-                  element.style.setProperty(
-                    'visibility',
-                    'hidden',
-                    'important',
-                  );
-                  element.style.setProperty('opacity', '0', 'important');
-                };
-
-                const removeHiddenPopups = () => {
-                  document
-                    .querySelectorAll('[data-bn-flutter-hidden="true"]')
-                    .forEach((element) => {
-                      element.remove();
-                    });
-                };
-
+              if (options.length > 0) {
                 // Hide the default popup
                 hidePopupElement(popup);
 
@@ -113,7 +86,6 @@ export function useToolbarPopup(editor, isReady, toolbarPopupCallbacksRef) {
                   options: options,
                 };
 
-                // Debug: verify options have IDs
                 if (options.length > 0 && !options[0].id) {
                   console.warn(
                     '[BlockNote] Warning: Options missing IDs:',
@@ -137,55 +109,7 @@ export function useToolbarPopup(editor, isReady, toolbarPopupCallbacksRef) {
                   requestId,
                   (selectedValue) => {
                     if (selectedValue !== null && selectedValue !== undefined) {
-                      // Apply the selected value
-                      if (popupType === 'colorStyle' && editor) {
-                        // Apply color style
-                        try {
-                          editor.toggleStyles({ textColor: selectedValue });
-                        } catch (err) {
-                          console.error(
-                            '[BlockNote] Error applying color style:',
-                            err,
-                          );
-                        }
-                      } else if (popupType === 'blockTypeSelect' && editor) {
-                        // Change block type
-                        try {
-                          const currentBlock =
-                            editor.getTextCursorPosition().block;
-                          if (currentBlock) {
-                            // Parse value if it's a JSON string (for heading levels, checklist, etc.)
-                            let blockUpdate = {};
-                            if (
-                              typeof selectedValue === 'string' &&
-                              selectedValue.startsWith('{')
-                            ) {
-                              try {
-                                const parsed = JSON.parse(selectedValue);
-                                blockUpdate = parsed;
-                              } catch {
-                                // Not JSON, treat as simple type
-                                blockUpdate = { type: selectedValue };
-                              }
-                            } else if (
-                              typeof selectedValue === 'object' &&
-                              selectedValue !== null
-                            ) {
-                              // Already an object, use directly
-                              blockUpdate = selectedValue;
-                            } else {
-                              blockUpdate = { type: selectedValue };
-                            }
-
-                            editor.updateBlock(currentBlock, blockUpdate);
-                          }
-                        } catch (err) {
-                          console.error(
-                            '[BlockNote] Error changing block type:',
-                            err,
-                          );
-                        }
-                      }
+                      applyPopupSelection(editor, popupType, selectedValue);
                     }
                     removeHiddenPopups();
                   },
