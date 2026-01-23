@@ -36,6 +36,9 @@ enum FlutterToJsMessageType {
 
   /// Send toolbar popup response with selected value.
   toolbarPopupResponse,
+
+  /// Set the transaction debounce duration.
+  setDebounceDuration,
 }
 
 /// Message types sent from JavaScript to Flutter.
@@ -265,6 +268,26 @@ class ToolbarPopupResponseMessage extends FlutterToJsMessage {
       'requestId': requestId,
       'popupType': popupType,
       'selectedValue': selectedValue,
+    };
+  }
+}
+
+/// Message to set the transaction debounce duration.
+class SetDebounceDurationMessage extends FlutterToJsMessage {
+  /// Creates a new set debounce duration message.
+  const SetDebounceDurationMessage({required this.durationMs});
+
+  /// The debounce duration in milliseconds.
+  final int durationMs;
+
+  @override
+  FlutterToJsMessageType get type => FlutterToJsMessageType.setDebounceDuration;
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      'type': 'set_debounce_duration',
+      'durationMs': durationMs,
     };
   }
 }

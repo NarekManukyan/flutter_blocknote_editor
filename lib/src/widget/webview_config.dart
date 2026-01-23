@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 /// Sets up JavaScript handlers for message communication.
@@ -46,6 +47,9 @@ class WebViewConfig {
       await controller.evaluateJavascript(
         source: '''
         (function() {
+          // Set debug logging flag
+          window.BlockNoteDebugLogging = $debugLogging;
+          
           // Create onMessage bridge object
           if (!window.onMessage) {
             window.onMessage = {
@@ -68,7 +72,9 @@ class WebViewConfig {
             };
           }
           
-          console.log('[BlockNote] JavaScript handlers bridge installed');
+          if (window.BlockNoteDebugLogging) {
+            console.log('[BlockNote] JavaScript handlers bridge installed');
+          }
         })();
       ''',
       );
@@ -86,10 +92,14 @@ class WebViewConfig {
   }
 
   /// Gets the default WebView settings for BlockNote editor.
-  static InAppWebViewSettings getDefaultSettings() {
+  ///
+  /// [backgroundColor] is optional. If provided, the WebView will use this
+  /// color as its background instead of being transparent. The background color
+  /// is applied via the theme system in JavaScript, not through WebView settings.
+  static InAppWebViewSettings getDefaultSettings({Color? backgroundColor}) {
     return InAppWebViewSettings(
       javaScriptEnabled: true,
-      transparentBackground: true,
+      transparentBackground: backgroundColor == null,
       useHybridComposition: true,
       verticalScrollBarEnabled: true,
       horizontalScrollBarEnabled: false,

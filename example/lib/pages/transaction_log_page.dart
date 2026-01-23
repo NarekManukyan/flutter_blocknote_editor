@@ -140,8 +140,7 @@ class _TransactionCardState extends State<_TransactionCard> {
     if (block == null) return 'null';
 
     final content = block.content;
-    if (content is BlockNoteInlineContentList &&
-        content.content.isNotEmpty) {
+    if (content is BlockNoteInlineContentList && content.content.isNotEmpty) {
       return content.content
           .map(_extractInlineText)
           .where((text) => text.isNotEmpty)
@@ -183,6 +182,38 @@ class _TransactionCardState extends State<_TransactionCard> {
   /// Formats block type for display.
   String _formatBlockType(BlockNoteBlockType type) {
     return type.name;
+  }
+
+  /// Finds a block by ID from the transaction operations.
+  BlockNoteBlock? _findBlockById(String blockId) {
+    for (final op in widget.transaction.operations) {
+      if (op.blockId == blockId && op.block != null) {
+        return op.block;
+      }
+    }
+    return null;
+  }
+
+  /// Builds a widget showing the content of a block by ID.
+  Widget _buildBlockContentWidget(String blockId) {
+    final block = _findBlockById(blockId);
+    if (block != null) {
+      final text = _extractBlockText(block);
+      return Text(
+        'Content: ${text.isEmpty ? "(empty)" : text}',
+        style: const TextStyle(fontSize: 10, color: Colors.grey),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      );
+    }
+    return Text(
+      'Content: (not found in transaction)',
+      style: TextStyle(
+        fontSize: 10,
+        color: Colors.grey[500],
+        fontStyle: FontStyle.italic,
+      ),
+    );
   }
 
   @override
@@ -350,6 +381,102 @@ class _TransactionCardState extends State<_TransactionCard> {
                               Text(
                                 'Parent ID: ${op.parentId}',
                                 style: const TextStyle(fontSize: 11),
+                              ),
+                            ],
+                            if (op.beforeChildId != null) ...[
+                              const SizedBox(height: 4),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.arrow_upward,
+                                        size: 14,
+                                        color: Colors.grey[600],
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Before Block:',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.grey[700],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 18),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'ID: ${op.beforeChildId}',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: Colors.grey[600],
+                                            fontFamily: 'monospace',
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        _buildBlockContentWidget(
+                                          op.beforeChildId!,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            if (op.afterChildId != null) ...[
+                              const SizedBox(height: 4),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.arrow_downward,
+                                        size: 14,
+                                        color: Colors.grey[600],
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'After Block:',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.grey[700],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 18),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'ID: ${op.afterChildId}',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: Colors.grey[600],
+                                            fontFamily: 'monospace',
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        _buildBlockContentWidget(
+                                          op.afterChildId!,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ],

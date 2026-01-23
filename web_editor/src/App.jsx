@@ -183,6 +183,39 @@ function App() {
   // Convert theme to BlockNote format if provided
   const blockNoteTheme = buildBlockNoteTheme(theme);
 
+  // Apply theme background color to page elements
+  useEffect(() => {
+    if (!theme || !blockNoteTheme) {
+      return;
+    }
+
+    // Extract editor background color from theme (prefer light, fallback to dark)
+    const colors = theme.light || theme.dark;
+    const editorBackground = colors?.editor?.background;
+
+    if (editorBackground) {
+      // Convert hex color to CSS format (already in hex from Flutter)
+      const bgColor = editorBackground.startsWith('#')
+        ? editorBackground
+        : `#${editorBackground}`;
+
+      // Apply to html, body, and root elements
+      const html = document.documentElement;
+      const body = document.body;
+      const root = document.getElementById('root');
+
+      if (html) {
+        html.style.backgroundColor = bgColor;
+      }
+      if (body) {
+        body.style.backgroundColor = bgColor;
+      }
+      if (root) {
+        root.style.backgroundColor = bgColor;
+      }
+    }
+  }, [theme, blockNoteTheme]);
+
   return (
     <BlockNoteErrorBoundary>
       <div

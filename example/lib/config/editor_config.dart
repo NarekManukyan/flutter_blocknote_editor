@@ -6,7 +6,7 @@ class EditorConfig {
   /// Creates a custom theme with red color scheme.
   static BlockNoteTheme createCustomTheme({required bool useCustomFont}) {
     return BlockNoteTheme(
-      colors: BlockNoteColorScheme(
+      light: BlockNoteColorScheme(
         editor: const BlockNoteColorPair(
           text: Color(0xFF222222),
           background: Color(0xFFFEEEEE),

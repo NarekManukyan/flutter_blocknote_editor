@@ -249,9 +249,7 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
                         ? EditorConfig.createCustomSlashCommands()
                         : null,
                   )
-                : const Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                : const Center(child: CircularProgressIndicator()),
           ),
         ],
       ),
@@ -440,15 +438,11 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
                           ? EditorConfig.createCustomSlashCommands()
                           : null,
                     )
-                  : const Center(
-                      child: CircularProgressIndicator(),
-                    ),
+                  : const Center(child: CircularProgressIndicator()),
             ),
           ],
         ),
       ),
     );
   }
-
-  
 }

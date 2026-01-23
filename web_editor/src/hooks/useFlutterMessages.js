@@ -112,6 +112,22 @@ export function useFlutterMessages(
         case 'toolbar_popup_response':
           handleToolbarPopupResponse(message, toolbarPopupCallbacksRef);
           break;
+        case 'set_debounce_duration':
+          // Update debounce duration globally
+          if (
+            typeof message.durationMs === 'number' &&
+            message.durationMs >= 0
+          ) {
+            window.__blockNoteDebounceDuration = message.durationMs;
+            // If editor is already initialized, update the debounce delay
+            if (
+              window.updateDebounceDuration &&
+              typeof window.updateDebounceDuration === 'function'
+            ) {
+              window.updateDebounceDuration(message.durationMs);
+            }
+          }
+          break;
         default:
           console.warn('[BlockNote] Unknown message type:', message.type);
       }

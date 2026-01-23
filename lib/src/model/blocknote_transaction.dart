@@ -33,6 +33,8 @@ class BlockNoteTransactionOp {
     this.block,
     this.index,
     this.parentId,
+    this.afterChildId,
+    this.beforeChildId,
   });
 
   /// The type of operation.
@@ -50,11 +52,26 @@ class BlockNoteTransactionOp {
   /// The parent block ID (for nested structures).
   final String? parentId;
 
+  /// The ID of the block that comes after this block (next sibling).
+  ///
+  /// This represents the block that appears immediately after the current block
+  /// in the document order. Used to maintain correct block ordering when applying
+  /// transactions. Will be `null` if this block is the last block in its parent.
+  final String? afterChildId;
+
+  /// The ID of the block that comes before this block (previous sibling).
+  ///
+  /// This represents the block that appears immediately before the current block
+  /// in the document order. Used to maintain correct block ordering when applying
+  /// transactions. Will be `null` if this block is the first block in its parent.
+  final String? beforeChildId;
+
   /// Creates a BlockNoteTransactionOp from a JSON map.
   factory BlockNoteTransactionOp.fromJson(Map<String, dynamic> json) {
     return BlockNoteTransactionOp(
-      operation:
-          BlockNoteTransactionOperation.values.byName(json['operation'] as String),
+      operation: BlockNoteTransactionOperation.values.byName(
+        json['operation'] as String,
+      ),
       blockId: json['blockId'] as String? ?? '',
       block: json['block'] == null
           ? null
@@ -63,6 +80,8 @@ class BlockNoteTransactionOp {
             ),
       index: json['index'] as int?,
       parentId: json['parentId'] as String?,
+      afterChildId: json['afterChildId'] as String?,
+      beforeChildId: json['beforeChildId'] as String?,
     );
   }
 
@@ -71,16 +90,12 @@ class BlockNoteTransactionOp {
     final json = <String, dynamic>{
       'operation': operation.name,
       'blockId': blockId,
+      if (block != null) 'block': block!.toJson(),
+      if (index != null) 'index': index,
+      if (parentId != null) 'parentId': parentId,
+      if (afterChildId != null) 'afterChildId': afterChildId,
+      if (beforeChildId != null) 'beforeChildId': beforeChildId,
     };
-    if (block != null) {
-      json['block'] = block!.toJson();
-    }
-    if (index != null) {
-      json['index'] = index;
-    }
-    if (parentId != null) {
-      json['parentId'] = parentId;
-    }
     return json;
   }
 
@@ -90,6 +105,8 @@ class BlockNoteTransactionOp {
     Object? block = _unset,
     Object? index = _unset,
     Object? parentId = _unset,
+    Object? afterChildId = _unset,
+    Object? beforeChildId = _unset,
   }) {
     return BlockNoteTransactionOp(
       operation: operation ?? this.operation,
@@ -99,12 +116,18 @@ class BlockNoteTransactionOp {
       parentId: identical(parentId, _unset)
           ? this.parentId
           : parentId as String?,
+      afterChildId: identical(afterChildId, _unset)
+          ? this.afterChildId
+          : afterChildId as String?,
+      beforeChildId: identical(beforeChildId, _unset)
+          ? this.beforeChildId
+          : beforeChildId as String?,
     );
   }
 
   @override
   String toString() {
-    return 'BlockNoteTransactionOp(operation: $operation, blockId: $blockId, block: $block, index: $index, parentId: $parentId)';
+    return 'BlockNoteTransactionOp(operation: $operation, blockId: $blockId, block: $block, index: $index, parentId: $parentId, afterChildId: $afterChildId, beforeChildId: $beforeChildId)';
   }
 
   @override
@@ -115,12 +138,21 @@ class BlockNoteTransactionOp {
             other.blockId == blockId &&
             other.block == block &&
             other.index == index &&
-            other.parentId == parentId;
+            other.parentId == parentId &&
+            other.afterChildId == afterChildId &&
+            other.beforeChildId == beforeChildId;
   }
 
   @override
-  int get hashCode =>
-      Object.hash(operation, blockId, block, index, parentId);
+  int get hashCode => Object.hash(
+    operation,
+    blockId,
+    block,
+    index,
+    parentId,
+    afterChildId,
+    beforeChildId,
+  );
 }
 
 /// A BlockNote transaction containing one or more operations.
@@ -152,9 +184,10 @@ class BlockNoteTransaction {
       baseVersion: json['baseVersion'] as int? ?? 0,
       operations: (json['operations'] as List<dynamic>? ?? [])
           .whereType<Map>()
-          .map((op) => BlockNoteTransactionOp.fromJson(
-                Map<String, dynamic>.from(op),
-              ))
+          .map(
+            (op) =>
+                BlockNoteTransactionOp.fromJson(Map<String, dynamic>.from(op)),
+          )
           .toList(),
       timestamp: json['timestamp'] as int?,
     );
@@ -180,7 +213,9 @@ class BlockNoteTransaction {
     return BlockNoteTransaction(
       baseVersion: baseVersion ?? this.baseVersion,
       operations: operations ?? this.operations,
-      timestamp: identical(timestamp, _unset) ? this.timestamp : timestamp as int?,
+      timestamp: identical(timestamp, _unset)
+          ? this.timestamp
+          : timestamp as int?,
     );
   }
 
@@ -199,11 +234,8 @@ class BlockNoteTransaction {
   }
 
   @override
-  int get hashCode => Object.hash(
-        baseVersion,
-        _listHash(operations),
-        timestamp,
-      );
+  int get hashCode =>
+      Object.hash(baseVersion, _listHash(operations), timestamp);
 }
 
 const Object _unset = Object();

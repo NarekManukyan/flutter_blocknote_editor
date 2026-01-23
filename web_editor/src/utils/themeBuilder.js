@@ -18,31 +18,35 @@ export function buildBlockNoteTheme(theme) {
     // Deep clone to avoid mutation issues
     const themeClone = JSON.parse(JSON.stringify(theme));
 
-    // BlockNote expects theme in a specific format
-    // If light/dark are provided, use them; otherwise use colors directly
-    let blockNoteTheme = {};
-    if (themeClone.light || themeClone.dark) {
-      if (themeClone.light) {
-        blockNoteTheme.light = themeClone.light;
-      }
-      if (themeClone.dark) {
-        blockNoteTheme.dark = themeClone.dark;
-      }
-      // Add borderRadius and fontFamily if provided
-      if (themeClone.borderRadius !== undefined) {
-        blockNoteTheme.borderRadius = themeClone.borderRadius;
-      }
-      if (themeClone.fontFamily) {
-        blockNoteTheme.fontFamily = themeClone.fontFamily;
-      }
-    } else {
-      // Use theme as-is (it should already be in the correct format)
-      blockNoteTheme = themeClone;
+    // BlockNote expects theme with light/dark properties
+    const blockNoteTheme = {};
+
+    // Add light theme if provided
+    if (themeClone.light) {
+      blockNoteTheme.light = themeClone.light;
     }
 
-    // Ensure fontFamily is always set if provided in theme
-    if (themeClone.fontFamily && !blockNoteTheme.fontFamily) {
-      blockNoteTheme.fontFamily = themeClone.fontFamily;
+    // Add dark theme if provided
+    if (themeClone.dark) {
+      blockNoteTheme.dark = themeClone.dark;
+    }
+
+    // Add borderRadius if provided
+    if (themeClone.borderRadius !== undefined) {
+      blockNoteTheme.borderRadius = themeClone.borderRadius;
+    }
+
+    // Add font configuration if provided
+    if (themeClone.font) {
+      blockNoteTheme.font = themeClone.font;
+    }
+
+    // Only return theme if it has at least light or dark
+    if (!blockNoteTheme.light && !blockNoteTheme.dark) {
+      console.warn(
+        '[BlockNote] Theme has no light or dark colors, returning null',
+      );
+      return null;
     }
 
     console.log('[BlockNote] Converted theme:', blockNoteTheme);

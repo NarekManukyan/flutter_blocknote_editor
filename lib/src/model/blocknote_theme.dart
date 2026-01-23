@@ -727,15 +727,11 @@ extension BlockNoteFontConfigExtension on BlockNoteFontConfig {
 class BlockNoteTheme {
   /// Creates a new theme configuration.
   const BlockNoteTheme({
-    this.colors,
     this.borderRadius,
     this.font,
     this.light,
     this.dark,
   });
-
-  /// Colors for both light and dark themes (if light/dark not specified).
-  final BlockNoteColorScheme? colors;
 
   /// Border radius in pixels.
   final double? borderRadius;
@@ -745,20 +741,15 @@ class BlockNoteTheme {
   /// Supports both system fonts and custom font files with automatic CSS generation.
   final BlockNoteFontConfig? font;
 
-  /// Light theme colors (overrides colors).
+  /// Light theme colors.
   final BlockNoteColorScheme? light;
 
-  /// Dark theme colors (overrides colors).
+  /// Dark theme colors.
   final BlockNoteColorScheme? dark;
 
   /// Creates a BlockNoteTheme from a JSON map.
   factory BlockNoteTheme.fromJson(Map<String, dynamic> json) {
     return BlockNoteTheme(
-      colors: json['colors'] == null
-          ? null
-          : BlockNoteColorScheme.fromJson(
-              Map<String, dynamic>.from(json['colors'] as Map),
-            ),
       borderRadius: (json['borderRadius'] as num?)?.toDouble(),
       font: json['font'] == null
           ? null
@@ -781,7 +772,6 @@ class BlockNoteTheme {
   /// Converts this theme to JSON.
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
-    _addIfNotNull(json, 'colors', colors?.toJson());
     _addIfNotNull(json, 'borderRadius', borderRadius);
     _addIfNotNull(json, 'font', font?.toJson());
     _addIfNotNull(json, 'light', light?.toJson());
@@ -790,14 +780,12 @@ class BlockNoteTheme {
   }
 
   BlockNoteTheme copyWith({
-    Object? colors = _unset,
     Object? borderRadius = _unset,
     Object? font = _unset,
     Object? light = _unset,
     Object? dark = _unset,
   }) {
     return BlockNoteTheme(
-      colors: identical(colors, _unset) ? this.colors : colors as BlockNoteColorScheme?,
       borderRadius: identical(borderRadius, _unset)
           ? this.borderRadius
           : borderRadius as double?,
@@ -809,14 +797,13 @@ class BlockNoteTheme {
 
   @override
   String toString() {
-    return 'BlockNoteTheme(colors: $colors, borderRadius: $borderRadius, font: $font, light: $light, dark: $dark)';
+    return 'BlockNoteTheme(borderRadius: $borderRadius, font: $font, light: $light, dark: $dark)';
   }
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
         other is BlockNoteTheme &&
-            other.colors == colors &&
             other.borderRadius == borderRadius &&
             other.font == font &&
             other.light == light &&
@@ -825,7 +812,7 @@ class BlockNoteTheme {
 
   @override
   int get hashCode =>
-      Object.hash(colors, borderRadius, font, light, dark);
+      Object.hash(borderRadius, font, light, dark);
 }
 
 /// Extension for BlockNoteTheme to add helper methods.

@@ -23,10 +23,24 @@ export function useEditorReady(
   const isReadyRef = useRef(false);
   const debounceTimeoutRef = useRef(null);
   const previousBlocksRef = useRef(null);
+  const debounceDurationRef = useRef(window.__blockNoteDebounceDuration ?? 300);
   const isReady = Boolean(editor);
 
-  // Debounce delay in milliseconds (300ms default)
-  const DEBOUNCE_DELAY = 300;
+  // Update debounce duration function (exposed globally)
+  useEffect(() => {
+    if (editor && isReady) {
+      window.updateDebounceDuration = (durationMs) => {
+        if (typeof durationMs === 'number' && durationMs >= 0) {
+          debounceDurationRef.current = durationMs;
+        }
+      };
+    }
+    return () => {
+      if (window.updateDebounceDuration) {
+        delete window.updateDebounceDuration;
+      }
+    };
+  }, [editor, isReady]);
 
   const serializeStyledText = useCallback((item) => {
     if (!item) return null;
@@ -226,54 +240,111 @@ export function useEditorReady(
         });
       }
 
+      // Helper function to get adjacent block IDs for a given index
+      const getAdjacentBlockIds = (index) => {
+        if (!currentBlocks || currentBlocks.length === 0) {
+          return { beforeChildId: null, afterChildId: null };
+        }
+
+        // Ensure index is within valid range
+        if (index < 0 || index >= currentBlocks.length) {
+          return { beforeChildId: null, afterChildId: null };
+        }
+
+        // Check if this is the last block
+        const isLastBlock = index === currentBlocks.length - 1;
+
+        const beforeIndex = index - 1;
+        const afterIndex = index + 1;
+
+        const beforeChildId =
+          beforeIndex >= 0 && currentBlocks[beforeIndex]?.id
+            ? currentBlocks[beforeIndex].id
+            : null;
+
+        // Ensure afterChildId is null if this is the last block
+        const afterChildId = isLastBlock
+          ? null
+          : afterIndex < currentBlocks.length && currentBlocks[afterIndex]?.id
+            ? currentBlocks[afterIndex].id
+            : null;
+
+        return { beforeChildId, afterChildId };
+      };
+
       // Find deleted blocks (in previous but not in current)
       for (const blockId of previousMap.keys()) {
         if (!currentMap.has(blockId)) {
+          const prevEntry = previousMap.get(blockId);
+          // For delete operations, use the previous index to find adjacent blocks
+          // We need to reconstruct what the adjacent blocks were before deletion
+          const prevIndex = prevEntry ? prevEntry.index : -1;
+          const { beforeChildId, afterChildId } =
+            getAdjacentBlockIds(prevIndex);
+
           operations.push({
             operation: 'delete',
             blockId: blockId,
+            beforeChildId: beforeChildId,
+            afterChildId: afterChildId,
           });
         }
       }
 
       // Find inserted and updated blocks
-      currentMap.forEach(({ block: currBlock, index: currIndex }, blockId) => {
-        const prevEntry = previousMap.get(blockId);
+      // Iterate through currentBlocks in order to ensure correct indices
+      if (currentBlocks) {
+        currentBlocks.forEach((currBlock, currIndex) => {
+          if (!currBlock || !currBlock.id) return;
 
-        if (!prevEntry) {
-          // New block - insert
-          operations.push({
-            operation: 'insert',
-            blockId: blockId,
-            block: currBlock,
-            index: currIndex,
-          });
-        } else {
-          // Existing block - check if it changed
-          const prevBlock = prevEntry.block;
-          const prevIndex = prevEntry.index;
+          const blockId = currBlock.id;
+          const prevEntry = previousMap.get(blockId);
 
-          // Check if block content changed
-          if (!blocksEqual(prevBlock, currBlock)) {
-            // Block content changed - update
+          // Get adjacent block IDs using the actual index in the array
+          const { beforeChildId, afterChildId } =
+            getAdjacentBlockIds(currIndex);
+
+          if (!prevEntry) {
+            // New block - insert
             operations.push({
-              operation: 'update',
+              operation: 'insert',
               blockId: blockId,
               block: currBlock,
-            });
-          }
-
-          // Check if block moved (position changed)
-          // Note: We send move separately even if content also changed
-          if (prevIndex !== currIndex) {
-            operations.push({
-              operation: 'move',
-              blockId: blockId,
               index: currIndex,
+              beforeChildId: beforeChildId,
+              afterChildId: afterChildId,
             });
+          } else {
+            // Existing block - check if it changed
+            const prevBlock = prevEntry.block;
+            const prevIndex = prevEntry.index;
+
+            // Check if block content changed
+            if (!blocksEqual(prevBlock, currBlock)) {
+              // Block content changed - update
+              operations.push({
+                operation: 'update',
+                blockId: blockId,
+                block: currBlock,
+                beforeChildId: beforeChildId,
+                afterChildId: afterChildId,
+              });
+            }
+
+            // Check if block moved (position changed)
+            // Note: We send move separately even if content also changed
+            if (prevIndex !== currIndex) {
+              operations.push({
+                operation: 'move',
+                blockId: blockId,
+                index: currIndex,
+                beforeChildId: beforeChildId,
+                afterChildId: afterChildId,
+              });
+            }
           }
-        }
-      });
+        });
+      }
 
       return operations;
     },
@@ -296,16 +367,38 @@ export function useEditorReady(
       if (previousBlocksRef.current === null) {
         // First time - send all blocks as updates
         operations = serializedCurrentBlocks
-          ? serializedCurrentBlocks.map((block, index) => ({
-              operation: 'update',
-              blockId: block.id || `block_${index}`,
-              block: block,
-            }))
+          ? serializedCurrentBlocks.map((block, index) => {
+              // Get adjacent block IDs
+              const isLastBlock = index === serializedCurrentBlocks.length - 1;
+              const beforeIndex = index - 1;
+              const afterIndex = index + 1;
+              const beforeChildId =
+                beforeIndex >= 0 && serializedCurrentBlocks[beforeIndex]?.id
+                  ? serializedCurrentBlocks[beforeIndex].id
+                  : null;
+              // Ensure afterChildId is null if this is the last block
+              const afterChildId = isLastBlock
+                ? null
+                : afterIndex < serializedCurrentBlocks.length &&
+                    serializedCurrentBlocks[afterIndex]?.id
+                  ? serializedCurrentBlocks[afterIndex].id
+                  : null;
+
+              return {
+                operation: 'update',
+                blockId: block.id || `block_${index}`,
+                block: block,
+                beforeChildId: beforeChildId,
+                afterChildId: afterChildId,
+              };
+            })
           : [
               {
                 operation: 'update',
                 blockId: 'root',
                 block: null,
+                beforeChildId: null,
+                afterChildId: null,
               },
             ];
       } else {
@@ -431,7 +524,7 @@ export function useEditorReady(
         debounceTimeoutRef.current = setTimeout(() => {
           sendTransactions();
           debounceTimeoutRef.current = null;
-        }, DEBOUNCE_DELAY);
+        }, debounceDurationRef.current);
       });
 
       // Set up selection change listener to ensure automatic scroll-to-selection works

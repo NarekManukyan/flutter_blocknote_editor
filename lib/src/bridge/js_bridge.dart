@@ -197,4 +197,9 @@ class JsBridge {
       ),
     );
   }
+
+  /// Sets the transaction debounce duration.
+  Future<void> setDebounceDuration(int durationMs) async {
+    await sendMessage(SetDebounceDurationMessage(durationMs: durationMs));
+  }
 }

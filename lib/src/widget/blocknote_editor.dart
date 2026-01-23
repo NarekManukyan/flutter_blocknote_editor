@@ -18,6 +18,7 @@ import '../model/blocknote_slash_command.dart';
 import '../bridge/js_bridge.dart';
 import '../bridge/message_types.dart';
 import '../batching/transaction_batcher.dart';
+import '../utils/theme_utils.dart';
 import 'asset_server.dart';
 import 'webview_initializer.dart';
 import 'document_loader.dart';
@@ -63,6 +64,7 @@ class BlockNoteEditor extends StatefulWidget {
     this.customCss,
     this.customCssAssetPaths,
     this.onToolbarPopupRequest,
+    this.transactionDebounceDuration,
     super.key,
   });
 
@@ -148,6 +150,13 @@ class BlockNoteEditor extends StatefulWidget {
   /// Asset paths containing custom CSS to inject into the editor.
   final List<String>? customCssAssetPaths;
 
+  /// Transaction debounce duration in milliseconds.
+  ///
+  /// Controls how long to wait before flushing transactions after the last
+  /// change. Defaults to 400ms. Lower values provide more responsive updates
+  /// but may cause more frequent Flutter rebuilds.
+  final Duration? transactionDebounceDuration;
+
   @override
   State<BlockNoteEditor> createState() => _BlockNoteEditorState();
 }
@@ -168,6 +177,7 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
   bool _isInitializing = false;
   Timer? _contentSizeChangeDebounceTimer;
   DateTime? _lastSignificantChangeTime;
+  Brightness? _lastBrightness;
 
   @override
   void initState() {
@@ -224,6 +234,8 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
           widget.onTransactions!(transactions);
         }
       },
+      batchWindow: widget.transactionDebounceDuration ??
+          const Duration(milliseconds: 400),
       debugLogging: widget.debugLogging,
     );
 
@@ -325,6 +337,11 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
       debugPrint('[BlockNoteEditor] Editor is ready');
     }
 
+    // Initialize brightness tracking
+    if (mounted && context.mounted) {
+      _lastBrightness = Theme.of(context).brightness;
+    }
+
     // Load initial document now that editor is ready
     _loadInitialDocument();
 
@@ -381,9 +398,16 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
     }
 
     // Update theme if it changed
+    // Note: We check theme change here, but brightness changes are handled
+    // by the build method which will trigger a rebuild when brightness changes
     if (oldWidget.theme != widget.theme && _bridge != null && _isReady) {
-      if (widget.theme != null) {
-        _bridge!.setTheme(widget.theme!.toJson());
+      if (!context.mounted) return;
+      final effectiveTheme = ThemeUtils.getEffectiveTheme(
+        widget.theme,
+        context,
+      );
+      if (effectiveTheme != null) {
+        _bridge!.setTheme(effectiveTheme);
       }
     }
 
@@ -451,6 +475,17 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
         _bridge != null) {
       _hasPreloadedCustomCss = false;
       _applyCustomCssAssets();
+    }
+
+    // Update debounce duration if it changed
+    if (oldWidget.transactionDebounceDuration !=
+            widget.transactionDebounceDuration &&
+        _bridge != null &&
+        _isReady) {
+      final duration = widget.transactionDebounceDuration;
+      if (duration != null) {
+        _bridge!.setDebounceDuration(duration.inMilliseconds);
+      }
     }
   }
 
@@ -549,6 +584,25 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
           return const Center(child: CircularProgressIndicator());
         }
 
+        // Get current brightness
+        final brightness = Theme.of(context).brightness;
+        
+        // Update theme if brightness changed
+        if (_isReady &&
+            _bridge != null &&
+            widget.theme != null &&
+            _lastBrightness != null &&
+            _lastBrightness != brightness) {
+          final effectiveTheme = ThemeUtils.getEffectiveTheme(
+            widget.theme,
+            context,
+          );
+          if (effectiveTheme != null) {
+            _bridge!.setTheme(effectiveTheme);
+          }
+        }
+        _lastBrightness = brightness;
+
         // Update WebView height when editor is ready or when keyboard opens/closes
         if (_isReady && _bridge != null && _controller != null) {
           // Always update height when ready (even if keyboard hasn't changed)
@@ -561,6 +615,19 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
             _updateWebViewHeight(keyboardHeight, availableHeight);
           }
         }
+        // Extract editor background color from theme if available
+        // Use theme based on app appearance
+        Color? editorBackgroundColor;
+        if (widget.theme != null) {
+          final colors = ThemeUtils.getColorSchemeForAppearance(
+            widget.theme,
+            context,
+          );
+          if (colors != null && colors.editor != null) {
+            editorBackgroundColor = colors.editor!.background;
+          }
+        }
+
         return SizedBox(
           height: availableHeight,
           child: InAppWebView(
@@ -570,7 +637,9 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
               ),
             },
             initialUrlRequest: URLRequest(url: WebUri(_initialUrl!)),
-            initialSettings: WebViewConfig.getDefaultSettings(),
+            initialSettings: WebViewConfig.getDefaultSettings(
+              backgroundColor: editorBackgroundColor,
+            ),
             onWebViewCreated: (controller) {
               _controller = controller;
               // Create JavaScript bridge
@@ -607,6 +676,12 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
                 debugLogging: widget.debugLogging,
               );
               await _preloadEditorConfiguration();
+              // Set debounce duration if provided
+              if (widget.transactionDebounceDuration != null) {
+                await _bridge!.setDebounceDuration(
+                  widget.transactionDebounceDuration!.inMilliseconds,
+                );
+              }
             },
             onReceivedError: (controller, request, error) {
               if (widget.debugLogging) {
@@ -663,4 +738,5 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
       debugLogging: widget.debugLogging,
     );
   }
+
 }

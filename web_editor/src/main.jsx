@@ -58,6 +58,11 @@ import './index.css';
 
 // Set up console channel to forward console messages to Flutter
 (function () {
+  // Initialize debug logging flag (default to false if not set)
+  if (typeof window.BlockNoteDebugLogging === 'undefined') {
+    window.BlockNoteDebugLogging = false;
+  }
+
   // Override console.log, console.error, console.warn to send through the channel
   const originalLog = console.log;
   const originalError = console.error;
@@ -65,44 +70,57 @@ import './index.css';
 
   console.log = function () {
     originalLog.apply(console, arguments);
-    const args = Array.prototype.slice.call(arguments);
-    const message = args
-      .map(function (arg) {
-        return typeof arg === 'object' ? JSON.stringify(arg) : String(arg);
-      })
-      .join(' ');
-    if (window.flutterConsole && window.flutterConsole.postMessage) {
+    // Only send to Flutter if debug logging is enabled
+    if (
+      window.BlockNoteDebugLogging &&
+      window.flutterConsole &&
+      window.flutterConsole.postMessage
+    ) {
+      const args = Array.prototype.slice.call(arguments);
+      const message = args
+        .map(function (arg) {
+          return typeof arg === 'object' ? JSON.stringify(arg) : String(arg);
+        })
+        .join(' ');
       window.flutterConsole.postMessage(message);
     }
   };
 
   console.error = function () {
     originalError.apply(console, arguments);
-    const args = Array.prototype.slice.call(arguments);
-    const message = args
-      .map(function (arg) {
-        return typeof arg === 'object' ? JSON.stringify(arg) : String(arg);
-      })
-      .join(' ');
+    // Always send errors to Flutter, but respect debug logging for non-error console.log calls
     if (window.flutterConsole && window.flutterConsole.postMessage) {
+      const args = Array.prototype.slice.call(arguments);
+      const message = args
+        .map(function (arg) {
+          return typeof arg === 'object' ? JSON.stringify(arg) : String(arg);
+        })
+        .join(' ');
       window.flutterConsole.postMessage('[ERROR] ' + message);
     }
   };
 
   console.warn = function () {
     originalWarn.apply(console, arguments);
-    const args = Array.prototype.slice.call(arguments);
-    const message = args
-      .map(function (arg) {
-        return typeof arg === 'object' ? JSON.stringify(arg) : String(arg);
-      })
-      .join(' ');
-    if (window.flutterConsole && window.flutterConsole.postMessage) {
+    // Only send to Flutter if debug logging is enabled
+    if (
+      window.BlockNoteDebugLogging &&
+      window.flutterConsole &&
+      window.flutterConsole.postMessage
+    ) {
+      const args = Array.prototype.slice.call(arguments);
+      const message = args
+        .map(function (arg) {
+          return typeof arg === 'object' ? JSON.stringify(arg) : String(arg);
+        })
+        .join(' ');
       window.flutterConsole.postMessage('[WARN] ' + message);
     }
   };
 
-  console.log('[BlockNote] Console channel override installed');
+  if (window.BlockNoteDebugLogging) {
+    console.log('[BlockNote] Console channel override installed');
+  }
 })();
 
 // Initialize message channel for Flutter communication
