@@ -24,6 +24,7 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
   bool _isDocumentLoaded = false;
   final List<BlockNoteTransaction> _transactions = [];
   BlockNoteDocument _document = BlockNoteDocument.empty();
+  BlockNoteController? _controller;
   final List<String> _customSchemaScriptAssets = const [
     'assets/custom_schema.js',
   ];
@@ -90,6 +91,7 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
             },
             tooltip: 'Reset editor',
           ),
+
           IconButton(
             icon: Stack(
               children: [
@@ -130,6 +132,7 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
                         _transactions.clear();
                       });
                     },
+                    controller: _controller,
                   ),
                 ),
               );
@@ -216,13 +219,30 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
                 ? BlockNoteEditor(
                     initialDocument: _document,
                     onReady: () {
+                      if (!mounted) return;
                       setState(() {
                         _isReady = true;
                       });
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      if (!mounted) return;
+                      final messenger = ScaffoldMessenger.of(context);
+                      messenger.showSnackBar(
                         const SnackBar(
                           content: Text('Editor is ready!'),
                           duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                    onControllerReady: (controller) {
+                      if (!mounted) return;
+                      setState(() {
+                        _controller = controller;
+                      });
+                      if (!mounted) return;
+                      final messenger = ScaffoldMessenger.of(context);
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('Controller is ready!'),
+                          duration: Duration(seconds: 1),
                         ),
                       );
                     },
@@ -249,9 +269,7 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
                         ? EditorConfig.createCustomSlashCommands()
                         : null,
                   )
-                : const Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                : const Center(child: CircularProgressIndicator()),
           ),
         ],
       ),
@@ -285,6 +303,7 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
                         _transactions.clear();
                       });
                     },
+                    controller: _controller,
                   ),
                 ),
               );
@@ -410,10 +429,23 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
                   ? BlockNoteEditor(
                       initialDocument: _document,
                       onReady: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        if (!mounted) return;
+                        final messenger = ScaffoldMessenger.of(context);
+                        messenger.showSnackBar(
                           const SnackBar(
                             content: Text('Editor is ready in modal!'),
                             duration: Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                      onControllerReady: (controller) {
+                        // Controller available in modal too
+                        if (!mounted) return;
+                        final messenger = ScaffoldMessenger.of(context);
+                        messenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('Controller ready in modal!'),
+                            duration: Duration(seconds: 1),
                           ),
                         );
                       },
@@ -440,15 +472,11 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
                           ? EditorConfig.createCustomSlashCommands()
                           : null,
                     )
-                  : const Center(
-                      child: CircularProgressIndicator(),
-                    ),
+                  : const Center(child: CircularProgressIndicator()),
             ),
           ],
         ),
       ),
     );
   }
-
-  
 }

@@ -36,6 +36,12 @@ enum FlutterToJsMessageType {
 
   /// Send toolbar popup response with selected value.
   toolbarPopupResponse,
+
+  /// Set the transaction debounce duration.
+  setDebounceDuration,
+
+  /// Get the full document from the editor.
+  getDocument,
 }
 
 /// Message types sent from JavaScript to Flutter.
@@ -51,6 +57,9 @@ enum JsToFlutterMessageType {
 
   /// Toolbar popup was clicked, requesting Flutter modal.
   toolbarPopupRequest,
+
+  /// Full document response from get document request.
+  document,
 }
 
 /// Base class for Flutter → JavaScript messages.
@@ -269,6 +278,46 @@ class ToolbarPopupResponseMessage extends FlutterToJsMessage {
   }
 }
 
+/// Message to set the transaction debounce duration.
+class SetDebounceDurationMessage extends FlutterToJsMessage {
+  /// Creates a new set debounce duration message.
+  const SetDebounceDurationMessage({required this.durationMs});
+
+  /// The debounce duration in milliseconds.
+  final int durationMs;
+
+  @override
+  FlutterToJsMessageType get type => FlutterToJsMessageType.setDebounceDuration;
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      'type': 'set_debounce_duration',
+      'durationMs': durationMs,
+    };
+  }
+}
+
+/// Message to get the full document from the editor.
+class GetDocumentMessage extends FlutterToJsMessage {
+  /// Creates a new get document message.
+  const GetDocumentMessage({required this.requestId});
+
+  /// Unique request ID for matching with response.
+  final String requestId;
+
+  @override
+  FlutterToJsMessageType get type => FlutterToJsMessageType.getDocument;
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      'type': 'get_document',
+      'requestId': requestId,
+    };
+  }
+}
+
 /// Base class for JavaScript → Flutter messages.
 abstract class JsToFlutterMessage {
   /// Creates a new message instance.
@@ -308,6 +357,8 @@ abstract class JsToFlutterMessage {
         return ErrorMessage.fromJson(json);
       case JsToFlutterMessageType.toolbarPopupRequest:
         return ToolbarPopupRequestMessage.fromJson(json);
+      case JsToFlutterMessageType.document:
+        return DocumentMessage.fromJson(json);
     }
   }
 }
@@ -394,4 +445,30 @@ class ToolbarPopupRequestMessage extends JsToFlutterMessage {
 
   @override
   JsToFlutterMessageType get type => JsToFlutterMessageType.toolbarPopupRequest;
+}
+
+/// Message containing the full document from get document request.
+class DocumentMessage extends JsToFlutterMessage {
+  /// Creates a new document message.
+  const DocumentMessage({
+    required this.requestId,
+    required this.document,
+  });
+
+  /// Unique request ID for matching with original request.
+  final String requestId;
+
+  /// The document data.
+  final Map<String, dynamic> document;
+
+  /// Creates a DocumentMessage from a JSON map.
+  factory DocumentMessage.fromJson(Map<String, dynamic> json) {
+    return DocumentMessage(
+      requestId: json['requestId'] as String,
+      document: Map<String, dynamic>.from(json['document'] as Map),
+    );
+  }
+
+  @override
+  JsToFlutterMessageType get type => JsToFlutterMessageType.document;
 }

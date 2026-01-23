@@ -3,26 +3,36 @@
  */
 
 import { useEffect } from 'react';
-import { loadDocument } from '../utils/documentLoader';
 import { updateWebViewHeight } from '../utils/webViewHeightManager';
 import { injectCustomCss } from '../utils/cssInjector';
 import { handleToolbarPopupResponse } from '../utils/toolbarPopupHandler';
+import {
+  handleLoadDocument,
+  handleSetSchemaConfig,
+  handleFlush,
+  handleSetTheme,
+  handleSetDebounceDuration,
+  handleGetDocument,
+} from '../handlers/messageHandlers';
 
 /**
- * Custom hook to handle messages from Flutter.
- * @param {Object} editor - The BlockNote editor instance
- * @param {Function} setIsReadonly - Function to set read-only state
- * @param {Function} setTheme - Function to set theme
- * @param {Function} setToolbarConfig - Function to set toolbar config
- * @param {Function} setSlashCommandConfig - Function to set slash command config
- * @param {Function} setSchemaConfig - Function to set schema config
- * @param {Function} setSchemaConfigReady - Function to set schema config ready
- * @param {Function} setSchemaConfigRequired - Function to set schema required
- * @param {Object} documentVersionRef - Ref to track document version
- * @param {Object} hasLoadedDocumentRef - Ref to track if document was loaded
- * @param {Object} toolbarPopupCallbacksRef - Ref to store popup callbacks
- * @param {Object} pendingDocumentRef - Ref to store pending documents
- * @param {Object} schemaChangePendingRef - Ref to track schema updates
+ * Listen for Flutter-originated messages and delegate them to handlers that update the editor state and related UI/configuration.
+ *
+ * Attaches a window 'flutterMessage' listener that routes incoming message payloads to the appropriate handler (document loading, schema updates, theme, toolbar, etc.) and cleans up the listener on unmount. Also processes any pending schema config left on window.__blockNotePendingSchemaConfig.
+ *
+ * @param {Object} editor - The BlockNote editor instance.
+ * @param {Function} setIsReadonly - Setter to update the editor read-only state.
+ * @param {Function} setTheme - Setter to update the editor theme.
+ * @param {Function} setToolbarConfig - Setter to update the toolbar configuration.
+ * @param {Function} setSlashCommandConfig - Setter to update slash-command configuration.
+ * @param {Function} setSchemaConfig - Setter to update the editor schema configuration.
+ * @param {Function} setSchemaConfigReady - Setter to mark schema config as ready.
+ * @param {Function} setSchemaConfigRequired - Setter to indicate that schema config is required.
+ * @param {Object} documentVersionRef - Ref tracking the current document version.
+ * @param {Object} hasLoadedDocumentRef - Ref indicating whether a document has been loaded.
+ * @param {Object} toolbarPopupCallbacksRef - Ref storing callbacks for toolbar popup responses.
+ * @param {Object} pendingDocumentRef - Ref storing a pending document awaiting processing.
+ * @param {Object} schemaChangePendingRef - Ref indicating whether a schema change is pending.
  */
 export function useFlutterMessages(
   editor,
@@ -43,59 +53,36 @@ export function useFlutterMessages(
     const handleFlutterMessage = (message) => {
       switch (message.type) {
         case 'load_document':
-          if (!editor || schemaChangePendingRef.current) {
-            pendingDocumentRef.current = message.data;
-            break;
-          }
-          loadDocument(
+          handleLoadDocument(
             editor,
             message.data,
             documentVersionRef,
             hasLoadedDocumentRef,
+            pendingDocumentRef,
+            schemaChangePendingRef,
           );
           break;
         case 'set_readonly':
           setIsReadonly(message.value);
           break;
         case 'set_schema_config':
-          setSchemaConfigRequired(
-            message.required !== undefined
-              ? Boolean(message.required)
-              : Boolean(message.data),
+          handleSetSchemaConfig(
+            editor,
+            message,
+            setSchemaConfig,
+            setSchemaConfigReady,
+            setSchemaConfigRequired,
+            documentVersionRef,
+            hasLoadedDocumentRef,
+            pendingDocumentRef,
+            schemaChangePendingRef,
           );
-          schemaChangePendingRef.current = true;
-          setSchemaConfig(message.data ?? null);
-          setSchemaConfigReady(true);
-          schemaChangePendingRef.current = false;
-          if (editor && pendingDocumentRef.current) {
-            loadDocument(
-              editor,
-              pendingDocumentRef.current,
-              documentVersionRef,
-              hasLoadedDocumentRef,
-            );
-            pendingDocumentRef.current = null;
-          }
           break;
         case 'flush':
-          // Force immediate transaction emission (bypass debounce)
-          if (
-            window.sendPendingTransaction &&
-            typeof window.sendPendingTransaction === 'function'
-          ) {
-            window.sendPendingTransaction();
-          } else if (editor && editor.onChange) {
-            // Fallback: trigger onChange if sendPendingTransaction not available
-            editor.onChange();
-          }
+          handleFlush(editor);
           break;
         case 'set_theme':
-          try {
-            console.log('[BlockNote] Setting theme:', message.data);
-            setTheme(message.data);
-          } catch (error) {
-            console.error('[BlockNote] Error setting theme:', error);
-          }
+          handleSetTheme(message, setTheme);
           break;
         case 'set_toolbar_config':
           setToolbarConfig(message.data);
@@ -111,6 +98,12 @@ export function useFlutterMessages(
           break;
         case 'toolbar_popup_response':
           handleToolbarPopupResponse(message, toolbarPopupCallbacksRef);
+          break;
+        case 'set_debounce_duration':
+          handleSetDebounceDuration(message);
+          break;
+        case 'get_document':
+          handleGetDocument(editor, message);
           break;
         default:
           console.warn('[BlockNote] Unknown message type:', message.type);

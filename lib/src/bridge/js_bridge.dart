@@ -197,4 +197,16 @@ class JsBridge {
       ),
     );
   }
+
+  /// Sets the transaction debounce duration.
+  Future<void> setDebounceDuration(int durationMs) async {
+    await sendMessage(SetDebounceDurationMessage(durationMs: durationMs));
+  }
+
+  /// Gets the full document from the editor.
+  ///
+  /// [requestId] is used to match the request with the response.
+  Future<void> getDocument({required String requestId}) async {
+    await sendMessage(GetDocumentMessage(requestId: requestId));
+  }
 }

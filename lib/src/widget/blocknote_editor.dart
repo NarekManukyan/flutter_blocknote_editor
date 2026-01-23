@@ -17,6 +17,7 @@ import '../model/blocknote_toolbar_config.dart';
 import '../model/blocknote_slash_command.dart';
 import '../bridge/js_bridge.dart';
 import '../bridge/message_types.dart';
+import 'blocknote_controller.dart';
 import '../batching/transaction_batcher.dart';
 import 'asset_server.dart';
 import 'webview_initializer.dart';
@@ -49,6 +50,7 @@ class BlockNoteEditor extends StatefulWidget {
     required this.initialDocument,
     this.onTransactions,
     this.onReady,
+    this.onControllerReady,
     this.readOnly = false,
     this.debugLogging = false,
     this.localhostUrl,
@@ -63,6 +65,7 @@ class BlockNoteEditor extends StatefulWidget {
     this.customCss,
     this.customCssAssetPaths,
     this.onToolbarPopupRequest,
+    this.transactionDebounceDuration,
     super.key,
   });
 
@@ -78,6 +81,12 @@ class BlockNoteEditor extends StatefulWidget {
 
   /// Callback invoked when the editor is ready and initialized.
   final VoidCallback? onReady;
+
+  /// Callback invoked when the controller is ready.
+  ///
+  /// The controller provides programmatic access to the editor, including
+  /// methods to get the full document, set configuration, and load documents.
+  final ValueChanged<BlockNoteController>? onControllerReady;
 
   /// Callback invoked when a toolbar popup is clicked.
   ///
@@ -148,6 +157,13 @@ class BlockNoteEditor extends StatefulWidget {
   /// Asset paths containing custom CSS to inject into the editor.
   final List<String>? customCssAssetPaths;
 
+  /// Transaction debounce duration in milliseconds.
+  ///
+  /// Controls how long to wait before flushing transactions after the last
+  /// change. Defaults to 400ms. Lower values provide more responsive updates
+  /// but may cause more frequent Flutter rebuilds.
+  final Duration? transactionDebounceDuration;
+
   @override
   State<BlockNoteEditor> createState() => _BlockNoteEditorState();
 }
@@ -157,6 +173,7 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
   JsBridge? _bridge;
   TransactionBatcher? _batcher;
   AssetServer? _assetServer;
+  BlockNoteController? _blockNoteController;
   bool _isReady = false;
   bool _hasLoadedDocument = false;
   bool _hasPreloadedCustomJavaScript = false;
@@ -224,6 +241,8 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
           widget.onTransactions!(transactions);
         }
       },
+      batchWindow: widget.transactionDebounceDuration ??
+          const Duration(milliseconds: 400),
       debugLogging: widget.debugLogging,
     );
 
@@ -302,8 +321,34 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
         debugLogging: widget.debugLogging,
       ),
       onToolbarPopupRequest: _handleToolbarPopupRequest,
+      onDocument: _handleDocument,
       mounted: mounted,
     );
+  }
+
+  /// Handles document response from JavaScript.
+  void _handleDocument(DocumentMessage message) {
+    if (_blockNoteController == null) {
+      if (widget.debugLogging) {
+        debugPrint(
+          '[BlockNoteEditor] Received document message but controller is null',
+        );
+      }
+      return;
+    }
+
+    try {
+      final document = BlockNoteDocument.fromJson(message.document);
+      _blockNoteController!.handleDocumentResponse(message.requestId, document);
+    } catch (e) {
+      if (widget.debugLogging) {
+        debugPrint('[BlockNoteEditor] Error parsing document: $e');
+      }
+      _blockNoteController!.handleDocumentError(
+        message.requestId,
+        'Failed to parse document: $e',
+      );
+    }
   }
 
   /// Handles raw JavaScript messages (fallback).
@@ -323,6 +368,19 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
 
     if (widget.debugLogging) {
       debugPrint('[BlockNoteEditor] Editor is ready');
+    }
+
+    // Initialize controller
+    if (_bridge != null && _blockNoteController == null) {
+      _blockNoteController = BlockNoteController(
+        debugLogging: widget.debugLogging,
+      );
+      _blockNoteController!.initialize(_bridge!);
+
+      // Notify controller ready callback
+      if (widget.onControllerReady != null) {
+        widget.onControllerReady!(_blockNoteController!);
+      }
     }
 
     // Load initial document now that editor is ready
@@ -452,6 +510,17 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
       _hasPreloadedCustomCss = false;
       _applyCustomCssAssets();
     }
+
+    // Update debounce duration if it changed
+    if (oldWidget.transactionDebounceDuration !=
+            widget.transactionDebounceDuration &&
+        _bridge != null &&
+        _isReady) {
+      final duration = widget.transactionDebounceDuration;
+      if (duration != null) {
+        _bridge!.setDebounceDuration(duration.inMilliseconds);
+      }
+    }
   }
 
   Future<void> _preloadEditorConfiguration() async {
@@ -561,6 +630,15 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
             _updateWebViewHeight(keyboardHeight, availableHeight);
           }
         }
+        // Extract editor background color from theme if available
+        Color? editorBackgroundColor;
+        if (widget.theme != null) {
+          final colors = widget.theme!.colors ?? widget.theme!.light ?? widget.theme!.dark;
+          if (colors != null && colors.editor != null) {
+            editorBackgroundColor = colors.editor!.background;
+          }
+        }
+
         return SizedBox(
           height: availableHeight,
           child: InAppWebView(
@@ -570,7 +648,9 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
               ),
             },
             initialUrlRequest: URLRequest(url: WebUri(_initialUrl!)),
-            initialSettings: WebViewConfig.getDefaultSettings(),
+            initialSettings: WebViewConfig.getDefaultSettings(
+              backgroundColor: editorBackgroundColor,
+            ),
             onWebViewCreated: (controller) {
               _controller = controller;
               // Create JavaScript bridge
@@ -579,6 +659,16 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
                 onMessage: _handleBridgeMessage,
                 debugLogging: widget.debugLogging,
               );
+              // Initialize controller if bridge is ready
+              if (_isReady && _blockNoteController == null) {
+                _blockNoteController = BlockNoteController(
+                  debugLogging: widget.debugLogging,
+                );
+                _blockNoteController!.initialize(_bridge!);
+                if (widget.onControllerReady != null) {
+                  widget.onControllerReady!(_blockNoteController!);
+                }
+              }
               // Set up JavaScript handlers
               WebViewConfig.setupJavaScriptHandlers(
                 controller: controller,
@@ -607,6 +697,12 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
                 debugLogging: widget.debugLogging,
               );
               await _preloadEditorConfiguration();
+              // Set debounce duration if provided
+              if (widget.transactionDebounceDuration != null) {
+                await _bridge!.setDebounceDuration(
+                  widget.transactionDebounceDuration!.inMilliseconds,
+                );
+              }
             },
             onReceivedError: (controller, request, error) {
               if (widget.debugLogging) {
@@ -663,4 +759,5 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
       debugLogging: widget.debugLogging,
     );
   }
+
 }

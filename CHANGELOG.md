@@ -1,3 +1,17 @@
+## 0.0.10
+
+* Added `BlockNoteController` for programmatic editor operations:
+  * `getDocument()` - Retrieve full document on-demand without large data transfers on every change
+  * `loadDocument()` - Load documents programmatically
+  * `flush()` - Flush pending transactions immediately
+  * Methods to set editor configuration (read-only, toolbar, slash commands, schema, etc.)
+  * Accessible via `onControllerReady` callback in `BlockNoteEditor`
+* Added `transactionDebounceDuration` parameter to `BlockNoteEditor` for customizable transaction batching window (default: 400ms)
+* Improved theme handling with unified color scheme and better support for light and dark modes
+* Refactored web editor components for improved error and loading displays
+* Enhanced transaction log page in example app with full document retrieval support
+* Updated embedded web editor bundle (`assets/web/editor.js`)
+
 ## 0.0.9
 
 * Added custom schema support with schema config, custom JavaScript/CSS injection, and asset-based scripts/styles for custom blocks, inline content, and styles.
