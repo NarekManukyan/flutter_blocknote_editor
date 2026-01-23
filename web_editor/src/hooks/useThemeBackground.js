@@ -6,7 +6,10 @@
 import { useEffect } from 'react';
 
 /**
- * Applies theme background color to page elements.
+ * Apply the editor background color from the provided theme to the document root, html, body, and #root elements.
+ *
+ * @param {object} theme - Theme object expected to contain color definitions; the hook reads `colors.editor.background` or falls back to `light`/`dark`.
+ * @param {object} blockNoteTheme - BlockNote theme instance whose presence and changes trigger the background synchronization.
  */
 export function useThemeBackground(theme, blockNoteTheme) {
   useEffect(() => {

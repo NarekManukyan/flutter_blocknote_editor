@@ -13,10 +13,10 @@ import {
 } from '../utils/popupHelpers';
 
 /**
- * Custom hook to intercept toolbar popups and send requests to Flutter.
- * @param {Object} editor - The BlockNote editor instance
- * @param {boolean} isReady - Whether editor is ready
- * @param {Object} toolbarPopupCallbacksRef - Ref to store popup callbacks
+ * Intercepts editor toolbar popups and forwards a popup request (with options) to the Flutter layer via window.BlockNoteChannel.
+ * @param {Object} editor - BlockNote editor instance used to apply a selection when a response arrives.
+ * @param {boolean} isReady - Whether the editor is initialized and ready for interaction.
+ * @param {Object} toolbarPopupCallbacksRef - Mutable ref (Map-like) used to store response callbacks keyed by the generated requestId.
  */
 export function useToolbarPopup(editor, isReady, toolbarPopupCallbacksRef) {
   useEffect(() => {

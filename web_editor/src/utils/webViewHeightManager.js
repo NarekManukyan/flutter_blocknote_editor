@@ -12,7 +12,11 @@ import {
 } from './scrollHelpers';
 
 /**
- * Sets up basic height styles for HTML, body, and root elements.
+ * Apply foundational height and scrolling styles to the document and the optional element with id "root".
+ *
+ * Sets html and body to occupy full height, ensures no max-height restriction, and makes body positioned relative.
+ * If an element with id "root" exists, sets it to full height, enables scrolling (overflow: auto), positions it relative,
+ * and enables WebKit touch scrolling.
  */
 function setupHeightStyles() {
   const html = document.documentElement;
@@ -67,7 +71,10 @@ function ensureRootScrollability(root) {
 }
 
 /**
- * Updates viewport meta tag.
+ * Ensure the page viewport is fixed to device width and disables user scaling.
+ *
+ * If a <meta name="viewport"> tag exists, its content is set to:
+ * "width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no".
  */
 function updateViewportMeta() {
   const viewport = document.querySelector('meta[name="viewport"]');
@@ -80,7 +87,12 @@ function updateViewportMeta() {
 }
 
 /**
- * Handles scrolling after keyboard opens/closes.
+ * Ensures the editor selection or focused element is visible when the on-screen keyboard is open.
+ *
+ * Schedules a check after 200ms and, if the keyboard is open, scrolls the editor selection or the document's active element into view within the element with id "root" when necessary.
+ *
+ * @param {number} keyboardHeight - Height of the on-screen keyboard in pixels.
+ * @param {Object} editor - Editor instance; expected to expose a TipTap editor at `editor._tiptapEditor`.
  */
 function handleKeyboardScroll(keyboardHeight, editor) {
   setTimeout(() => {
@@ -117,10 +129,10 @@ function handleKeyboardScroll(keyboardHeight, editor) {
 }
 
 /**
- * Updates the WebView height to ensure proper scrolling.
- * @param {number} height - Available height in pixels
- * @param {number} keyboardHeight - Keyboard height in pixels
- * @param {Object} editor - The BlockNote editor instance
+ * Adjusts the WebView layout and scrolling to match the current viewport and keyboard state.
+ * @param {number} height - The available viewport height in pixels.
+ * @param {number} keyboardHeight - The on-screen keyboard height in pixels (0 if closed).
+ * @param {Object} editor - BlockNote editor instance used to compute and apply keyboard-related scrolling.
  */
 export function updateWebViewHeight(height, keyboardHeight, editor) {
   try {

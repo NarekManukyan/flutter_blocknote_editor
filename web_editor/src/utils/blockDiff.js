@@ -4,7 +4,14 @@
  */
 
 /**
- * Checks if two blocks are equal.
+ * Determine whether two block objects are deeply structurally equal.
+ *
+ * Compares `id`, `type`, `content` (treating absent content as `null`), `props` (defaulting to `{}`),
+ * and recursively compares `children` arrays for equality.
+ *
+ * @param {Object|null|undefined} block1 - The first block to compare; may be `null` or `undefined`.
+ * @param {Object|null|undefined} block2 - The second block to compare; may be `null` or `undefined`.
+ * @returns {boolean} `true` if the blocks are equal in `id`, `type`, `content`, `props`, and `children`; `false` otherwise.
  */
 export function blocksEqual(block1, block2) {
   const blocksEqualInner = (left, right) => {
@@ -36,7 +43,10 @@ export function blocksEqual(block1, block2) {
 }
 
 /**
- * Gets adjacent block IDs for a given index.
+ * Determine the IDs of the blocks immediately before and after a given index in an ordered block list.
+ * @param {Array<Object>} currentBlocks - Ordered array of block objects; blocks may omit an `id` property.
+ * @param {number} index - Zero-based index to inspect.
+ * @returns {{beforeChildId: string|null, afterChildId: string|null}} `beforeChildId` is the id of the block at index - 1 or `null` if out of range or missing; `afterChildId` is the id of the block at index + 1 or `null` if out of range, missing, or if `index` is the last position.
  */
 function getAdjacentBlockIds(currentBlocks, index) {
   if (!currentBlocks || currentBlocks.length === 0) {
@@ -66,7 +76,17 @@ function getAdjacentBlockIds(currentBlocks, index) {
 }
 
 /**
- * Computes differences between previous and current blocks.
+ * Produce a list of operations that transform a sequence of previous blocks into the given current blocks.
+ *
+ * @param {Array<Object>} previousBlocks - The prior sequence of block objects (each may include `id`, `type`, `content`, `props`, and `children`).
+ * @param {Array<Object>} currentBlocks - The new sequence of block objects to compare against `previousBlocks`.
+ * @param {(a: Object, b: Object) => boolean} blocksEqualFn - Function that returns `true` if two block objects are considered equal, `false` otherwise.
+ * @returns {Array<Object>} An array of operation objects describing changes. Each operation has an `operation` field with one of:
+ *  - `insert`: { operation: 'insert', blockId, block, index, beforeChildId, afterChildId }
+ *  - `delete`: { operation: 'delete', blockId, beforeChildId, afterChildId }
+ *  - `update`: { operation: 'update', blockId, block, beforeChildId, afterChildId }
+ *  - `move`:   { operation: 'move', blockId, index, beforeChildId, afterChildId }
+ *  The `beforeChildId` and `afterChildId` fields indicate adjacent sibling IDs for positional context and may be `null`.
  */
 export function computeBlockDifferences(
   previousBlocks,

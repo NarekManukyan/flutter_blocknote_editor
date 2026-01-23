@@ -6,7 +6,8 @@
 import React from 'react';
 
 /**
- * Displays loading message.
+ * Renders a full-size, centered loading message for the BlockNote editor.
+ * @returns {JSX.Element} The loading UI occupying the full container.
  */
 export function LoadingDisplay() {
   return (

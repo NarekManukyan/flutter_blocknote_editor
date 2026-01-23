@@ -7,7 +7,14 @@ import React from 'react';
 import PropTypes from 'prop-types';
 
 /**
- * Displays error message with reload button.
+ * Render a full-page error view showing a message and a reload control.
+ *
+ * The displayed message is the provided `error` string. Activating the "Reload"
+ * button will reload the current page.
+ *
+ * @param {Object} props
+ * @param {string} props.error - Error message to display.
+ * @returns {JSX.Element} The rendered error view.
  */
 export function ErrorDisplay({ error }) {
   return (

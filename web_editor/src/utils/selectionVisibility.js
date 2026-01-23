@@ -4,7 +4,10 @@
  */
 
 /**
- * Gets selection visibility information.
+ * Determine whether the editor's current text selection is fully visible within a given root element.
+ * @param {object} view - ProseMirror EditorView that provides the selection and coordinate methods.
+ * @param {Element} root - DOM element whose bounding rectangle defines the visible area.
+ * @returns {{isVisible: boolean, selectionTop: number, selectionBottom: number, rootTop: number, rootBottom: number}|null} An object containing visibility details, or `null` if `view`, `root`, or the selection is unavailable. `isVisible` is `true` if the selection's top is greater than or equal to `rootTop` and the selection's bottom is less than or equal to `rootBottom`; `selectionTop` and `selectionBottom` are the vertical coordinates of the selection, and `rootTop` and `rootBottom` are the root element's top and bottom coordinates respectively.
  */
 export function getSelectionVisibility(view, root) {
   if (!view || !root) return null;
@@ -27,8 +30,8 @@ export function getSelectionVisibility(view, root) {
 }
 
 /**
- * Checks if keyboard is open based on viewport height.
- */
+ * Determine whether the on-screen keyboard is likely open by comparing viewport heights.
+ * @returns {boolean} `true` if the visual viewport height is smaller than the window inner height by more than 24 pixels (indicating the on-screen keyboard is likely open), `false` otherwise. */
 export function isKeyboardOpen() {
   const visualViewport = window.visualViewport;
   if (!visualViewport) return false;
@@ -36,7 +39,9 @@ export function isKeyboardOpen() {
 }
 
 /**
- * Scrolls selection into view if needed.
+ * Ensure the editor selection is scrolled into view when the on-screen keyboard likely obscures it.
+ * @param {object} proseMirrorView - The ProseMirror EditorView whose selection will be checked and scrolled.
+ * @param {HTMLElement} root - The root DOM element used to determine the visible area for the selection.
  */
 export function scrollSelectionIntoView(proseMirrorView, root) {
   if (!proseMirrorView || !root) return;
@@ -52,7 +57,14 @@ export function scrollSelectionIntoView(proseMirrorView, root) {
 }
 
 /**
- * Sets up focus listeners for scroll-to-selection.
+ * Attach focus and click listeners to a TipTap editor to ensure the current selection is scrolled into view when necessary.
+ *
+ * Initializes repeatedly until the editor DOM is available, then registers capturing `focus` and `click` handlers that
+ * check keyboard/viewport state and, if the selection is not visible, dispatch a scroll-into-view transaction.
+ *
+ * @param {object} tiptapEditor - TipTap editor instance (expected to expose a `.view` with a `.dom` and `.state`).
+ * @param {function} getSelectionVisibilityFn - Function that accepts `(view, root)` and returns an object with
+ *   visibility data (e.g., `{ isVisible, selectionTop, selectionBottom, rootTop, rootBottom }`) or `null`.
  */
 export function setupFocusListeners(tiptapEditor, getSelectionVisibilityFn) {
   const setup = () => {

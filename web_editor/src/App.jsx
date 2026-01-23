@@ -83,6 +83,15 @@ EditorHost.propTypes = {
   onEditorChange: PropTypes.func.isRequired,
 };
 
+/**
+ * Top-level React component that hosts and manages the BlockNote editor and its UI.
+ *
+ * Manages editor lifecycle and readiness, wires external (Flutter) message handling,
+ * applies theming to the page, and chooses between editor view, loading display,
+ * or error display based on current state and configuration.
+ *
+ * @returns {JSX.Element} The rendered React element tree for the BlockNote application.
+ */
 function App() {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
