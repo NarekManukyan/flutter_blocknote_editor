@@ -1,3 +1,16 @@
+## 0.0.11
+
+* Improved WebView height management and scrolling behavior:
+  * Enhanced selection visibility detection for better keyboard interaction
+  * Improved scroll-to-selection handling with debouncing for content size changes
+  * Better handling of keyboard open/close states with visual viewport detection
+  * Refactored scroll helpers and selection visibility utilities for better code organization
+* Enhanced content size change handling:
+  * Added debouncing for scroll-to-selection to avoid excessive scrolling
+  * Improved detection of significant content size changes (>20px threshold)
+  * Better handling of minor content adjustments without resetting debounce timers
+* Updated embedded web editor bundle (`assets/web/editor.js`)
+
 ## 0.0.10
 
 * Added `BlockNoteController` for programmatic editor operations:
@@ -5,7 +18,7 @@
   * `loadDocument()` - Load documents programmatically
   * `flush()` - Flush pending transactions immediately
   * Methods to set editor configuration (read-only, toolbar, slash commands, schema, etc.)
-  * Accessible via `onControllerReady` callback in `BlockNoteEditor`
+  * Accessible via `onReady` callback in `BlockNoteEditor` (controller is passed as parameter)
 * Added `transactionDebounceDuration` parameter to `BlockNoteEditor` for customizable transaction batching window (default: 400ms)
 * Improved theme handling with unified color scheme and better support for light and dark modes
 * Refactored web editor components for improved error and loading displays
