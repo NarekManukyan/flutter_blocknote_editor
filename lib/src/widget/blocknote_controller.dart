@@ -25,7 +25,7 @@ import '../model/blocknote_slash_command.dart';
 /// `theme` prop, which automatically adapts to system brightness changes.
 ///
 /// The controller is initialized when the editor is ready and can be accessed
-/// via the `onControllerReady` callback in `BlockNoteEditor`.
+/// via the `onReady` callback in `BlockNoteEditor`.
 class BlockNoteController {
   /// Creates a new BlockNote controller.
   ///

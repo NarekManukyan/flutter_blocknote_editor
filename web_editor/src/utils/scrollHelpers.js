@@ -83,7 +83,12 @@ export function scrollSelectionIfNeeded(editor, selectionScrollNeeded) {
 
   const proseMirrorView = editor._tiptapEditor.view;
   if (proseMirrorView) {
-    proseMirrorView.dispatch(proseMirrorView.state.tr.scrollIntoView());
+    try {
+      // Simply scroll to selection - ProseMirror handles it correctly
+      proseMirrorView.dispatch(proseMirrorView.state.tr.scrollIntoView());
+    } catch (err) {
+      // Silently fail
+    }
   }
 }
 

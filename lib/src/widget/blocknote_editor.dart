@@ -50,7 +50,6 @@ class BlockNoteEditor extends StatefulWidget {
     required this.initialDocument,
     this.onTransactions,
     this.onReady,
-    this.onControllerReady,
     this.readOnly = false,
     this.debugLogging = false,
     this.localhostUrl,
@@ -80,13 +79,10 @@ class BlockNoteEditor extends StatefulWidget {
   final ValueChanged<List<BlockNoteTransaction>>? onTransactions;
 
   /// Callback invoked when the editor is ready and initialized.
-  final VoidCallback? onReady;
-
-  /// Callback invoked when the controller is ready.
   ///
   /// The controller provides programmatic access to the editor, including
   /// methods to get the full document, set configuration, and load documents.
-  final ValueChanged<BlockNoteController>? onControllerReady;
+  final ValueChanged<BlockNoteController>? onReady;
 
   /// Callback invoked when a toolbar popup is clicked.
   ///
@@ -376,11 +372,6 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
         debugLogging: widget.debugLogging,
       );
       _blockNoteController!.initialize(_bridge!);
-
-      // Notify controller ready callback
-      if (widget.onControllerReady != null) {
-        widget.onControllerReady!(_blockNoteController!);
-      }
     }
 
     // Load initial document now that editor is ready
@@ -399,8 +390,9 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
       _updateWebViewHeight(keyboardHeight, availableHeight);
     });
 
-    if (widget.onReady != null) {
-      widget.onReady!();
+    // Notify ready callback with controller
+    if (widget.onReady != null && _blockNoteController != null) {
+      widget.onReady!(_blockNoteController!);
     }
   }
 
@@ -665,8 +657,8 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
                   debugLogging: widget.debugLogging,
                 );
                 _blockNoteController!.initialize(_bridge!);
-                if (widget.onControllerReady != null) {
-                  widget.onControllerReady!(_blockNoteController!);
+                if (widget.onReady != null) {
+                  widget.onReady!(_blockNoteController!);
                 }
               }
               // Set up JavaScript handlers

@@ -120,7 +120,7 @@ import 'package:flutter_blocknote_editor/flutter_blocknote_editor.dart';
 
 BlockNoteEditor(
   initialDocument: BlockNoteDocument.empty(),
-  onReady: () {
+  onReady: (controller) {
     print('Editor is ready');
   },
 )
@@ -141,7 +141,7 @@ BlockNoteEditor(
       }
     }
   },
-  onReady: () {
+  onReady: (controller) {
     print('Editor initialized');
   },
 )
@@ -155,7 +155,7 @@ Toggle between editable and read-only states:
 BlockNoteEditor(
   initialDocument: BlockNoteDocument.empty(),
   readOnly: true, // Set to true for read-only mode
-  onReady: () {
+  onReady: (controller) {
     print('Editor is ready');
   },
 )
@@ -198,7 +198,7 @@ BlockNoteEditor(
   onTransactions: (transactions) {
     // Handle transactions
   },
-  onReady: () {
+  onReady: (controller) {
     print('Editor initialized with content');
   },
 )
@@ -241,7 +241,7 @@ BlockNoteEditor(
       family: "'Georgia', 'Times New Roman', serif",
     ),
   ),
-  onReady: () {
+  onReady: (controller) {
     print('Editor with custom theme is ready');
   },
 )
@@ -279,7 +279,7 @@ BlockNoteEditor(
       ),
     ],
   ),
-  onReady: () {
+  onReady: (controller) {
     print('Editor with custom toolbar is ready');
   },
 )
@@ -304,7 +304,7 @@ BlockNoteEditor(
       ),
     ],
   ),
-  onReady: () {
+  onReady: (controller) {
     print('Editor with custom slash commands is ready');
   },
 )
@@ -357,7 +357,7 @@ BlockNoteEditor(
   schemaConfig: {
     'blockSpecs': ['agenda_item'],
   },
-  onReady: () {
+  onReady: (controller) {
     print('Editor with custom schema is ready');
   },
 )
@@ -375,12 +375,9 @@ BlockNoteController? _controller;
 
 BlockNoteEditor(
   initialDocument: BlockNoteDocument.empty(),
-  onControllerReady: (controller) {
+  onReady: (controller) {
     _controller = controller;
-    print('Controller is ready');
-  },
-  onReady: () {
-    print('Editor is ready');
+    print('Editor and controller are ready');
   },
 )
 
@@ -439,7 +436,7 @@ Enable debug logging for development:
 BlockNoteEditor(
   initialDocument: BlockNoteDocument.empty(),
   debugLogging: true, // Enable debug logging
-  onReady: () {
+  onReady: (controller) {
     print('Editor is ready');
   },
 )
@@ -500,13 +497,9 @@ class _EditorPageState extends State<EditorPage> {
           Expanded(
             child: BlockNoteEditor(
               initialDocument: _document,
-              onControllerReady: (controller) {
+              onReady: (controller) {
                 setState(() {
                   _controller = controller;
-                });
-              },
-              onReady: () {
-                setState(() {
                   _isReady = true;
                 });
               },

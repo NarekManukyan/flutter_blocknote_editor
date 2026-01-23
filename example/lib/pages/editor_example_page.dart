@@ -218,10 +218,11 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
             child: _isDocumentLoaded
                 ? BlockNoteEditor(
                     initialDocument: _document,
-                    onReady: () {
+                    onReady: (controller) {
                       if (!mounted) return;
                       setState(() {
                         _isReady = true;
+                        _controller = controller;
                       });
                       if (!mounted) return;
                       final messenger = ScaffoldMessenger.of(context);
@@ -229,20 +230,6 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
                         const SnackBar(
                           content: Text('Editor is ready!'),
                           duration: Duration(seconds: 2),
-                        ),
-                      );
-                    },
-                    onControllerReady: (controller) {
-                      if (!mounted) return;
-                      setState(() {
-                        _controller = controller;
-                      });
-                      if (!mounted) return;
-                      final messenger = ScaffoldMessenger.of(context);
-                      messenger.showSnackBar(
-                        const SnackBar(
-                          content: Text('Controller is ready!'),
-                          duration: Duration(seconds: 1),
                         ),
                       );
                     },
@@ -428,24 +415,13 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
               child: _isDocumentLoaded
                   ? BlockNoteEditor(
                       initialDocument: _document,
-                      onReady: () {
+                      onReady: (controller) {
                         if (!mounted) return;
                         final messenger = ScaffoldMessenger.of(context);
                         messenger.showSnackBar(
                           const SnackBar(
                             content: Text('Editor is ready in modal!'),
                             duration: Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                      onControllerReady: (controller) {
-                        // Controller available in modal too
-                        if (!mounted) return;
-                        final messenger = ScaffoldMessenger.of(context);
-                        messenger.showSnackBar(
-                          const SnackBar(
-                            content: Text('Controller ready in modal!'),
-                            duration: Duration(seconds: 1),
                           ),
                         );
                       },
