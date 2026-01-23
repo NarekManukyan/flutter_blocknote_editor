@@ -21,13 +21,15 @@ import {
 } from '../utils/transactionSender';
 
 /**
- * Custom hook to handle editor ready state and send ready message.
- * @param {Object} editor - The BlockNote editor instance
- * @param {Object} documentVersionRef - Ref to track document version
- * @param {Function} setIsLoading - Function to set loading state
- * @param {Function} setError - Function to set error state
- * @param {boolean} allowMissingEditor - Whether to skip error if editor missing
- * @returns {boolean} Whether editor is ready
+ * Manage editor readiness, initialize change listeners, and expose helpers for transaction flushing and serialization.
+ * 
+ * Initializes the editor-ready state, sends a ready signal, sets up debounced change handling that serializes top-level blocks and dispatches operations, exposes runtime helpers (sendPendingTransaction, resetPreviousBlocks, serializeBlock, updateDebounceDuration), and reports initialization errors when the editor is missing unless allowed.
+ * @param {Object} editor - The BlockNote editor instance (or null/undefined when not present).
+ * @param {Object} documentVersionRef - Mutable ref tracking the document version for outgoing transactions.
+ * @param {Function} setIsLoading - Setter to update loading state.
+ * @param {Function} setError - Setter to record an error message.
+ * @param {boolean} allowMissingEditor - If true, skip setting an error when the editor is not provided.
+ * @returns {boolean} `true` if the hook considers the editor ready, `false` otherwise.
  */
 export function useEditorReady(
   editor,

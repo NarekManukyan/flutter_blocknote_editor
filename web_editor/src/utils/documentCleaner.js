@@ -4,7 +4,9 @@
  */
 
 /**
- * Cleans styled text item.
+ * Normalize a styled text item into a plain text node.
+ * @param {Object} item - Source item that may contain `text` and `styles`.
+ * @returns {Object} An object with `type: 'text'`, a `text` string (empty if missing), and a `styles` object when `item.styles` is an object.
  */
 export function cleanStyledText(item) {
   const cleaned = {
@@ -18,7 +20,14 @@ export function cleanStyledText(item) {
 }
 
 /**
- * Cleans inline content item.
+ * Normalize an inline content item into a consistent cleaned structure.
+ *
+ * @param {object} item - Inline content item; may be a text node, a link, or a custom inline type.
+ * @param {function} cleanStyledTextFn - Function that accepts a styled text item and returns a cleaned text node.
+ * @returns {object} Cleaned inline content:
+ *  - For text: the cleaned text node returned by `cleanStyledTextFn`.
+ *  - For link: `{ type: 'link', content: Array<cleanedTextNode>, href: string }`.
+ *  - For other types: `{ type: string, content?: Array<cleanedTextNode>, props: object }`.
  */
 export function cleanInlineContent(item, cleanStyledTextFn) {
   const itemType = item?.type || 'text';
@@ -50,7 +59,10 @@ export function cleanInlineContent(item, cleanStyledTextFn) {
 }
 
 /**
- * Cleans table content.
+ * Normalize a tableContent object into a consistent rows/cells structure.
+ * @param {Object} content - Source object that may contain a `rows` array.
+ * @param {Function} cleanInlineContentFn - Function used to normalize each inline content item.
+ * @returns {Object} An object with `type: 'tableContent'` and a `rows` array where each row has `cells`; each cell is an array of cleaned inline content items (non-array cells become empty arrays).
  */
 export function cleanTableContent(content, cleanInlineContentFn) {
   const rows = Array.isArray(content?.rows) ? content.rows : [];
@@ -69,7 +81,12 @@ export function cleanTableContent(content, cleanInlineContentFn) {
 }
 
 /**
- * Creates a default block.
+ * Produce a minimal default block object used when no block data is provided.
+ * @returns {{id: string, type: string, content: Array, props: Object}} An object with:
+ *  - `id`: a unique id prefixed with "block_" and the current timestamp,
+ *  - `type`: the block type (`"paragraph"`),
+ *  - `content`: an array containing a single empty text node `{ type: "text", text: "", styles: {} }`,
+ *  - `props`: an empty object for block-specific properties.
  */
 export function createDefaultBlock() {
   return {
@@ -81,7 +98,16 @@ export function createDefaultBlock() {
 }
 
 /**
- * Cleans a single block.
+ * Normalize a block object into a consistent cleaned structure.
+ *
+ * Ensures the returned block has an `id`, `type`, and `props`, preserves `children` when present,
+ * and sets `content` to a cleaned representation using the provided helpers (array content is mapped
+ * through `cleanInlineContentFn`; `tableContent` objects are processed by `cleanTableContentFn`).
+ *
+ * @param {Object|null|undefined} block - The block to normalize; if falsy a default block is returned.
+ * @param {function(Object): Object} cleanInlineContentFn - Function that normalizes an inline content item.
+ * @param {function(Object): Object} cleanTableContentFn - Function that normalizes a `tableContent` object.
+ * @returns {Object} A cleaned block object with normalized `id`, `type`, `props`, optional `content`, and optional `children`.
  */
 export function cleanBlock(block, cleanInlineContentFn, cleanTableContentFn) {
   if (!block) {
