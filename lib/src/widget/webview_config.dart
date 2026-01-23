@@ -1,7 +1,6 @@
 /// WebView configuration utilities for BlockNote editor.
 library;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
@@ -45,7 +44,8 @@ class WebViewConfig {
       // Inject JavaScript to create bridge objects that map to handlers
       // This allows the existing JavaScript code to work without changes
       await controller.evaluateJavascript(
-        source: '''
+        source:
+            '''
         (function() {
           // Set debug logging flag
           window.BlockNoteDebugLogging = $debugLogging;

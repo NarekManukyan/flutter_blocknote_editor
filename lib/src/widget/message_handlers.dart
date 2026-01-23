@@ -6,7 +6,6 @@ import '../bridge/js_bridge.dart';
 import '../bridge/message_types.dart';
 import '../batching/transaction_batcher.dart';
 import '../model/blocknote_transaction.dart';
-import '../model/blocknote_document.dart';
 
 /// Handles messages from the JavaScript bridge.
 class MessageHandlers {
