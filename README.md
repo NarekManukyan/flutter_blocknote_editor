@@ -33,9 +33,10 @@ A Flutter package that embeds [BlockNoteJS](https://github.com/TypeCellOS/BlockN
 
 - ✅ **WebView Integration**: Embeds BlockNoteJS editor in a WebView for iOS and Android
 - ✅ **Bidirectional Communication**: Type-safe message protocol between Flutter and JavaScript
-- ✅ **Transaction Batching**: Efficient batching system prevents excessive Flutter rebuilds
+- ✅ **Transaction Batching**: Efficient batching system prevents excessive Flutter rebuilds (configurable debounce duration)
 - ✅ **Undo/Redo Safety**: Undo/redo operations remain entirely within the JavaScript editor
 - ✅ **Offline Support**: JavaScript bundle embedded locally via assets
+- ✅ **Programmatic Control**: `BlockNoteController` for on-demand document retrieval and editor operations
 - ✅ **Custom Themes**: Customize editor colors, fonts, and styling
 - ✅ **Custom Toolbar**: Configure formatting toolbar buttons
 - ✅ **Custom Slash Commands**: Add custom slash menu items
@@ -68,15 +69,16 @@ graph LR
 ### Key Components
 
 1. **BlockNoteEditor Widget**: Main Flutter widget that embeds the WebView
-2. **JS Bridge**: Handles message protocol between Flutter and JavaScript
-3. **Transaction Batcher**: Batches transactions to prevent excessive rebuilds
-4. **Document Models**: Type-safe Dart models for documents, blocks, and transactions
+2. **BlockNoteController**: Provides programmatic access to the editor (get document, load document, flush transactions, etc.)
+3. **JS Bridge**: Handles message protocol between Flutter and JavaScript
+4. **Transaction Batcher**: Batches transactions to prevent excessive rebuilds
+5. **Document Models**: Type-safe Dart models for documents, blocks, and transactions
 
 ### Transaction Batching
 
 Transactions are automatically batched to prevent excessive Flutter rebuilds:
 
-- **Default batch window**: 400ms
+- **Default batch window**: 400ms (configurable via `transactionDebounceDuration`)
 - **Immediate flush triggers**:
   - Paste operations
   - Delete block operations
@@ -364,6 +366,71 @@ BlockNoteEditor(
 The `schemaConfig` map also supports `inlineContentSpecs` and `styleSpecs` with
 the same array format to enable registered inline content and styles.
 
+### BlockNoteController
+
+Use `BlockNoteController` for programmatic editor operations:
+
+```dart
+BlockNoteController? _controller;
+
+BlockNoteEditor(
+  initialDocument: BlockNoteDocument.empty(),
+  onControllerReady: (controller) {
+    _controller = controller;
+    print('Controller is ready');
+  },
+  onReady: () {
+    print('Editor is ready');
+  },
+)
+
+// Later, get the full document on-demand
+Future<void> saveDocument() async {
+  if (_controller != null && _controller!.isReady) {
+    try {
+      final document = await _controller!.getDocument();
+      // Save document to storage, send to server, etc.
+      print('Document has ${document.blocks.length} blocks');
+    } catch (e) {
+      print('Error getting document: $e');
+    }
+  }
+}
+
+// Load a document programmatically
+Future<void> loadSavedDocument(BlockNoteDocument document) async {
+  if (_controller != null && _controller!.isReady) {
+    await _controller!.loadDocument(document);
+  }
+}
+
+// Flush pending transactions immediately
+Future<void> flushTransactions() async {
+  if (_controller != null && _controller!.isReady) {
+    await _controller!.flush();
+  }
+}
+```
+
+### Transaction Debounce Duration
+
+Customize the transaction batching window:
+
+```dart
+BlockNoteEditor(
+  initialDocument: BlockNoteDocument.empty(),
+  transactionDebounceDuration: const Duration(milliseconds: 200), // Faster updates
+  onTransactions: (transactions) {
+    // Handle transactions
+  },
+  onReady: () {
+    print('Editor is ready');
+  },
+)
+```
+
+The default debounce duration is 400ms. Shorter durations provide more frequent updates but may impact performance with large documents.
+
 ### Debug Logging
 
 Enable debug logging for development:
@@ -398,6 +465,7 @@ class _EditorPageState extends State<EditorPage> {
   bool _readOnly = false;
   BlockNoteDocument _document = BlockNoteDocument.empty();
   final List<BlockNoteTransaction> _transactions = [];
+  BlockNoteController? _controller;
 
   @override
   Widget build(BuildContext context) {
@@ -414,6 +482,11 @@ class _EditorPageState extends State<EditorPage> {
             },
             tooltip: _readOnly ? 'Enable editing' : 'Disable editing',
           ),
+          IconButton(
+            icon: const Icon(Icons.save),
+            onPressed: _saveDocument,
+            tooltip: 'Save document',
+          ),
         ],
       ),
       body: Column(
@@ -427,6 +500,11 @@ class _EditorPageState extends State<EditorPage> {
           Expanded(
             child: BlockNoteEditor(
               initialDocument: _document,
+              onControllerReady: (controller) {
+                setState(() {
+                  _controller = controller;
+                });
+              },
               onReady: () {
                 setState(() {
                   _isReady = true;
@@ -443,6 +521,30 @@ class _EditorPageState extends State<EditorPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _saveDocument() async {
+    if (_controller != null && _controller!.isReady) {
+      try {
+        final document = await _controller!.getDocument();
+        // Save document to storage, send to server, etc.
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Document saved with ${document.blocks.length} blocks'),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error saving document: $e'),
+            ),
+          );
+        }
+      }
+    }
   }
 }
 ```
