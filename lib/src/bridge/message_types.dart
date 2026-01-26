@@ -204,19 +204,18 @@ class SetSchemaConfigMessage extends FlutterToJsMessage {
   }
 }
 
-/// Message to update WebView height for keyboard handling.
+/// Message to update WebView bottom padding for keyboard handling.
+///
+/// Keyboard detection is handled on the JavaScript side using visualViewport API.
+/// Flutter only controls the extra bottom padding value.
 class UpdateWebViewHeightMessage extends FlutterToJsMessage {
-  /// Creates a new update WebView height message.
+  /// Creates a new update WebView bottom padding message.
   const UpdateWebViewHeightMessage({
-    required this.height,
-    required this.keyboardHeight,
+    this.extraBottomPadding = 0,
   });
 
-  /// The available height in pixels.
-  final int height;
-
-  /// The keyboard height in pixels.
-  final int keyboardHeight;
+  /// Extra bottom padding in pixels (optional, defaults to 0).
+  final int extraBottomPadding;
 
   @override
   FlutterToJsMessageType get type => FlutterToJsMessageType.updateWebViewHeight;
@@ -225,8 +224,7 @@ class UpdateWebViewHeightMessage extends FlutterToJsMessage {
   Map<String, dynamic> toJson() {
     return {
       'type': 'update_webview_height',
-      'height': height,
-      'keyboardHeight': keyboardHeight,
+      'extraBottomPadding': extraBottomPadding,
     };
   }
 }

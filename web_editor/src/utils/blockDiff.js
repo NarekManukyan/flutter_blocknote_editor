@@ -13,6 +13,10 @@
  * @param {Object|null|undefined} block2 - The second block to compare; may be `null` or `undefined`.
  * @returns {boolean} `true` if the blocks are equal in `id`, `type`, `content`, `props`, and `children`; `false` otherwise.
  */
+/**
+ * Optimized block equality check that avoids JSON.stringify when possible.
+ * Uses shallow comparison first, then deep comparison only when needed.
+ */
 export function blocksEqual(block1, block2) {
   const blocksEqualInner = (left, right) => {
     if (!left && !right) return true;
@@ -20,17 +24,35 @@ export function blocksEqual(block1, block2) {
     if (left.id !== right.id) return false;
     if (left.type !== right.type) return false;
 
-    const content1 = JSON.stringify(left.content ?? null);
-    const content2 = JSON.stringify(right.content ?? null);
-    if (content1 !== content2) return false;
+    // Fast path: if references are the same, they're equal
+    if (left === right) return true;
 
-    const props1 = JSON.stringify(left.props || {});
-    const props2 = JSON.stringify(right.props || {});
-    if (props1 !== props2) return false;
+    // Shallow comparison for content (most common case)
+    const leftContent = left.content ?? null;
+    const rightContent = right.content ?? null;
+    if (leftContent !== rightContent) {
+      // Only use JSON.stringify if shallow comparison fails
+      const content1 = JSON.stringify(leftContent);
+      const content2 = JSON.stringify(rightContent);
+      if (content1 !== content2) return false;
+    }
+
+    // Shallow comparison for props
+    const leftProps = left.props || {};
+    const rightProps = right.props || {};
+    if (leftProps !== rightProps) {
+      // Only use JSON.stringify if shallow comparison fails
+      const props1 = JSON.stringify(leftProps);
+      const props2 = JSON.stringify(rightProps);
+      if (props1 !== props2) return false;
+    }
 
     const children1 = left.children || [];
     const children2 = right.children || [];
     if (children1.length !== children2.length) return false;
+
+    // Fast path: if children arrays are the same reference, they're equal
+    if (children1 === children2) return true;
 
     for (let i = 0; i < children1.length; i++) {
       if (!blocksEqualInner(children1[i], children2[i])) return false;

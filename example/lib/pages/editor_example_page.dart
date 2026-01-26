@@ -21,6 +21,7 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
   bool _useCustomTheme = false;
   bool _useCustomToolbar = false;
   bool _useCustomSlashCommands = false;
+  bool _useAvailableSlashCommands = false;
   bool _useCustomFont = false;
   bool _isDocumentLoaded = false;
   final List<BlockNoteTransaction> _transactions = [];
@@ -136,6 +137,7 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.red,
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('BlockNote Editor Example'),
@@ -228,6 +230,9 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
                   case 'slash':
                     _useCustomSlashCommands = !_useCustomSlashCommands;
                     break;
+                  case 'availableSlash':
+                    _useAvailableSlashCommands = !_useAvailableSlashCommands;
+                    break;
                   case 'font':
                     _useCustomFont = !_useCustomFont;
                     break;
@@ -268,6 +273,20 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
                     ),
                     const SizedBox(width: 8),
                     const Text('Custom Slash Commands'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'availableSlash',
+                child: Row(
+                  children: [
+                    Icon(
+                      _useAvailableSlashCommands
+                          ? Icons.check
+                          : Icons.circle_outlined,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text('Available Slash Commands'),
                   ],
                 ),
               ),
@@ -328,9 +347,11 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
                     toolbarConfig: _useCustomToolbar
                         ? EditorConfig.createCustomToolbar()
                         : null,
-                    slashCommandConfig: _useCustomSlashCommands
-                        ? EditorConfig.createCustomSlashCommands()
-                        : null,
+                    slashCommandConfig: _useAvailableSlashCommands
+                        ? EditorConfig.createAvailableSlashCommands()
+                        : _useCustomSlashCommands
+                            ? EditorConfig.createCustomSlashCommands()
+                            : null,
                     onLinkTapped: _handleLinkTap,
                   )
                 : const Center(child: CircularProgressIndicator()),
@@ -396,11 +417,13 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
           if (_useCustomTheme ||
               _useCustomToolbar ||
               _useCustomSlashCommands ||
+              _useAvailableSlashCommands ||
               _useCustomFont)
             const SizedBox(width: 8),
           if (_useCustomTheme ||
               _useCustomToolbar ||
               _useCustomSlashCommands ||
+              _useAvailableSlashCommands ||
               _useCustomFont)
             Flexible(
               child: Wrap(
@@ -422,6 +445,12 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
                   if (_useCustomSlashCommands)
                     const Chip(
                       label: Text('Slash'),
+                      labelStyle: TextStyle(fontSize: 10),
+                      padding: EdgeInsets.symmetric(horizontal: 4),
+                    ),
+                  if (_useAvailableSlashCommands)
+                    const Chip(
+                      label: Text('Available Slash'),
                       labelStyle: TextStyle(fontSize: 10),
                       padding: EdgeInsets.symmetric(horizontal: 4),
                     ),

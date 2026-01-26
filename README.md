@@ -109,6 +109,70 @@ Then run:
 flutter pub get
 ```
 
+## Setup
+
+The package uses a local HTTP server to serve the BlockNote editor assets. To allow the WebView to load content from `localhost`, you need to configure platform-specific security settings.
+
+### Android Setup
+
+Android blocks cleartext (HTTP) traffic by default. To allow localhost HTTP connections, you need to add a network security configuration.
+
+1. **Create a network security configuration file** at `android/app/src/main/res/xml/network_security_config.xml`:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Allow cleartext traffic for localhost only -->
+    <!-- This is safe because localhost traffic never leaves the device -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>
+```
+
+2. **Update your AndroidManifest.xml** to reference this configuration. Add `android:networkSecurityConfig="@xml/network_security_config"` to the `<application>` tag:
+
+```xml
+<application
+    android:label="your_app_name"
+    android:name="${applicationName}"
+    android:icon="@mipmap/ic_launcher"
+    android:networkSecurityConfig="@xml/network_security_config">
+    <!-- ... rest of your application configuration ... -->
+</application>
+```
+
+### iOS Setup
+
+iOS requires App Transport Security (ATS) configuration to allow HTTP connections to localhost.
+
+**Update your Info.plist** (typically at `ios/Runner/Info.plist`) to add the following configuration:
+
+```xml
+<key>NSAppTransportSecurity</key>
+<dict>
+    <key>NSAllowsLocalNetworking</key>
+    <true/>
+    <key>NSExceptionDomains</key>
+    <dict>
+        <key>localhost</key>
+        <dict>
+            <key>NSExceptionAllowsInsecureHTTPLoads</key>
+            <true/>
+        </dict>
+        <key>127.0.0.1</key>
+        <dict>
+            <key>NSExceptionAllowsInsecureHTTPLoads</key>
+            <true/>
+        </dict>
+    </dict>
+</dict>
+```
+
+**Note:** These configurations only allow cleartext traffic for localhost, which is safe since localhost traffic never leaves the device. This does not affect the security of your app's external network connections.
+
 ## Usage
 
 ### Basic Usage

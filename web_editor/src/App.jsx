@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
 import '@blocknote/core/fonts/inter.css';
@@ -15,7 +21,6 @@ import { buildFormattingToolbar } from './utils/toolbarBuilder.jsx';
 import { buildSlashMenuItems } from './utils/slashMenuBuilder.jsx';
 import { buildBlockNoteTheme } from './utils/themeBuilder';
 import { ErrorDisplay } from './components/ErrorDisplay';
-import { LoadingDisplay } from './components/LoadingDisplay';
 
 class BlockNoteErrorBoundary extends React.Component {
   constructor(props) {
@@ -115,9 +120,9 @@ function App() {
     [schemaConfigReady, schemaConfigRequired],
   );
 
-  const updateEditor = (nextEditor) => {
+  const updateEditor = useCallback((nextEditor) => {
     setEditor(nextEditor ?? null);
-  };
+  }, []);
 
   const allowMissingEditor = !shouldRenderEditor || !editor;
 
@@ -171,21 +176,33 @@ function App() {
   // Set up link tap handler
   useLinkTapHandler(editor);
 
-  // Determine if we should use custom toolbar
-  const useCustomToolbar =
-    toolbarConfig && toolbarConfig.buttons && toolbarConfig.enabled !== false;
-  const formattingToolbarComponent = useCustomToolbar
-    ? buildFormattingToolbar(toolbarConfig)
-    : null;
+  // Memoize toolbar and slash menu components to prevent unnecessary rebuilds
+  const useCustomToolbar = useMemo(
+    () =>
+      toolbarConfig && toolbarConfig.buttons && toolbarConfig.enabled !== false,
+    [toolbarConfig],
+  );
+  const formattingToolbarComponent = useMemo(
+    () => (useCustomToolbar ? buildFormattingToolbar(toolbarConfig) : null),
+    [useCustomToolbar, toolbarConfig],
+  );
 
-  // Determine if we should use custom slash menu
-  const useCustomSlashMenu =
-    slashCommandConfig &&
-    slashCommandConfig.items &&
-    slashCommandConfig.enabled !== false;
-  const slashMenuComponent = useCustomSlashMenu
-    ? buildSlashMenuItems(slashCommandConfig, editor)
-    : null;
+  const useCustomSlashMenu = useMemo(
+    () =>
+      slashCommandConfig &&
+      slashCommandConfig.enabled !== false &&
+      (slashCommandConfig.items ||
+        (slashCommandConfig.availableSlashCommands &&
+          slashCommandConfig.availableSlashCommands.length > 0)),
+    [slashCommandConfig],
+  );
+  const slashMenuComponent = useMemo(
+    () =>
+      useCustomSlashMenu
+        ? buildSlashMenuItems(slashCommandConfig, editor)
+        : null,
+    [useCustomSlashMenu, slashCommandConfig, editor],
+  );
 
   useEffect(() => {
     if (!shouldRenderEditor) {
@@ -194,10 +211,10 @@ function App() {
     return () => {
       updateEditor(null);
     };
-  }, [shouldRenderEditor]);
+  }, [shouldRenderEditor, updateEditor]);
 
-  // Convert theme to BlockNote format if provided
-  const blockNoteTheme = buildBlockNoteTheme(theme);
+  // Memoize theme conversion to prevent unnecessary rebuilds
+  const blockNoteTheme = useMemo(() => buildBlockNoteTheme(theme), [theme]);
 
   // Apply theme background color to page elements
   useThemeBackground(theme, blockNoteTheme);
@@ -220,34 +237,23 @@ function App() {
         )}
         {error ? (
           <>
-            {(() => {
-              console.error('[BlockNote] App error:', error);
-              return null;
-            })()}
+            {window.BlockNoteDebugLogging &&
+              (() => {
+                console.error('[BlockNote] App error:', error);
+                return null;
+              })()}
             <ErrorDisplay error={error} />
           </>
-        ) : !shouldRenderEditor || isLoading || !editor ? (
+        ) : !shouldRenderEditor || isLoading || !editor ? null : (
           <>
-            {(() => {
-              console.log(
-                '[BlockNote] Loading state - isLoading:',
-                isLoading,
-                'editor:',
-                !!editor,
-              );
-              return null;
-            })()}
-            <LoadingDisplay />
-          </>
-        ) : (
-          <>
-            {(() => {
-              console.log(
-                '[BlockNote] Rendering BlockNoteView with editor:',
-                !!editor,
-              );
-              return null;
-            })()}
+            {window.BlockNoteDebugLogging &&
+              (() => {
+                console.log(
+                  '[BlockNote] Rendering BlockNoteView with editor:',
+                  !!editor,
+                );
+                return null;
+              })()}
             <BlockNoteView
               editor={editor}
               editable={!isReadonly}

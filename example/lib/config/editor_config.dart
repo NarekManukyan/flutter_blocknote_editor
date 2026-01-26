@@ -91,4 +91,21 @@ class EditorConfig {
       ],
     );
   }
+
+  /// Creates a slash command configuration with only specific available commands.
+  ///
+  /// This demonstrates the availableSlashCommands feature by showing only
+  /// a subset of the default commands.
+  static BlockNoteSlashCommandConfig createAvailableSlashCommands() {
+    return BlockNoteSlashCommandConfig(
+      availableSlashCommands: [
+        BlockNoteDefaultSlashCommand.paragraph,
+        BlockNoteDefaultSlashCommand.heading1,
+        BlockNoteDefaultSlashCommand.heading2,
+        BlockNoteDefaultSlashCommand.heading3,
+        BlockNoteDefaultSlashCommand.bulletList,
+        BlockNoteDefaultSlashCommand.numberedList,
+      ],
+    );
+  }
 }

@@ -34,16 +34,20 @@ export function loadDocument(
       return;
     }
 
-    console.log('[BlockNote] loadDocument called with:', documentData);
+    if (window.BlockNoteDebugLogging) {
+      console.log('[BlockNote] loadDocument called with:', documentData);
+    }
 
     const doc =
       typeof documentData === 'string'
         ? JSON.parse(documentData)
         : documentData;
 
-    console.log('[BlockNote] Parsed document:', doc);
-    console.log('[BlockNote] Document blocks:', doc.blocks);
-    console.log('[BlockNote] Document version:', doc.version);
+    if (window.BlockNoteDebugLogging) {
+      console.log('[BlockNote] Parsed document:', doc);
+      console.log('[BlockNote] Document blocks:', doc.blocks);
+      console.log('[BlockNote] Document version:', doc.version);
+    }
 
     if (!doc) {
       throw new Error('Document data is null or undefined');
@@ -75,15 +79,27 @@ export function loadDocument(
         cleanBlock(block, cleanInlineContentFn, cleanTableContentFn),
       );
 
-      console.log('[BlockNote] Cleaning blocks, count:', cleanedBlocks.length);
-      console.log('[BlockNote] First block:', cleanedBlocks[0]);
+      if (window.BlockNoteDebugLogging) {
+        console.log(
+          '[BlockNote] Cleaning blocks, count:',
+          cleanedBlocks.length,
+        );
+        console.log('[BlockNote] First block:', cleanedBlocks[0]);
+      }
 
       // Use BlockNote's replaceBlocks method
       if (editor.replaceBlocks) {
         const currentBlocks = editor.topLevelBlocks || [];
-        console.log('[BlockNote] Current blocks count:', currentBlocks.length);
+        if (window.BlockNoteDebugLogging) {
+          console.log(
+            '[BlockNote] Current blocks count:',
+            currentBlocks.length,
+          );
+        }
         editor.replaceBlocks(currentBlocks, cleanedBlocks);
-        console.log('[BlockNote] Blocks replaced successfully');
+        if (window.BlockNoteDebugLogging) {
+          console.log('[BlockNote] Blocks replaced successfully');
+        }
       } else {
         console.warn(
           '[BlockNote] replaceBlocks not available, trying alternative method',
@@ -119,7 +135,9 @@ export function loadDocument(
         }, 100);
       }
 
-      console.log('[BlockNote] Document loaded successfully');
+      if (window.BlockNoteDebugLogging) {
+        console.log('[BlockNote] Document loaded successfully');
+      }
     } else {
       throw new Error('Invalid document format: blocks must be an array');
     }

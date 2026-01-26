@@ -245,13 +245,22 @@ try {
   }
 
   const root = ReactDOM.createRoot(rootElement);
+  // Remove StrictMode in production for better performance
+  // StrictMode causes double rendering which is expensive in WebView
+  const isDevelopment = window.BlockNoteDebugLogging === true;
   root.render(
-    <React.StrictMode>
+    isDevelopment ? (
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>
+    ) : (
       <App />
-    </React.StrictMode>,
+    ),
   );
 
-  console.log('[BlockNote] React app rendered successfully');
+  if (isDevelopment) {
+    console.log('[BlockNote] React app rendered successfully');
+  }
 } catch (error) {
   console.error('[BlockNote] Failed to render React app:', error);
   const rootElement = document.getElementById('root');

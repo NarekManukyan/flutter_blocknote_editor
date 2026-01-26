@@ -2,7 +2,12 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react({
+      // Optimize React for production
+      jsxRuntime: 'automatic',
+    }),
+  ],
   build: {
     outDir: '../assets/web',
     emptyOutDir: true,
@@ -25,8 +30,11 @@ export default defineConfig({
       // Ensure all dependencies are bundled
       external: [],
     },
-    // Don't minify to help with debugging
-    minify: false,
+    // Enable minification for production builds (better performance)
+    // Use esbuild (default, faster than terser) with console removal
+    minify: 'esbuild',
+    // Note: esbuild doesn't support drop_console directly, but we handle it via
+    // conditional logging in the code (window.BlockNoteDebugLogging checks)
     // Inline small assets
     assetsInlineLimit: 4096,
     // Increase chunk size warning limit since we're creating one big bundle

@@ -190,7 +190,9 @@ export function useEditorReady(
     }
 
     if (!isReadyRef.current) {
-      console.log('[BlockNote] Editor initialized, sending ready message');
+      if (window.BlockNoteDebugLogging) {
+        console.log('[BlockNote] Editor initialized, sending ready message');
+      }
       setIsLoading(false);
       isReadyRef.current = true;
 
