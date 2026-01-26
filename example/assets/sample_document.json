@@ -185,6 +185,33 @@
           "text": "Happy editing! 🎉"
         }
       ]
+    },
+    {
+      "id": "block12",
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "Try tapping this ",
+          "styles": {}
+        },
+        {
+          "type": "link",
+          "href": "https://www.blocknotejs.org",
+          "content": [
+            {
+              "type": "text",
+              "text": "link",
+              "styles": {}
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": " to see link handling in action!",
+          "styles": {}
+        }
+      ]
     }
   ]
 }

@@ -22,7 +22,7 @@ import {
 
 /**
  * Manage editor readiness, initialize change listeners, and expose helpers for transaction flushing and serialization.
- * 
+ *
  * Initializes the editor-ready state, sends a ready signal, sets up debounced change handling that serializes top-level blocks and dispatches operations, exposes runtime helpers (sendPendingTransaction, resetPreviousBlocks, serializeBlock, updateDebounceDuration), and reports initialization errors when the editor is missing unless allowed.
  * @param {Object} editor - The BlockNote editor instance (or null/undefined when not present).
  * @param {Object} documentVersionRef - Mutable ref tracking the document version for outgoing transactions.

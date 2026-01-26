@@ -17,6 +17,7 @@ class MessageHandlers {
     required Function(String) onError,
     required Function(ToolbarPopupRequestMessage) onToolbarPopupRequest,
     Function(DocumentMessage)? onDocument,
+    Function(LinkTapMessage)? onLinkTap,
     required bool mounted,
   }) {
     if (!mounted) return;
@@ -37,6 +38,11 @@ class MessageHandlers {
       case JsToFlutterMessageType.document:
         if (onDocument != null) {
           onDocument(message as DocumentMessage);
+        }
+        break;
+      case JsToFlutterMessageType.linkTap:
+        if (onLinkTap != null) {
+          onLinkTap(message as LinkTapMessage);
         }
         break;
     }

@@ -86,7 +86,7 @@ export function scrollSelectionIfNeeded(editor, selectionScrollNeeded) {
     try {
       // Simply scroll to selection - ProseMirror handles it correctly
       proseMirrorView.dispatch(proseMirrorView.state.tr.scrollIntoView());
-    } catch (err) {
+    } catch {
       // Silently fail
     }
   }

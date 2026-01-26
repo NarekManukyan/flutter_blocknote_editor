@@ -1,3 +1,13 @@
+## 0.0.12
+
+* Added link tap handling:
+  * New `onLinkTapped` callback in `BlockNoteEditor` to handle link clicks
+  * Link clicks are intercepted in the editor and sent to Flutter via message channel
+  * Prevents default navigation, allowing custom handling (e.g., using `url_launcher`)
+  * Added `useLinkTapHandler` hook in web editor for link click interception
+  * Added `LinkTapMessage` message type for link tap communication
+* Updated embedded web editor bundle (`assets/web/editor.js`)
+
 ## 0.0.11
 
 * Improved WebView height management and scrolling behavior:

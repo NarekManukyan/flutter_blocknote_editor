@@ -51,7 +51,7 @@ export function identifyPopupType(popupClasses) {
 
 /**
  * Determine whether a popup is vertically near the toolbar.
- * 
+ *
  * @param {Element} toolbar - The toolbar DOM element to compare against.
  * @param {Element} popup - The popup DOM element to check.
  * @returns {boolean} `true` if the vertical distance between the popup and the toolbar is less than 100 pixels, `false` otherwise.
