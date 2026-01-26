@@ -168,12 +168,16 @@ class JsBridge {
     );
   }
 
-  /// Updates the WebView height for keyboard handling.
-  Future<void> updateWebViewHeight(int height, int keyboardHeight) async {
+  /// Updates the WebView bottom padding for keyboard handling.
+  ///
+  /// Keyboard detection is handled on the JavaScript side.
+  /// This method only sends the extra bottom padding value.
+  Future<void> updateWebViewHeight({
+    int extraBottomPadding = 0,
+  }) async {
     await sendMessage(
       UpdateWebViewHeightMessage(
-        height: height,
-        keyboardHeight: keyboardHeight,
+        extraBottomPadding: extraBottomPadding,
       ),
     );
   }

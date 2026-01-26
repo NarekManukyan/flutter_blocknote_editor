@@ -1,3 +1,16 @@
+## 0.0.13
+
+* Improved custom slash menu support:
+  * Added `buildSlashMenuItems` utility for building custom slash menus from Flutter configuration
+  * Enhanced slash menu integration with memoization to prevent unnecessary rebuilds
+  * Better support for filtering default slash menu items via `availableSlashCommands` whitelist
+  * Improved custom slash command execution with error handling
+* Enhanced touch gesture handling:
+  * Disabled pinch zoom and double-tap zoom gestures to prevent accidental zooming
+  * Improved touch event handling for toolbar buttons and interactive elements
+  * Better viewport meta tag management for consistent mobile behavior
+* Updated embedded web editor bundle (`assets/web/editor.js`)
+
 ## 0.0.12
 
 * Added link tap handling:

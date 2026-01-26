@@ -4,6 +4,7 @@
  */
 
 import { useEffect } from 'react';
+import { setTheme } from '../utils/webViewHeightManager';
 
 /**
  * Apply the editor background color from the provided theme to the document root, html, body, and #root elements.
@@ -13,6 +14,9 @@ import { useEffect } from 'react';
  */
 export function useThemeBackground(theme, blockNoteTheme) {
   useEffect(() => {
+    // Store theme globally so webViewHeightManager can access it
+    setTheme(theme);
+
     if (!theme || !blockNoteTheme) {
       return;
     }

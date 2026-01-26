@@ -2,7 +2,7 @@
  * Custom hook for handling Flutter messages.
  */
 
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { updateWebViewHeight } from '../utils/webViewHeightManager';
 import { injectCustomCss } from '../utils/cssInjector';
 import { handleToolbarPopupResponse } from '../utils/toolbarPopupHandler';
@@ -49,8 +49,9 @@ export function useFlutterMessages(
   pendingDocumentRef,
   schemaChangePendingRef,
 ) {
-  useEffect(() => {
-    const handleFlutterMessage = (message) => {
+  // Memoize handlers to prevent unnecessary re-renders
+  const handleFlutterMessage = useCallback(
+    (message) => {
       switch (message.type) {
         case 'load_document':
           handleLoadDocument(
@@ -91,7 +92,7 @@ export function useFlutterMessages(
           setSlashCommandConfig(message.data);
           break;
         case 'update_webview_height':
-          updateWebViewHeight(message.height, message.keyboardHeight, editor);
+          updateWebViewHeight(message.extraBottomPadding, editor);
           break;
         case 'inject_custom_css':
           injectCustomCss(message.css);
@@ -106,10 +107,29 @@ export function useFlutterMessages(
           handleGetDocument(editor, message);
           break;
         default:
-          console.warn('[BlockNote] Unknown message type:', message.type);
+          if (window.BlockNoteDebugLogging) {
+            console.warn('[BlockNote] Unknown message type:', message.type);
+          }
       }
-    };
+    },
+    [
+      editor,
+      setIsReadonly,
+      setTheme,
+      setToolbarConfig,
+      setSlashCommandConfig,
+      setSchemaConfig,
+      setSchemaConfigReady,
+      setSchemaConfigRequired,
+      documentVersionRef,
+      hasLoadedDocumentRef,
+      toolbarPopupCallbacksRef,
+      pendingDocumentRef,
+      schemaChangePendingRef,
+    ],
+  );
 
+  useEffect(() => {
     const handleFlutterEvent = (event) => {
       handleFlutterMessage(event.detail);
     };
@@ -123,19 +143,5 @@ export function useFlutterMessages(
     return () => {
       window.removeEventListener('flutterMessage', handleFlutterEvent);
     };
-  }, [
-    editor,
-    setIsReadonly,
-    setTheme,
-    setToolbarConfig,
-    setSlashCommandConfig,
-    setSchemaConfig,
-    setSchemaConfigReady,
-    setSchemaConfigRequired,
-    documentVersionRef,
-    hasLoadedDocumentRef,
-    toolbarPopupCallbacksRef,
-    pendingDocumentRef,
-    schemaChangePendingRef,
-  ]);
+  }, [handleFlutterMessage]);
 }

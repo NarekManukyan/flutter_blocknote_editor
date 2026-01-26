@@ -107,6 +107,28 @@ class WebViewConfig {
       disableVerticalScroll: false,
       disableHorizontalScroll: true,
       useShouldOverrideUrlLoading: true,
+      // Performance optimizations for Android
+      cacheEnabled: true,
+      clearCache: false,
+      // Reduce memory usage
+      domStorageEnabled: true,
+      databaseEnabled: false,
+      // Performance optimizations for iOS
+      isFraudulentWebsiteWarningEnabled: false,
+      // Disable unnecessary features for better performance
+      mediaPlaybackRequiresUserGesture: false,
+      allowsInlineMediaPlayback: true,
+      // Optimize rendering
+      disableContextMenu: true,
+      // Reduce overhead
+      thirdPartyCookiesEnabled: false,
+      // Android-specific performance settings
+      // Note: MixedContentMode may not be available in all versions
+      // mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
+      // iOS-specific performance settings
+      allowsBackForwardNavigationGestures: false,
+      // Reduce JavaScript bridge overhead
+      javaScriptCanOpenWindowsAutomatically: false,
     );
   }
 }

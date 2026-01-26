@@ -8,37 +8,40 @@ import '../bridge/js_bridge.dart';
 
 /// Manages WebView height updates and content size changes.
 class WebViewHeightManager {
-  /// Updates the WebView height in JavaScript to ensure proper scrolling.
+  /// Updates the WebView bottom padding in JavaScript to ensure proper scrolling.
+  ///
+  /// Keyboard detection is handled on the JavaScript side using visualViewport API.
+  /// This method only sends the extra bottom padding value.
   static void updateWebViewHeight({
     required JsBridge bridge,
     required InAppWebViewController controller,
-    required double keyboardHeight,
-    required double availableHeight,
+    double extraBottomPadding = 0,
     required bool debugLogging,
   }) {
     if (debugLogging) {
       debugPrint(
         '[BlockNoteEditor] _updateWebViewHeight called: '
-        'keyboardHeight=$keyboardHeight, availableHeight=$availableHeight',
+        'extraBottomPadding=$extraBottomPadding',
       );
     }
 
     // Convert to pixels (Flutter uses logical pixels, but we need physical pixels)
     final pixelRatio =
         WidgetsBinding.instance.platformDispatcher.views.first.devicePixelRatio;
-    final heightInPixels = (availableHeight * pixelRatio).round();
-    final keyboardHeightInPixels = (keyboardHeight * pixelRatio).round();
+    final extraBottomPaddingInPixels = (extraBottomPadding * pixelRatio).round();
 
     if (debugLogging) {
       debugPrint(
-        '[BlockNoteEditor] Updating WebView height: '
-        'heightInPixels=$heightInPixels, keyboardHeightInPixels=$keyboardHeightInPixels, '
+        '[BlockNoteEditor] Updating WebView bottom padding: '
+        'extraBottomPaddingInPixels=$extraBottomPaddingInPixels, '
         'pixelRatio=$pixelRatio',
       );
     }
 
     // Update via bridge
-    bridge.updateWebViewHeight(heightInPixels, keyboardHeightInPixels);
+    bridge.updateWebViewHeight(
+      extraBottomPadding: extraBottomPaddingInPixels,
+    );
 
     // Also ensure WebView itself has proper size constraints
     // This helps with scrolling when there are many blocks

@@ -4,6 +4,111 @@
 /// types "/" in the editor.
 library;
 
+/// Enumeration of default slash commands provided by BlockNote.
+///
+/// Use this enum to easily reference and specify which default slash commands
+/// should be available in the slash menu.
+enum BlockNoteDefaultSlashCommand {
+  /// Paragraph/Text block command.
+  paragraph,
+
+  /// Heading level 1 command.
+  heading1,
+
+  /// Heading level 2 command.
+  heading2,
+
+  /// Heading level 3 command.
+  heading3,
+
+  /// Toggle heading level 1 command.
+  toggleHeading1,
+
+  /// Toggle heading level 2 command.
+  toggleHeading2,
+
+  /// Toggle heading level 3 command.
+  toggleHeading3,
+
+  /// Bullet list command.
+  bulletList,
+
+  /// Numbered list command.
+  numberedList,
+
+  /// Check list command.
+  checkList,
+
+  /// Quote block command.
+  quote,
+
+  /// Toggle list command.
+  toggleList,
+
+  /// Code block command.
+  codeBlock,
+
+  /// Image block command.
+  image,
+
+  /// Audio block command.
+  audio,
+
+  /// Video block command.
+  video,
+
+  /// File block command.
+  file,
+
+  /// Table block command.
+  table;
+
+  /// Returns the expected title for this default slash command.
+  ///
+  /// These titles match the default titles used by BlockNote's
+  /// getDefaultReactSlashMenuItems function.
+  String get title {
+    switch (this) {
+      case BlockNoteDefaultSlashCommand.paragraph:
+        return 'Paragraph';
+      case BlockNoteDefaultSlashCommand.heading1:
+        return 'Heading 1';
+      case BlockNoteDefaultSlashCommand.heading2:
+        return 'Heading 2';
+      case BlockNoteDefaultSlashCommand.heading3:
+        return 'Heading 3';
+      case BlockNoteDefaultSlashCommand.toggleHeading1:
+        return 'Toggle Heading 1';
+      case BlockNoteDefaultSlashCommand.toggleHeading2:
+        return 'Toggle Heading 2';
+      case BlockNoteDefaultSlashCommand.toggleHeading3:
+        return 'Toggle Heading 3';
+      case BlockNoteDefaultSlashCommand.bulletList:
+        return 'Bullet List';
+      case BlockNoteDefaultSlashCommand.numberedList:
+        return 'Numbered List';
+      case BlockNoteDefaultSlashCommand.checkList:
+        return 'Check List';
+      case BlockNoteDefaultSlashCommand.quote:
+        return 'Quote';
+      case BlockNoteDefaultSlashCommand.toggleList:
+        return 'Toggle List';
+      case BlockNoteDefaultSlashCommand.codeBlock:
+        return 'Code Block';
+      case BlockNoteDefaultSlashCommand.image:
+        return 'Image';
+      case BlockNoteDefaultSlashCommand.audio:
+        return 'Audio';
+      case BlockNoteDefaultSlashCommand.video:
+        return 'Video';
+      case BlockNoteDefaultSlashCommand.file:
+        return 'File';
+      case BlockNoteDefaultSlashCommand.table:
+        return 'Table';
+    }
+  }
+}
+
 /// Slash command item configuration.
 class BlockNoteSlashCommandItem {
   /// Creates a new slash command item.
@@ -419,6 +524,7 @@ class BlockNoteSlashCommandConfig {
     this.items,
     this.enabled = true,
     this.triggerCharacter = '/',
+    this.availableSlashCommands,
   });
 
   /// Custom slash command items (extends default if provided).
@@ -430,8 +536,47 @@ class BlockNoteSlashCommandConfig {
   /// Trigger character (default: '/').
   final String triggerCharacter;
 
+  /// List of default slash commands that should be available.
+  ///
+  /// If provided, only the default commands specified in this list will be
+  /// shown in the slash menu. If null, all default commands are shown.
+  ///
+  /// Can contain [BlockNoteDefaultSlashCommand] enum values or custom title
+  /// strings. Only commands matching these titles will be included from the
+  /// default slash menu items.
+  ///
+  /// Example:
+  /// ```dart
+  /// BlockNoteSlashCommandConfig(
+  ///   availableSlashCommands: [
+  ///     BlockNoteDefaultSlashCommand.paragraph,
+  ///     BlockNoteDefaultSlashCommand.heading1,
+  ///     BlockNoteDefaultSlashCommand.heading2,
+  ///     BlockNoteDefaultSlashCommand.heading3,
+  ///   ],
+  /// )
+  /// ```
+  final List<dynamic>? availableSlashCommands;
+
   /// Creates a BlockNoteSlashCommandConfig from a JSON map.
   factory BlockNoteSlashCommandConfig.fromJson(Map<String, dynamic> json) {
+    final availableCommandsJson =
+        json['availableSlashCommands'] as List<dynamic>?;
+    final availableCommands = availableCommandsJson?.map((item) {
+      if (item is String) {
+        // Try to match by enum title first
+        try {
+          return BlockNoteDefaultSlashCommand.values.firstWhere(
+            (e) => e.title == item,
+          );
+        } catch (_) {
+          // If not found as enum title, treat as custom title string
+          return item;
+        }
+      }
+      return item;
+    }).toList();
+
     return BlockNoteSlashCommandConfig(
       items: (json['items'] as List<dynamic>?)
           ?.whereType<Map>()
@@ -441,6 +586,7 @@ class BlockNoteSlashCommandConfig {
           .toList(),
       enabled: json['enabled'] as bool? ?? true,
       triggerCharacter: json['triggerCharacter'] as String? ?? '/',
+      availableSlashCommands: availableCommands,
     );
   }
 
@@ -453,6 +599,14 @@ class BlockNoteSlashCommandConfig {
     if (items != null) {
       json['items'] = items!.map((item) => item.toJson()).toList();
     }
+    if (availableSlashCommands != null) {
+      json['availableSlashCommands'] = availableSlashCommands!.map((item) {
+        if (item is BlockNoteDefaultSlashCommand) {
+          return item.title;
+        }
+        return item.toString();
+      }).toList();
+    }
     return json;
   }
 
@@ -460,6 +614,7 @@ class BlockNoteSlashCommandConfig {
     Object? items = _unset,
     bool? enabled,
     String? triggerCharacter,
+    Object? availableSlashCommands = _unset,
   }) {
     return BlockNoteSlashCommandConfig(
       items: identical(items, _unset)
@@ -467,12 +622,15 @@ class BlockNoteSlashCommandConfig {
           : items as List<BlockNoteSlashCommandItem>?,
       enabled: enabled ?? this.enabled,
       triggerCharacter: triggerCharacter ?? this.triggerCharacter,
+      availableSlashCommands: identical(availableSlashCommands, _unset)
+          ? this.availableSlashCommands
+          : availableSlashCommands as List<dynamic>?,
     );
   }
 
   @override
   String toString() {
-    return 'BlockNoteSlashCommandConfig(items: $items, enabled: $enabled, triggerCharacter: $triggerCharacter)';
+    return 'BlockNoteSlashCommandConfig(items: $items, enabled: $enabled, triggerCharacter: $triggerCharacter, availableSlashCommands: $availableSlashCommands)';
   }
 
   @override
@@ -481,12 +639,17 @@ class BlockNoteSlashCommandConfig {
         other is BlockNoteSlashCommandConfig &&
             _listEquals(other.items, items) &&
             other.enabled == enabled &&
-            other.triggerCharacter == triggerCharacter;
+            other.triggerCharacter == triggerCharacter &&
+            _listEquals(other.availableSlashCommands, availableSlashCommands);
   }
 
   @override
-  int get hashCode =>
-      Object.hash(_listHash(items), enabled, triggerCharacter);
+  int get hashCode => Object.hash(
+        _listHash(items),
+        enabled,
+        triggerCharacter,
+        _listHash(availableSlashCommands),
+      );
 }
 
 const Object _unset = Object();

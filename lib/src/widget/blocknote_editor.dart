@@ -66,6 +66,9 @@ class BlockNoteEditor extends StatefulWidget {
     this.onToolbarPopupRequest,
     this.transactionDebounceDuration,
     this.onLinkTapped,
+    this.extraBottomPadding = 0,
+    this.loading = false,
+    this.skeletonBackgroundColor,
     super.key,
   });
 
@@ -101,6 +104,24 @@ class BlockNoteEditor extends StatefulWidget {
   /// The URL of the tapped link is passed as a parameter.
   /// Use this to handle link navigation (e.g., using `url_launcher`).
   final ValueChanged<String>? onLinkTapped;
+
+  /// Extra bottom padding in logical pixels to add to the WebView content.
+  ///
+  /// This padding is added on top of the keyboard height when the keyboard
+  /// is open, allowing for additional spacing if needed.
+  final double extraBottomPadding;
+
+  /// Whether to show a loading skeleton overlay.
+  ///
+  /// When true, a skeleton loading indicator is shown over the WebView.
+  /// The skeleton is also automatically shown when the editor is not ready yet.
+  final bool loading;
+
+  /// Custom background color for the loading skeleton shimmer.
+  ///
+  /// If not provided, the skeleton will use the editor background color from
+  /// the theme configuration, or white as a fallback.
+  final Color? skeletonBackgroundColor;
 
   /// Whether the editor should be in read-only mode.
   final bool readOnly;
@@ -178,17 +199,19 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
   AssetServer? _assetServer;
   BlockNoteController? _blockNoteController;
   bool _isReady = false;
+  bool _isEditorInitialized = false;
   bool _hasLoadedDocument = false;
   bool _hasPreloadedCustomJavaScript = false;
   bool _hasPreloadedCustomCss = false;
   bool _hasPreloadedSchemaConfig = false;
-  double _lastKeyboardHeight = 0;
-  double _lastAvailableHeight = 0;
+  double _lastExtraBottomPadding = 0;
   String? _initialUrl;
   bool _isInitializing = false;
   String? _loadedInitialUrl;
   Timer? _contentSizeChangeDebounceTimer;
   DateTime? _lastSignificantChangeTime;
+  Timer? _heightUpdateDebounceTimer;
+  double _pendingExtraBottomPadding = 0;
 
   @override
   void initState() {
@@ -227,8 +250,9 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
     _assetServer?.stop();
     // Flush any pending transactions before disposing
     _batcher?.dispose();
-    // Cancel debounce timer
+    // Cancel debounce timers
     _contentSizeChangeDebounceTimer?.cancel();
+    _heightUpdateDebounceTimer?.cancel();
     super.dispose();
   }
 
@@ -245,7 +269,8 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
           widget.onTransactions!(transactions);
         }
       },
-      batchWindow: widget.transactionDebounceDuration ??
+      batchWindow:
+          widget.transactionDebounceDuration ??
           const Duration(milliseconds: 400),
       debugLogging: widget.debugLogging,
     );
@@ -269,14 +294,15 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
   ///
   /// This is called once after the editor sends the "ready" message.
   /// We load the full document and then resume streaming transactions.
+  /// After the document is loaded and UI is updated, _isReady is set to true.
   Future<void> _loadInitialDocument() async {
-    if (_hasLoadedDocument || _bridge == null || !_isReady) {
+    if (_hasLoadedDocument || _bridge == null || !_isEditorInitialized) {
       return;
     }
 
     _hasLoadedDocument = true;
 
-    // Load document immediately since editor is ready
+    // Load document immediately since editor is initialized
     if (!mounted) return;
 
     try {
@@ -296,15 +322,29 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
         ),
       );
 
-      // Ensure WebView height is updated after document loads
+      // Wait for UI to update after document loads, then mark as ready
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || !_isReady || _bridge == null) return;
+        if (!mounted || _bridge == null) return;
         if (!context.mounted) return;
 
-        final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
-        final screenHeight = MediaQuery.of(context).size.height;
-        final availableHeight = screenHeight - keyboardHeight;
-        _updateWebViewHeight(keyboardHeight, availableHeight);
+        // Update WebView height after document loads
+        _updateWebViewHeight();
+
+        // Mark as ready after document is loaded and UI is updated
+        if (mounted) {
+          setState(() {
+            _isReady = true;
+          });
+
+          if (widget.debugLogging) {
+            debugPrint('[BlockNoteEditor] Editor is ready (document loaded)');
+          }
+
+          // Notify ready callback with controller after document is loaded
+          if (widget.onReady != null && _blockNoteController != null) {
+            widget.onReady!(_blockNoteController!);
+          }
+        }
       });
     } catch (e) {
       MessageHandlers.handleError(
@@ -373,13 +413,18 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
   }
 
   /// Handles the ready message from JavaScript.
+  ///
+  /// This marks the editor as initialized, but not fully ready.
+  /// The editor is only marked as ready after the document is loaded and UI is updated.
   void _handleReady() {
-    if (_isReady) return;
+    if (_isEditorInitialized) return;
 
-    _isReady = true;
+    _isEditorInitialized = true;
 
     if (widget.debugLogging) {
-      debugPrint('[BlockNoteEditor] Editor is ready');
+      debugPrint(
+        '[BlockNoteEditor] Editor initialized (waiting for document load)',
+      );
     }
 
     // Initialize controller
@@ -390,26 +435,9 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
       _blockNoteController!.initialize(_bridge!);
     }
 
-    // Load initial document now that editor is ready
+    // Load initial document now that editor is initialized
+    // _isReady will be set to true after document is loaded and UI is updated
     _loadInitialDocument();
-
-    // Set initial WebView height after next frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_isReady || _bridge == null) return;
-      if (!context.mounted) return;
-
-      final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
-      final screenHeight = MediaQuery.of(context).size.height;
-      final availableHeight = screenHeight - keyboardHeight;
-      _lastKeyboardHeight = keyboardHeight;
-      _lastAvailableHeight = availableHeight;
-      _updateWebViewHeight(keyboardHeight, availableHeight);
-    });
-
-    // Notify ready callback with controller
-    if (widget.onReady != null && _blockNoteController != null) {
-      widget.onReady!(_blockNoteController!);
-    }
   }
 
   /// Handles transactions from JavaScript.
@@ -478,6 +506,7 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
         _bridge != null) {
       _hasLoadedDocument = false;
       _isReady = false;
+      _isEditorInitialized = false;
       _hasPreloadedSchemaConfig = false;
       final resolvedSchemaConfig = _resolveSchemaConfig();
       if (resolvedSchemaConfig != null) {
@@ -556,7 +585,8 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
 
     if (!_hasPreloadedSchemaConfig) {
       final resolvedSchemaConfig = _resolveSchemaConfig();
-      final hasSchemaConfig = resolvedSchemaConfig != null ||
+      final hasSchemaConfig =
+          resolvedSchemaConfig != null ||
           (widget.schemaConfigs != null && widget.schemaConfigs!.isNotEmpty);
       await _bridge!.setSchemaConfig(
         resolvedSchemaConfig,
@@ -616,192 +646,343 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Get keyboard height from viewInsets
-        final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
-        final screenHeight = constraints.maxHeight;
-        final availableHeight = screenHeight - keyboardHeight;
-
         // Show loading indicator while initializing
         if (_initialUrl == null) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        // Update WebView height when editor is ready or when keyboard opens/closes
+        // Update WebView bottom padding when editor is ready or when extraBottomPadding changes
+        // Use debouncing to avoid excessive updates
         if (_isReady && _bridge != null && _controller != null) {
-          // Always update height when ready (even if keyboard hasn't changed)
-          // This ensures proper scrolling is enabled from the start
-          if (_lastAvailableHeight == 0 ||
-              (keyboardHeight - _lastKeyboardHeight).abs() > 1.0 ||
-              (availableHeight - _lastAvailableHeight).abs() > 1.0) {
-            _lastKeyboardHeight = keyboardHeight;
-            _lastAvailableHeight = availableHeight;
-            _updateWebViewHeight(keyboardHeight, availableHeight);
+          final extraBottomPadding = widget.extraBottomPadding;
+          final paddingDiff = (extraBottomPadding - _lastExtraBottomPadding)
+              .abs();
+
+          // Use a larger threshold (5 pixels) to avoid updates on every frame
+          final significantChange = paddingDiff > 5.0;
+
+          if (_lastExtraBottomPadding == 0 || significantChange) {
+            // Store pending value
+            _pendingExtraBottomPadding = extraBottomPadding;
+
+            // Cancel previous debounce timer
+            _heightUpdateDebounceTimer?.cancel();
+
+            // Debounce padding updates to avoid excessive calls
+            // Use a shorter delay (50ms) for responsiveness while still batching updates
+            _heightUpdateDebounceTimer = Timer(
+              const Duration(milliseconds: 50),
+              () {
+                if (mounted &&
+                    _isReady &&
+                    _bridge != null &&
+                    _controller != null) {
+                  // Only update if value actually changed significantly
+                  final finalPaddingDiff =
+                      (_pendingExtraBottomPadding - _lastExtraBottomPadding)
+                          .abs();
+
+                  if (_lastExtraBottomPadding == 0 || finalPaddingDiff > 5.0) {
+                    _lastExtraBottomPadding = _pendingExtraBottomPadding;
+                    _updateWebViewHeight();
+                  }
+                }
+              },
+            );
           }
         }
         // Extract editor background color from theme if available
+        // This ensures the skeleton background matches the editor background
         Color? editorBackgroundColor;
         if (widget.theme != null) {
-          final colors = widget.theme!.colors ?? widget.theme!.light ?? widget.theme!.dark;
+          final colors =
+              widget.theme!.colors ?? widget.theme!.light ?? widget.theme!.dark;
           if (colors != null && colors.editor != null) {
             editorBackgroundColor = colors.editor!.background;
           }
         }
 
-        return SizedBox(
-          height: availableHeight,
-          child: InAppWebView(
-            gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
-              Factory<OneSequenceGestureRecognizer>(
-                () => EagerGestureRecognizer(),
+        // Get scaffold background color from theme as fallback
+        final scaffoldBgColor = Theme.of(context).scaffoldBackgroundColor;
+
+        // Determine skeleton background color
+        // Priority: custom skeletonBackgroundColor > theme editor background > scaffold background > white
+        final skeletonBgColor =
+            widget.skeletonBackgroundColor ??
+            editorBackgroundColor ??
+            scaffoldBgColor;
+
+        // Determine if skeleton should be shown
+        final shouldShowSkeleton = widget.loading || !_isReady;
+
+        return Stack(
+          children: [
+            InAppWebView(
+              gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+                Factory<OneSequenceGestureRecognizer>(
+                  () => EagerGestureRecognizer(),
+                ),
+              },
+              initialUrlRequest: URLRequest(url: WebUri(_initialUrl!)),
+              initialSettings: WebViewConfig.getDefaultSettings(
+                backgroundColor: editorBackgroundColor,
               ),
-            },
-            initialUrlRequest: URLRequest(url: WebUri(_initialUrl!)),
-            initialSettings: WebViewConfig.getDefaultSettings(
-              backgroundColor: editorBackgroundColor,
-            ),
-            onWebViewCreated: (controller) {
-              _controller = controller;
-              // Create JavaScript bridge
-              _bridge = JsBridge(
-                controller: controller,
-                onMessage: _handleBridgeMessage,
-                debugLogging: widget.debugLogging,
-              );
-              // Initialize controller if bridge is ready
-              if (_isReady && _blockNoteController == null) {
-                _blockNoteController = BlockNoteController(
+              onWebViewCreated: (controller) {
+                _controller = controller;
+                // Create JavaScript bridge
+                _bridge = JsBridge(
+                  controller: controller,
+                  onMessage: _handleBridgeMessage,
                   debugLogging: widget.debugLogging,
                 );
-                _blockNoteController!.initialize(_bridge!);
-                if (widget.onReady != null) {
-                  widget.onReady!(_blockNoteController!);
-                }
-              }
-              // Set up JavaScript handlers
-              WebViewConfig.setupJavaScriptHandlers(
-                controller: controller,
-                onJsMessage: _handleJsMessage,
-                onConsoleMessage: (msg) {
-                  if (msg.contains('[ERROR]')) {
-                    debugPrint('[BlockNoteEditor] $msg');
-                    MessageHandlers.handleError(
-                      message: msg,
-                      debugLogging: widget.debugLogging,
-                    );
-                  } else if (widget.debugLogging) {
-                    debugPrint('[JS Console] $msg');
-                  }
-                },
-                debugLogging: widget.debugLogging,
-              );
-            },
-            onLoadStop: (controller, url) async {
-              if (widget.debugLogging) {
-                debugPrint('[BlockNoteEditor] Page finished loading: $url');
-              }
-              // Mark initial URL as loaded
-              if (_loadedInitialUrl == null && _initialUrl != null) {
-                _loadedInitialUrl = url.toString();
-              }
-              // Set up JavaScript bridge objects for message communication
-              await WebViewConfig.setupJavaScriptBridge(
-                controller: controller,
-                debugLogging: widget.debugLogging,
-              );
-              await _preloadEditorConfiguration();
-              // Set debounce duration if provided
-              if (widget.transactionDebounceDuration != null) {
-                await _bridge!.setDebounceDuration(
-                  widget.transactionDebounceDuration!.inMilliseconds,
+                // Controller will be initialized in _handleReady() when editor sends ready message
+                // and onReady callback will be called after document is loaded
+                // Set up JavaScript handlers
+                WebViewConfig.setupJavaScriptHandlers(
+                  controller: controller,
+                  onJsMessage: _handleJsMessage,
+                  onConsoleMessage: (msg) {
+                    if (msg.contains('[ERROR]')) {
+                      debugPrint('[BlockNoteEditor] $msg');
+                      MessageHandlers.handleError(
+                        message: msg,
+                        debugLogging: widget.debugLogging,
+                      );
+                    } else if (widget.debugLogging) {
+                      debugPrint('[JS Console] $msg');
+                    }
+                  },
+                  debugLogging: widget.debugLogging,
                 );
-              }
-            },
-            onReceivedError: (controller, request, error) {
-              if (widget.debugLogging) {
-                debugPrint('[BlockNoteEditor] Web resource error: $error');
-              }
-              MessageHandlers.handleError(
-                message: 'WebView error: ${error.description}',
-                debugLogging: widget.debugLogging,
-              );
-            },
-            shouldOverrideUrlLoading: (controller, navigationAction) async {
-              // Allow initial page load, block subsequent navigation (link clicks)
-              final url = navigationAction.request.url.toString();
-              
-              // Normalize URLs for comparison (remove trailing slashes)
-              String normalizeUrl(String? urlStr) {
-                if (urlStr == null) return '';
-                return urlStr.endsWith('/') ? urlStr.substring(0, urlStr.length - 1) : urlStr;
-              }
-              
-              final normalizedUrl = normalizeUrl(url);
-              final normalizedInitialUrl = normalizeUrl(_initialUrl);
-              
-              // If this is the initial URL or we haven't loaded it yet, allow navigation
-              if (_initialUrl != null && normalizedUrl == normalizedInitialUrl && _loadedInitialUrl == null) {
-                _loadedInitialUrl = url;
+              },
+              onLoadStop: (controller, url) async {
                 if (widget.debugLogging) {
-                  debugPrint('[BlockNoteEditor] Allowing initial page load: $url');
+                  debugPrint('[BlockNoteEditor] Page finished loading: $url');
                 }
-                return NavigationActionPolicy.ALLOW;
-              }
-              
-              // Block all other navigation (link clicks)
-              // Link taps are handled via JavaScript interception and sent to Flutter
-              // via onLinkTapped callback.
-              if (widget.debugLogging) {
-                debugPrint(
-                  '[BlockNoteEditor] Navigation blocked: $url',
+                // Mark initial URL as loaded
+                if (_loadedInitialUrl == null && _initialUrl != null) {
+                  _loadedInitialUrl = url.toString();
+                }
+                // Set up JavaScript bridge objects for message communication
+                await WebViewConfig.setupJavaScriptBridge(
+                  controller: controller,
+                  debugLogging: widget.debugLogging,
                 );
-              }
-              return NavigationActionPolicy.CANCEL;
-            },
-            onContentSizeChanged: (controller, oldContentSize, newContentSize) {
-              WebViewHeightManager.handleContentSizeChange(
-                controller: controller,
-                oldContentSize: oldContentSize,
-                newContentSize: newContentSize,
-                isReady: _isReady,
-                debugLogging: widget.debugLogging,
-                onScrollToSelection: () {
-                  if (_controller != null && mounted) {
-                    WebViewHeightManager.triggerScrollToSelection(
-                      controller: _controller!,
-                      debugLogging: widget.debugLogging,
+                await _preloadEditorConfiguration();
+                // Set debounce duration if provided
+                if (widget.transactionDebounceDuration != null) {
+                  await _bridge!.setDebounceDuration(
+                    widget.transactionDebounceDuration!.inMilliseconds,
+                  );
+                }
+              },
+              onReceivedError: (controller, request, error) {
+                if (widget.debugLogging) {
+                  debugPrint('[BlockNoteEditor] Web resource error: $error');
+                }
+                MessageHandlers.handleError(
+                  message: 'WebView error: ${error.description}',
+                  debugLogging: widget.debugLogging,
+                );
+              },
+              shouldOverrideUrlLoading: (controller, navigationAction) async {
+                // Allow initial page load, block subsequent navigation (link clicks)
+                final url = navigationAction.request.url.toString();
+
+                // Normalize URLs for comparison (remove trailing slashes)
+                String normalizeUrl(String? urlStr) {
+                  if (urlStr == null) return '';
+                  return urlStr.endsWith('/')
+                      ? urlStr.substring(0, urlStr.length - 1)
+                      : urlStr;
+                }
+
+                final normalizedUrl = normalizeUrl(url);
+                final normalizedInitialUrl = normalizeUrl(_initialUrl);
+
+                // If this is the initial URL or we haven't loaded it yet, allow navigation
+                if (_initialUrl != null &&
+                    normalizedUrl == normalizedInitialUrl &&
+                    _loadedInitialUrl == null) {
+                  _loadedInitialUrl = url;
+                  if (widget.debugLogging) {
+                    debugPrint(
+                      '[BlockNoteEditor] Allowing initial page load: $url',
                     );
-                    // Reset tracking
-                    _lastSignificantChangeTime = null;
                   }
-                },
-                updateLastSignificantChangeTime: (time) {
-                  _lastSignificantChangeTime = time;
-                },
-                updateDebounceTimer: (timer) {
-                  _contentSizeChangeDebounceTimer?.cancel();
-                  _contentSizeChangeDebounceTimer = timer;
-                },
-                lastSignificantChangeTime: _lastSignificantChangeTime,
-                contentSizeChangeDebounceTimer: _contentSizeChangeDebounceTimer,
-              );
-            },
-          ),
+                  return NavigationActionPolicy.ALLOW;
+                }
+
+                // Block all other navigation (link clicks)
+                // Link taps are handled via JavaScript interception and sent to Flutter
+                // via onLinkTapped callback.
+                if (widget.debugLogging) {
+                  debugPrint('[BlockNoteEditor] Navigation blocked: $url');
+                }
+                return NavigationActionPolicy.CANCEL;
+              },
+              onContentSizeChanged:
+                  (controller, oldContentSize, newContentSize) {
+                    WebViewHeightManager.handleContentSizeChange(
+                      controller: controller,
+                      oldContentSize: oldContentSize,
+                      newContentSize: newContentSize,
+                      isReady: _isReady,
+                      debugLogging: widget.debugLogging,
+                      onScrollToSelection: () {
+                        if (_controller != null && mounted) {
+                          WebViewHeightManager.triggerScrollToSelection(
+                            controller: _controller!,
+                            debugLogging: widget.debugLogging,
+                          );
+                          // Reset tracking
+                          _lastSignificantChangeTime = null;
+                        }
+                      },
+                      updateLastSignificantChangeTime: (time) {
+                        _lastSignificantChangeTime = time;
+                      },
+                      updateDebounceTimer: (timer) {
+                        _contentSizeChangeDebounceTimer?.cancel();
+                        _contentSizeChangeDebounceTimer = timer;
+                      },
+                      lastSignificantChangeTime: _lastSignificantChangeTime,
+                      contentSizeChangeDebounceTimer:
+                          _contentSizeChangeDebounceTimer,
+                    );
+                  },
+            ),
+            if (shouldShowSkeleton)
+              _EditorSkeletonOverlay(backgroundColor: skeletonBgColor),
+          ],
         );
       },
     );
   }
 
-  /// Updates the WebView height in JavaScript to ensure proper scrolling.
-  void _updateWebViewHeight(double keyboardHeight, double availableHeight) {
+  /// Updates the WebView bottom padding in JavaScript to ensure proper scrolling.
+  ///
+  /// Keyboard detection is handled on the JavaScript side using visualViewport API.
+  /// This method only sends the extra bottom padding value.
+  void _updateWebViewHeight() {
     if (_bridge == null || _controller == null) return;
 
     WebViewHeightManager.updateWebViewHeight(
       bridge: _bridge!,
       controller: _controller!,
-      keyboardHeight: keyboardHeight,
-      availableHeight: availableHeight,
+      extraBottomPadding: widget.extraBottomPadding,
       debugLogging: widget.debugLogging,
     );
   }
+}
 
+/// Skeleton loading overlay for the BlockNote editor.
+///
+/// Displays a shimmer effect with placeholder blocks to indicate loading state.
+/// Covers only the WebView area.
+class _EditorSkeletonOverlay extends StatelessWidget {
+  /// Creates a new editor skeleton overlay.
+  const _EditorSkeletonOverlay({required this.backgroundColor});
+
+  /// Background color for the skeleton.
+  final Color backgroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        width: double.infinity,
+        height: double.infinity,
+        color: backgroundColor,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: 12,
+            children: [
+              _SkeletonLine(width: double.infinity, height: 24),
+              _SkeletonLine(width: double.infinity, height: 20),
+              _SkeletonLine(width: 200, height: 20),
+              _SkeletonLine(width: double.infinity, height: 24),
+              _SkeletonLine(width: double.infinity, height: 20),
+              _SkeletonLine(width: 150, height: 20),
+              _SkeletonLine(width: double.infinity, height: 24),
+              _SkeletonLine(width: 180, height: 20),
+              _SkeletonLine(width: double.infinity, height: 24),
+              _SkeletonLine(width: double.infinity, height: 20),
+              _SkeletonLine(width: 250, height: 20),
+              _SkeletonLine(width: double.infinity, height: 24),
+              _SkeletonLine(width: double.infinity, height: 20),
+              _SkeletonLine(width: 200, height: 20),
+              _SkeletonLine(width: double.infinity, height: 24),
+              _SkeletonLine(width: double.infinity, height: 20),
+              _SkeletonLine(width: 150, height: 20),
+              _SkeletonLine(width: double.infinity, height: 24),
+              _SkeletonLine(width: 180, height: 20),
+              _SkeletonLine(width: double.infinity, height: 24),
+              _SkeletonLine(width: double.infinity, height: 20),
+              _SkeletonLine(width: 250, height: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A single skeleton line with shimmer effect.
+class _SkeletonLine extends StatefulWidget {
+  /// Creates a new skeleton line.
+  const _SkeletonLine({required this.width, required this.height});
+
+  /// Width of the skeleton line.
+  final double width;
+
+  /// Height of the skeleton line.
+  final double height;
+
+  @override
+  State<_SkeletonLine> createState() => _SkeletonLineState();
+}
+
+class _SkeletonLineState extends State<_SkeletonLine>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Container(
+          width: widget.width,
+          height: widget.height,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(4),
+            gradient: LinearGradient(
+              begin: Alignment(-1.0 - _controller.value * 2, 0),
+              end: Alignment(1.0 - _controller.value * 2, 0),
+              colors: [Colors.grey[300]!, Colors.grey[200]!, Colors.grey[300]!],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
