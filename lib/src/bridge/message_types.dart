@@ -60,6 +60,9 @@ enum JsToFlutterMessageType {
 
   /// Full document response from get document request.
   document,
+
+  /// Link was tapped in the editor.
+  linkTap,
 }
 
 /// Base class for Flutter → JavaScript messages.
@@ -359,6 +362,8 @@ abstract class JsToFlutterMessage {
         return ToolbarPopupRequestMessage.fromJson(json);
       case JsToFlutterMessageType.document:
         return DocumentMessage.fromJson(json);
+      case JsToFlutterMessageType.linkTap:
+        return LinkTapMessage.fromJson(json);
     }
   }
 }
@@ -471,4 +476,21 @@ class DocumentMessage extends JsToFlutterMessage {
 
   @override
   JsToFlutterMessageType get type => JsToFlutterMessageType.document;
+}
+
+/// Message indicating a link was tapped in the editor.
+class LinkTapMessage extends JsToFlutterMessage {
+  /// Creates a new link tap message.
+  const LinkTapMessage({required this.url});
+
+  /// The URL of the tapped link.
+  final String url;
+
+  /// Creates a LinkTapMessage from a JSON map.
+  factory LinkTapMessage.fromJson(Map<String, dynamic> json) {
+    return LinkTapMessage(url: json['url'] as String);
+  }
+
+  @override
+  JsToFlutterMessageType get type => JsToFlutterMessageType.linkTap;
 }

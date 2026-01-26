@@ -106,6 +106,7 @@ class WebViewConfig {
       supportZoom: false,
       disableVerticalScroll: false,
       disableHorizontalScroll: true,
+      useShouldOverrideUrlLoading: true,
     );
   }
 }

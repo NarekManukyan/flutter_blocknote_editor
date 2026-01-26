@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_blocknote_editor/flutter_blocknote_editor.dart';
 import '../config/editor_config.dart';
 import 'transaction_log_page.dart';
@@ -49,11 +50,86 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
         _isDocumentLoaded = true;
       });
     } catch (e) {
-      // If loading fails, fall back to empty document
+      // If loading fails, create a document with a link example
       setState(() {
-        _document = BlockNoteDocument.empty();
+        _document = _createDocumentWithLink();
         _isDocumentLoaded = true;
       });
+    }
+  }
+
+  BlockNoteDocument _createDocumentWithLink() {
+    // Create a document with a link example
+    return BlockNoteDocument.fromJson({
+      'blocks': [
+        {
+          'id': 'root',
+          'type': 'paragraph',
+          'content': [
+            {
+              'type': 'text',
+              'text': 'Welcome to BlockNote Editor! Tap this ',
+              'styles': {},
+            },
+            {
+              'type': 'link',
+              'href': 'https://www.blocknotejs.org',
+              'content': [
+                {
+                  'type': 'text',
+                  'text': 'link',
+                  'styles': {},
+                },
+              ],
+            },
+            {
+              'type': 'text',
+              'text': ' to see link handling in action.',
+              'styles': {},
+            },
+          ],
+          'props': {},
+        },
+      ],
+    });
+  }
+
+  Future<void> _handleLinkTap(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Invalid URL: $url'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
+    }
+
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Cannot launch URL: $url'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error launching URL: $e'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 
@@ -255,6 +331,7 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
                     slashCommandConfig: _useCustomSlashCommands
                         ? EditorConfig.createCustomSlashCommands()
                         : null,
+                    onLinkTapped: _handleLinkTap,
                   )
                 : const Center(child: CircularProgressIndicator()),
           ),
@@ -447,6 +524,7 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
                       slashCommandConfig: _useCustomSlashCommands
                           ? EditorConfig.createCustomSlashCommands()
                           : null,
+                      onLinkTapped: _handleLinkTap,
                     )
                   : const Center(child: CircularProgressIndicator()),
             ),

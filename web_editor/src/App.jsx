@@ -9,6 +9,7 @@ import { useFlutterMessages } from './hooks/useFlutterMessages';
 import { useToolbarPopup } from './hooks/useToolbarPopup';
 import { usePopupPortals } from './hooks/usePopupPortals';
 import { useThemeBackground } from './hooks/useThemeBackground';
+import { useLinkTapHandler } from './hooks/useLinkTapHandler';
 import { loadDocument } from './utils/documentLoader';
 import { buildFormattingToolbar } from './utils/toolbarBuilder.jsx';
 import { buildSlashMenuItems } from './utils/slashMenuBuilder.jsx';
@@ -166,6 +167,9 @@ function App() {
 
   // Ensure popup portals can render correctly
   usePopupPortals();
+
+  // Set up link tap handler
+  useLinkTapHandler(editor);
 
   // Determine if we should use custom toolbar
   const useCustomToolbar =

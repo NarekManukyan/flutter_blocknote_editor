@@ -65,6 +65,7 @@ class BlockNoteEditor extends StatefulWidget {
     this.customCssAssetPaths,
     this.onToolbarPopupRequest,
     this.transactionDebounceDuration,
+    this.onLinkTapped,
     super.key,
   });
 
@@ -94,6 +95,12 @@ class BlockNoteEditor extends StatefulWidget {
     List<Map<String, dynamic>> options,
   )?
   onToolbarPopupRequest;
+
+  /// Callback invoked when a link is tapped in the editor.
+  ///
+  /// The URL of the tapped link is passed as a parameter.
+  /// Use this to handle link navigation (e.g., using `url_launcher`).
+  final ValueChanged<String>? onLinkTapped;
 
   /// Whether the editor should be in read-only mode.
   final bool readOnly;
@@ -179,6 +186,7 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
   double _lastAvailableHeight = 0;
   String? _initialUrl;
   bool _isInitializing = false;
+  String? _loadedInitialUrl;
   Timer? _contentSizeChangeDebounceTimer;
   DateTime? _lastSignificantChangeTime;
 
@@ -318,8 +326,16 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
       ),
       onToolbarPopupRequest: _handleToolbarPopupRequest,
       onDocument: _handleDocument,
+      onLinkTap: _handleLinkTap,
       mounted: mounted,
     );
+  }
+
+  /// Handles link tap messages from JavaScript.
+  void _handleLinkTap(LinkTapMessage message) {
+    if (widget.onLinkTapped != null) {
+      widget.onLinkTapped!(message.url);
+    }
   }
 
   /// Handles document response from JavaScript.
@@ -683,6 +699,10 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
               if (widget.debugLogging) {
                 debugPrint('[BlockNoteEditor] Page finished loading: $url');
               }
+              // Mark initial URL as loaded
+              if (_loadedInitialUrl == null && _initialUrl != null) {
+                _loadedInitialUrl = url.toString();
+              }
               // Set up JavaScript bridge objects for message communication
               await WebViewConfig.setupJavaScriptBridge(
                 controller: controller,
@@ -704,6 +724,38 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
                 message: 'WebView error: ${error.description}',
                 debugLogging: widget.debugLogging,
               );
+            },
+            shouldOverrideUrlLoading: (controller, navigationAction) async {
+              // Allow initial page load, block subsequent navigation (link clicks)
+              final url = navigationAction.request.url.toString();
+              
+              // Normalize URLs for comparison (remove trailing slashes)
+              String normalizeUrl(String? urlStr) {
+                if (urlStr == null) return '';
+                return urlStr.endsWith('/') ? urlStr.substring(0, urlStr.length - 1) : urlStr;
+              }
+              
+              final normalizedUrl = normalizeUrl(url);
+              final normalizedInitialUrl = normalizeUrl(_initialUrl);
+              
+              // If this is the initial URL or we haven't loaded it yet, allow navigation
+              if (_initialUrl != null && normalizedUrl == normalizedInitialUrl && _loadedInitialUrl == null) {
+                _loadedInitialUrl = url;
+                if (widget.debugLogging) {
+                  debugPrint('[BlockNoteEditor] Allowing initial page load: $url');
+                }
+                return NavigationActionPolicy.ALLOW;
+              }
+              
+              // Block all other navigation (link clicks)
+              // Link taps are handled via JavaScript interception and sent to Flutter
+              // via onLinkTapped callback.
+              if (widget.debugLogging) {
+                debugPrint(
+                  '[BlockNoteEditor] Navigation blocked: $url',
+                );
+              }
+              return NavigationActionPolicy.CANCEL;
             },
             onContentSizeChanged: (controller, oldContentSize, newContentSize) {
               WebViewHeightManager.handleContentSizeChange(
