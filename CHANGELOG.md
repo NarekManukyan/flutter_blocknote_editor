@@ -1,3 +1,11 @@
+## 0.0.16
+
+* Block diff: emit only the blocks that actually changed (no redundant parent update):
+  * Update detection now uses shallow-children comparison: a block is considered changed only if its own content/props or its child-id list changed; descendant content changes do not mark the parent as changed
+  * Editing a nested block (e.g. toggle list item) now produces a single update operation for that child block, not an additional update for the parent with full children
+  * New internal helper `blocksEqualShallowChildren`; `computeBlockDifferences` no longer takes a `blocksEqualFn` parameter
+* Web editor: test added for "only one update for edited child block, not for parent" (shallow-children comparison)
+
 ## 0.0.15
 
 * Transaction and block diff improvements:

@@ -9,7 +9,7 @@ import {
   serializeTableContent,
   createSerializeBlock,
 } from '../utils/blockSerialization';
-import { blocksEqual, computeBlockDifferences } from '../utils/blockDiff';
+import { computeBlockDifferences } from '../utils/blockDiff';
 import {
   getSelectionVisibility,
   scrollSelectionIntoView,
@@ -83,19 +83,10 @@ export function useEditorReady(
     [serializeInlineContentFn, serializeTableContentFn],
   );
 
-  const blocksEqualFn = useCallback(
-    (block1, block2) => blocksEqual(block1, block2),
-    [],
-  );
   const computeBlockDifferencesFn = useCallback(
     (previousBlocks, currentBlocks) =>
-      computeBlockDifferences(
-        editor,
-        previousBlocks,
-        currentBlocks,
-        blocksEqualFn,
-      ),
-    [editor, blocksEqualFn],
+      computeBlockDifferences(editor, previousBlocks, currentBlocks),
+    [editor],
   );
   const getSelectionVisibilityFn = useCallback(
     (view, root) => getSelectionVisibility(view, root),

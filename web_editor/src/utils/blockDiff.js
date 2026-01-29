@@ -65,6 +65,36 @@ export function blocksEqual(block1, block2) {
 }
 
 /**
+ * Compare two blocks for "did this block itself change" — same as blocksEqual except children
+ * are compared only by id list (same length, same ids in order). Used so we do not emit an
+ * update for a parent when the only change is in a descendant (we emit only for the edited block).
+ *
+ * @param {Object|null|undefined} block1 - First block.
+ * @param {Object|null|undefined} block2 - Second block.
+ * @returns {boolean} True if id, type, content, props match and children have same ids in order.
+ */
+function blocksEqualShallowChildren(block1, block2) {
+  if (!block1 && !block2) return true;
+  if (!block1 || !block2) return false;
+  if (block1.id !== block2.id) return false;
+  if (block1.type !== block2.type) return false;
+  if (block1 === block2) return true;
+  const c1 = block1.content ?? null;
+  const c2 = block2.content ?? null;
+  if (JSON.stringify(c1) !== JSON.stringify(c2)) return false;
+  const p1 = block1.props || {};
+  const p2 = block2.props || {};
+  if (JSON.stringify(p1) !== JSON.stringify(p2)) return false;
+  const ch1 = block1.children || [];
+  const ch2 = block2.children || [];
+  if (ch1.length !== ch2.length) return false;
+  for (let i = 0; i < ch1.length; i++) {
+    if (ch1[i]?.id !== ch2[i]?.id) return false;
+  }
+  return true;
+}
+
+/**
  * Get adjacent sibling block IDs and parent for a block anywhere in a block tree.
  * Used for delete operations when the block is no longer in the editor (searches previous tree).
  *
@@ -183,7 +213,6 @@ export function getBlockContextFromEditor(editor, blockId) {
  * @param {Object} editor - The BlockNote editor instance (used for getPrevBlock/getNextBlock).
  * @param {Array<Object>} previousBlocks - The prior sequence of block objects (each may include `id`, `type`, `content`, `props`, and `children`).
  * @param {Array<Object>} currentBlocks - The new sequence of block objects to compare against `previousBlocks`.
- * @param {(a: Object, b: Object) => boolean} blocksEqualFn - Function that returns `true` if two block objects are considered equal, `false` otherwise.
  * @returns {Array<Object>} An array of operation objects describing changes. Each operation has an `operation` field with one of:
  *  - `insert`: { operation: 'insert', blockId, block, parentId, beforeChildId, afterChildId }
  *  - `delete`: { operation: 'delete', blockId, beforeChildId, afterChildId }
@@ -191,12 +220,7 @@ export function getBlockContextFromEditor(editor, blockId) {
  *  - `reorder`: { operation: 'reorder', parentId, afterChildId, beforeChildId, orderedChildIds } — single op when the same set of blocks was reordered (no insert/delete). One transaction for the whole reorder.
  *  The `parentId` is the block's parent (null for top-level). `beforeChildId` and `afterChildId` are previous/next sibling IDs.
  */
-export function computeBlockDifferences(
-  editor,
-  previousBlocks,
-  currentBlocks,
-  blocksEqualFn,
-) {
+export function computeBlockDifferences(editor, previousBlocks, currentBlocks) {
   const operations = [];
 
   const previousListFull = collectBlocksDepthFirst(previousBlocks || []);
@@ -273,7 +297,7 @@ export function computeBlockDifferences(
       });
     } else {
       const prevBlock = previousMapFull.get(blockId);
-      if (!blocksEqualFn(prevBlock, currBlock)) {
+      if (!blocksEqualShallowChildren(prevBlock, currBlock)) {
         operations.push({
           operation: 'update',
           blockId: blockId,

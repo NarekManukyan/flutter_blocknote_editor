@@ -7,7 +7,6 @@ import {
   getBlockContextFromEditor,
   getAdjacentBlockIdsFromTopLevel,
   computeBlockDifferences,
-  blocksEqual,
 } from './blockDiff.js';
 
 describe('getBlockContextFromEditor', () => {
@@ -151,12 +150,7 @@ describe('computeBlockDifferences', () => {
     };
     const previousBlocks = [];
     const currentBlocks = [{ id: 'new-id', type: 'paragraph' }];
-    const ops = computeBlockDifferences(
-      editor,
-      previousBlocks,
-      currentBlocks,
-      blocksEqual,
-    );
+    const ops = computeBlockDifferences(editor, previousBlocks, currentBlocks);
     expect(ops).toHaveLength(1);
     expect(ops[0].operation).toBe('insert');
     expect(ops[0].blockId).toBe('new-id');
@@ -185,12 +179,7 @@ describe('computeBlockDifferences', () => {
         content: [{ type: 'text', text: 'new' }],
       },
     ];
-    const ops = computeBlockDifferences(
-      editor,
-      previousBlocks,
-      currentBlocks,
-      blocksEqual,
-    );
+    const ops = computeBlockDifferences(editor, previousBlocks, currentBlocks);
     expect(ops).toHaveLength(1);
     expect(ops[0].operation).toBe('update');
     expect(ops[0].beforeChildId).toBe('ID_1');
@@ -201,12 +190,7 @@ describe('computeBlockDifferences', () => {
     const editor = {};
     const previousBlocks = [{ id: 'ID_1' }, { id: 'ID_2' }, { id: 'ID_3' }];
     const currentBlocks = [{ id: 'ID_1' }, { id: 'ID_3' }];
-    const ops = computeBlockDifferences(
-      editor,
-      previousBlocks,
-      currentBlocks,
-      blocksEqual,
-    );
+    const ops = computeBlockDifferences(editor, previousBlocks, currentBlocks);
     expect(ops).toHaveLength(1);
     expect(ops[0].operation).toBe('delete');
     expect(ops[0].blockId).toBe('ID_2');
@@ -230,16 +214,82 @@ describe('computeBlockDifferences', () => {
     };
     const previousBlocks = [{ id: 'ID_1' }, { id: 'ID_2' }, { id: 'ID_3' }];
     const currentBlocks = [{ id: 'ID_3' }, { id: 'ID_2' }, { id: 'ID_1' }];
-    const ops = computeBlockDifferences(
-      editor,
-      previousBlocks,
-      currentBlocks,
-      blocksEqual,
-    );
+    const ops = computeBlockDifferences(editor, previousBlocks, currentBlocks);
     const reorderOp = ops.find((o) => o.operation === 'reorder');
     expect(reorderOp).toBeDefined();
     expect(reorderOp.parentId).toBe(null);
     // orderedChildIds contains only blocks that changed index (ID_3 and ID_1); ID_2 stayed at index 1
     expect(reorderOp.orderedChildIds).toEqual(['ID_3', 'ID_1']);
+  });
+
+  it('should emit only one update for the edited child block, not for the parent (shallow-children comparison)', () => {
+    const parentId = 'toggle-root';
+    const childAId = 'child-a';
+    const childBId = 'child-b';
+    const editor = {
+      getPrevBlock: vi.fn((blockId) => {
+        if (blockId === parentId) return null;
+        if (blockId === childAId) return null;
+        if (blockId === childBId) return { id: childAId };
+        return null;
+      }),
+      getNextBlock: vi.fn((blockId) => {
+        if (blockId === parentId) return null;
+        if (blockId === childAId) return { id: childBId };
+        if (blockId === childBId) return null;
+        return null;
+      }),
+      getParentBlock: vi.fn((blockId) => {
+        if (blockId === childAId || blockId === childBId)
+          return { id: parentId };
+        return null;
+      }),
+    };
+    const previousBlocks = [
+      {
+        id: parentId,
+        type: 'toggle',
+        children: [
+          {
+            id: childAId,
+            type: 'paragraph',
+            content: [{ type: 'text', text: 'Item A' }],
+          },
+          {
+            id: childBId,
+            type: 'paragraph',
+            content: [{ type: 'text', text: 'Item B' }],
+          },
+        ],
+      },
+    ];
+    const currentBlocks = [
+      {
+        id: parentId,
+        type: 'toggle',
+        children: [
+          {
+            id: childAId,
+            type: 'paragraph',
+            content: [{ type: 'text', text: 'Item A' }],
+          },
+          {
+            id: childBId,
+            type: 'paragraph',
+            content: [{ type: 'text', text: 'Item B edited' }],
+          },
+        ],
+      },
+    ];
+    const ops = computeBlockDifferences(editor, previousBlocks, currentBlocks);
+    const updates = ops.filter((o) => o.operation === 'update');
+    expect(updates).toHaveLength(1);
+    expect(updates[0].blockId).toBe(childBId);
+    expect(updates[0].parentId).toBe(parentId);
+    expect(updates[0].beforeChildId).toBe(childAId);
+    expect(updates[0].afterChildId).toBe(null);
+    expect(updates[0].block.content).toEqual([
+      { type: 'text', text: 'Item B edited' },
+    ]);
   });
 });
