@@ -10,15 +10,17 @@ import { generateBlockId } from './idGenerator.js';
  *
  * When no blocks are provided, returns a single operation that updates the root with a null block.
  * When blocks are provided, returns one 'update' operation per block with surrounding child links
- * derived from the BlockNote editor getPrevBlock/getNextBlock.
+ * derived solely from the BlockNote editor getPrevBlock/getNextBlock/getParentBlock (no fallback).
+ * Semantics: beforeChildId = previous sibling, afterChildId = next sibling (matches Dart model).
  *
- * @param {Object} editor - The BlockNote editor instance (used for getPrevBlock/getNextBlock).
+ * @param {Object} editor - The BlockNote editor instance (used for getPrevBlock/getNextBlock/getParentBlock).
  * @param {Array<Object>|null|undefined} serializedCurrentBlocks - Array of block objects in document order, or falsy if no blocks exist.
  * @returns {Array<Object>} An array of operation objects. Each operation has the form:
  *   {
  *     operation: 'update',
  *     blockId: string,        // block.id if present, otherwise a UUID v4
  *     block: Object|null,     // the block object (null for the root update when no blocks)
+ *     parentId: string|null,  // parent block id or null for top-level
  *     beforeChildId: string|null, // id of the previous sibling block or null
  *     afterChildId: string|null   // id of the next sibling block or null
  *   }
@@ -103,10 +105,12 @@ export function sendTransactionsToFlutter(operations, documentVersionRef) {
   const filtered = filterRedundantOperations(operations);
   if (filtered.length === 0) return;
 
+  const operationsWithIndex = filtered.map((op, i) => ({ ...op, index: i }));
+
   const transactions = [
     {
       baseVersion: documentVersionRef.current,
-      operations: filtered,
+      operations: operationsWithIndex,
     },
   ];
 

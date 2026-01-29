@@ -35,6 +35,7 @@ class BlockNoteTransactionOp {
     this.afterChildId,
     this.beforeChildId,
     this.orderedChildIds,
+    this.index,
   });
 
   /// The type of operation.
@@ -66,6 +67,9 @@ class BlockNoteTransactionOp {
   /// For [BlockNoteTransactionOperation.reorder], the list of block ids that were reordered.
   final List<String>? orderedChildIds;
 
+  /// Optional 0-based index of this operation within the transaction (for consumers that need order).
+  final int? index;
+
   /// Creates a BlockNoteTransactionOp from a JSON map.
   factory BlockNoteTransactionOp.fromJson(Map<String, dynamic> json) {
     final orderedChildIdsRaw = json['orderedChildIds'];
@@ -90,6 +94,7 @@ class BlockNoteTransactionOp {
       afterChildId: json['afterChildId'] as String?,
       beforeChildId: json['beforeChildId'] as String?,
       orderedChildIds: orderedChildIds,
+      index: json['index'] as int?,
     );
   }
 
@@ -104,6 +109,7 @@ class BlockNoteTransactionOp {
       if (beforeChildId != null) 'beforeChildId': beforeChildId,
       if (orderedChildIds != null && orderedChildIds!.isNotEmpty)
         'orderedChildIds': orderedChildIds,
+      if (index != null) 'index': index,
     };
     return json;
   }
@@ -120,6 +126,7 @@ class BlockNoteTransactionOp {
     Object? afterChildId = _unset,
     Object? beforeChildId = _unset,
     Object? orderedChildIds = _unset,
+    Object? index = _unset,
   }) {
     return BlockNoteTransactionOp(
       operation: operation ?? this.operation,
@@ -137,12 +144,13 @@ class BlockNoteTransactionOp {
       orderedChildIds: identical(orderedChildIds, _unset)
           ? this.orderedChildIds
           : orderedChildIds as List<String>?,
+      index: identical(index, _unset) ? this.index : index as int?,
     );
   }
 
   @override
   String toString() {
-    return 'BlockNoteTransactionOp(operation: $operation, blockId: $blockId, block: $block, parentId: $parentId, afterChildId: $afterChildId, beforeChildId: $beforeChildId, orderedChildIds: $orderedChildIds)';
+    return 'BlockNoteTransactionOp(operation: $operation, blockId: $blockId, block: $block, parentId: $parentId, afterChildId: $afterChildId, beforeChildId: $beforeChildId, orderedChildIds: $orderedChildIds, index: $index)';
   }
 
   @override
@@ -155,7 +163,8 @@ class BlockNoteTransactionOp {
         other.parentId == parentId &&
         other.afterChildId == afterChildId &&
         other.beforeChildId == beforeChildId &&
-        _listEquals(other.orderedChildIds, orderedChildIds);
+        _listEquals(other.orderedChildIds, orderedChildIds) &&
+        other.index == index;
   }
 
   @override
@@ -167,6 +176,7 @@ class BlockNoteTransactionOp {
     afterChildId,
     beforeChildId,
     _listHash(orderedChildIds),
+    index,
   );
 }
 

@@ -41,4 +41,9 @@ export default defineConfig({
     chunkSizeWarningLimit: 5000,
   },
   base: './',
+  test: {
+    environment: 'node',
+    include: ['src/**/*.test.js'],
+    globals: false,
+  },
 });

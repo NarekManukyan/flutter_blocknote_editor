@@ -65,14 +65,73 @@ export function blocksEqual(block1, block2) {
 }
 
 /**
- * Get the IDs of the previous and next sibling blocks for a block in a top-level block array.
- * Used when the block is no longer in the editor (e.g. delete operations).
+ * Get adjacent sibling block IDs and parent for a block anywhere in a block tree.
+ * Used for delete operations when the block is no longer in the editor (searches previous tree).
  *
- * @param {Array<Object>} blocks - Top-level ordered array of block objects.
+ * @param {Array<Object>} blocks - Block tree (top-level array; each block may have `children`).
+ * @param {string} blockId - The block id to find.
+ * @returns {{beforeChildId: string|null, afterChildId: string|null, parentId: string|null}} Sibling and parent ids; all `null` if not found.
+ */
+function getBlockContextFromTree(blocks, blockId) {
+  if (!blocks?.length || !blockId) {
+    return { beforeChildId: null, afterChildId: null, parentId: null };
+  }
+  function search(list, parent) {
+    for (let i = 0; i < list.length; i++) {
+      const node = list[i];
+      if (node?.id === blockId) {
+        const beforeChildId = i > 0 && list[i - 1]?.id ? list[i - 1].id : null;
+        const afterChildId =
+          i < list.length - 1 && list[i + 1]?.id ? list[i + 1].id : null;
+        const parentId = parent?.id ?? null;
+        return { beforeChildId, afterChildId, parentId };
+      }
+      if (node?.children?.length) {
+        const found = search(node.children, node);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+  return (
+    search(blocks, null) ?? {
+      beforeChildId: null,
+      afterChildId: null,
+      parentId: null,
+    }
+  );
+}
+
+/**
+ * Collect all blocks from a block tree in depth-first order (for diffing at all levels).
+ *
+ * @param {Array<Object>} blocks - Block tree (top-level array; each block may have `children`).
+ * @returns {Array<Object>} Flat array of block objects in depth-first order.
+ */
+function collectBlocksDepthFirst(blocks) {
+  const result = [];
+  function walk(list) {
+    for (const b of list || []) {
+      if (b?.id) {
+        result.push(b);
+        if (b.children?.length) walk(b.children);
+      }
+    }
+  }
+  walk(blocks);
+  return result;
+}
+
+/**
+ * Get the IDs of the previous and next sibling blocks for a block in a top-level block array.
+ * Used only when the block is no longer in the editor (e.g. delete operations). Does not search
+ * nested children—only the top-level array. Prefer getBlockContextFromTree for nested blocks.
+ *
+ * @param {Array<Object>} blocks - Top-level ordered array of block objects (not a flattened tree).
  * @param {string} blockId - The block id to find.
  * @returns {{beforeChildId: string|null, afterChildId: string|null}} `beforeChildId` is the previous sibling's id; `afterChildId` is the next sibling's id; both `null` if not found or no sibling.
  */
-function getAdjacentBlockIdsFromTopLevel(blocks, blockId) {
+export function getAdjacentBlockIdsFromTopLevel(blocks, blockId) {
   if (!blocks?.length || !blockId) {
     return { beforeChildId: null, afterChildId: null };
   }
@@ -94,12 +153,13 @@ function getAdjacentBlockIdsFromTopLevel(blocks, blockId) {
 
 /**
  * Get adjacent sibling block IDs and parent from the BlockNote editor (getPrevBlock/getNextBlock/getParentBlock).
+ * Semantics: beforeChildId = previous sibling, afterChildId = next sibling (matches BlockNote and Dart model).
  *
  * @param {Object} editor - The BlockNote editor instance.
  * @param {string} blockId - The block id to look up.
  * @returns {{beforeChildId: string|null, afterChildId: string|null, parentId: string|null}}
  */
-function getBlockContextFromEditor(editor, blockId) {
+export function getBlockContextFromEditor(editor, blockId) {
   if (!editor || !blockId) {
     return { beforeChildId: null, afterChildId: null, parentId: null };
   }
@@ -139,93 +199,91 @@ export function computeBlockDifferences(
 ) {
   const operations = [];
 
-  const previousMap = new Map();
-  const currentMap = new Map();
+  const previousListFull = collectBlocksDepthFirst(previousBlocks || []);
+  const currentListFull = collectBlocksDepthFirst(currentBlocks || []);
+  const previousMapFull = new Map();
+  const currentMapFull = new Map();
+  previousListFull.forEach((b) => previousMapFull.set(b.id, b));
+  currentListFull.forEach((b) => currentMapFull.set(b.id, b));
 
+  const previousMapTop = new Map();
+  const currentMapTop = new Map();
   if (previousBlocks) {
     previousBlocks.forEach((block, index) => {
-      if (block && block.id) {
-        previousMap.set(block.id, { block, index });
-      }
+      if (block?.id) previousMapTop.set(block.id, { block, index });
     });
   }
-
   if (currentBlocks) {
     currentBlocks.forEach((block, index) => {
-      if (block && block.id) {
-        currentMap.set(block.id, { block, index });
-      }
+      if (block?.id) currentMapTop.set(block.id, { block, index });
     });
   }
 
   const hasInsertOrDelete =
-    previousMap.size !== currentMap.size ||
-    [...previousMap.keys()].some((id) => !currentMap.has(id));
+    previousMapTop.size !== currentMapTop.size ||
+    [...previousMapTop.keys()].some((id) => !currentMapTop.has(id));
 
-  // Find deleted blocks (block no longer in editor; use previous block tree for adjacent IDs)
-  for (const blockId of previousMap.keys()) {
-    if (!currentMap.has(blockId)) {
-      const { beforeChildId, afterChildId } = getAdjacentBlockIdsFromTopLevel(
+  // Find deleted blocks (any level); use previous tree for sibling/parent context
+  for (const blockId of previousMapFull.keys()) {
+    if (!currentMapFull.has(blockId)) {
+      const { beforeChildId, afterChildId, parentId } = getBlockContextFromTree(
         previousBlocks,
         blockId,
       );
-
       operations.push({
         operation: 'delete',
         blockId: blockId,
         beforeChildId: beforeChildId,
         afterChildId: afterChildId,
+        parentId: parentId,
       });
     }
   }
 
-  // Collect moved block ids when it's a pure reorder (same set of blocks, no insert/delete)
+  // Collect moved block ids when it's a pure reorder at top level (same set of top-level blocks, no insert/delete)
   const movedBlockIds =
     !hasInsertOrDelete && currentBlocks
       ? currentBlocks
           .filter((currBlock, currIndex) => {
-            if (!currBlock?.id || !previousMap.has(currBlock.id)) return false;
-            const prevIndex = previousMap.get(currBlock.id).index;
+            if (!currBlock?.id || !previousMapTop.has(currBlock.id))
+              return false;
+            const prevIndex = previousMapTop.get(currBlock.id).index;
             return prevIndex !== currIndex;
           })
           .map((b) => b.id)
       : [];
 
-  // Find inserted, updated blocks (use editor getPrevBlock/getNextBlock/getParentBlock for context)
-  if (currentBlocks) {
-    currentBlocks.forEach((currBlock) => {
-      if (!currBlock || !currBlock.id) return;
+  // Find inserted, updated blocks at all levels (use editor getPrevBlock/getNextBlock/getParentBlock for context)
+  for (const currBlock of currentListFull) {
+    if (!currBlock?.id) continue;
+    const blockId = currBlock.id;
+    const { beforeChildId, afterChildId, parentId } = getBlockContextFromEditor(
+      editor,
+      blockId,
+    );
 
-      const blockId = currBlock.id;
-      const { beforeChildId, afterChildId, parentId } =
-        getBlockContextFromEditor(editor, blockId);
-
-      if (!previousMap.has(blockId)) {
-        // New block - insert
+    if (!previousMapFull.has(blockId)) {
+      operations.push({
+        operation: 'insert',
+        blockId: blockId,
+        block: currBlock,
+        parentId: parentId,
+        beforeChildId: beforeChildId,
+        afterChildId: afterChildId,
+      });
+    } else {
+      const prevBlock = previousMapFull.get(blockId);
+      if (!blocksEqualFn(prevBlock, currBlock)) {
         operations.push({
-          operation: 'insert',
+          operation: 'update',
           blockId: blockId,
           block: currBlock,
           parentId: parentId,
           beforeChildId: beforeChildId,
           afterChildId: afterChildId,
         });
-      } else {
-        const prevEntry = previousMap.get(blockId);
-        const prevBlock = prevEntry.block;
-
-        if (!blocksEqualFn(prevBlock, currBlock)) {
-          operations.push({
-            operation: 'update',
-            blockId: blockId,
-            block: currBlock,
-            parentId: parentId,
-            beforeChildId: beforeChildId,
-            afterChildId: afterChildId,
-          });
-        }
       }
-    });
+    }
   }
 
   // Emit a single reorder operation when blocks were reordered (top-level parent = null)

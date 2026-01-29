@@ -1,3 +1,13 @@
+## 0.0.15
+
+* Transaction and block diff improvements:
+  * Transaction operations now include an optional `index` (0-based) indicating operation order within the transaction; Dart `BlockNoteTransactionOp` has optional `index` field (fromJson/toJson/copyWith)
+  * Block diff runs over the full block tree (all levels), not just top-level: nested blocks (e.g. toggle list children) get their own insert/update/delete operations with correct `beforeChildId`/`afterChildId`/`parentId` from the editor, so the transaction log shows the actual changed block and its siblings
+  * Delete operations use tree-based context (`getBlockContextFromTree`) for blocks at any level and include `parentId`
+  * New helpers: `getBlockContextFromTree`, `collectBlocksDepthFirst`; exported `getBlockContextFromEditor`, `getAdjacentBlockIdsFromTopLevel` for tests
+* Web editor: Vitest test suite for block diff and transaction sender (getBlockContextFromEditor, getAdjacentBlockIdsFromTopLevel, computeBlockDifferences, createInitialOperations, filterRedundantOperations, payload index, structure test for ID_1/ID_2/ID_3 and nested ID_1_2)
+* Web editor: JSDoc updates for sibling/tree semantics; Prettier/ESLint fixes
+
 ## 0.0.14
 
 * Document and transaction model updates:
