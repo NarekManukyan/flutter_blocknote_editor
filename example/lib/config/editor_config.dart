@@ -77,7 +77,17 @@ class EditorConfig {
     );
   }
 
-  /// Creates a custom slash command configuration.
+  /// Minimal 1x1 transparent PNG as data URL (for testing image icon).
+  static const String _kTestPngDataUrl =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+  /// Small circle SVG string (for testing SVG icon).
+  static const String _kTestSvgCircle =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>';
+
+  /// Creates a custom slash command configuration with all icon variants.
+  ///
+  /// Items demonstrate: emoji (string), text icon, SVG icon, and image (data URL).
   static BlockNoteSlashCommandConfig createCustomSlashCommands() {
     return BlockNoteSlashCommandConfig(
       items: [
@@ -86,9 +96,71 @@ class EditorConfig {
           content: 'Hello World',
           aliases: ['helloworld', 'hw'],
           group: 'Custom',
-          subtext: 'Inserts a "Hello World" paragraph',
+          subtext: 'Icon: emoji string',
+          icon: '📝',
+        ),
+        BlockNoteSlashCommandItem.paragraph(
+          title: 'Insert Greeting',
+          content: 'Hi there!',
+          aliases: ['greeting', 'hi'],
+          group: 'Custom',
+          subtext: 'Icon: BlockNoteSlashCommandIconText',
+          icon: const BlockNoteSlashCommandIconText('Hi'),
+        ),
+        BlockNoteSlashCommandItem.paragraph(
+          title: 'Insert SVG block',
+          content: 'SVG icon item',
+          aliases: ['svg'],
+          group: 'Custom',
+          subtext: 'Icon: BlockNoteSlashCommandIconSvg (circle)',
+          icon: const BlockNoteSlashCommandIconSvg(_kTestSvgCircle),
+        ),
+        BlockNoteSlashCommandItem.paragraph(
+          title: 'Insert image-icon block',
+          content: 'Image icon item',
+          aliases: ['imgicon', 'imageicon'],
+          group: 'Custom',
+          subtext: 'Icon: BlockNoteSlashCommandIconImage (data URL)',
+          icon: const BlockNoteSlashCommandIconImage(_kTestPngDataUrl),
+        ),
+        BlockNoteSlashCommandItem(
+          title: 'Insert current date',
+          onItemClick: '',
+          onItemClickScriptPath: 'assets/slash_insert_date.js',
+          aliases: ['date', 'today'],
+          group: 'Custom',
+          subtext: 'Handler from JS file (onItemClickScriptPath)',
+          icon: '📅',
         ),
       ],
+    );
+  }
+
+  /// Creates a custom slash command config that includes an item with icon
+  /// loaded via [BlockNoteSlashCommandIconImage.fromAsset] (async).
+  ///
+  /// Uses [createCustomSlashCommands] items plus one item with icon from
+  /// assets/slash_icon_test.png.
+  static Future<BlockNoteSlashCommandConfig> createCustomSlashCommandsWithAssetIcon() async {
+    final imageIcon = await BlockNoteSlashCommandIconImage.fromAsset(
+      'assets/slash_icon_test.png',
+    );
+    final base = createCustomSlashCommands();
+    final items = List<BlockNoteSlashCommandItem>.from(base.items!);
+    items.add(
+      BlockNoteSlashCommandItem.paragraph(
+        title: 'Insert fromAsset icon block',
+        content: 'Loaded from app asset (PNG)',
+        aliases: ['fromasset', 'asset'],
+        group: 'Custom',
+        subtext: 'Icon: BlockNoteSlashCommandIconImage.fromAsset()',
+        icon: imageIcon,
+      ),
+    );
+    return BlockNoteSlashCommandConfig(
+      items: items,
+      enabled: base.enabled,
+      triggerCharacter: base.triggerCharacter,
     );
   }
 

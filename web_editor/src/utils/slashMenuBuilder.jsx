@@ -9,6 +9,63 @@ import {
 } from '@blocknote/react';
 import { filterSuggestionItems } from '@blocknote/core/extensions';
 
+const SLASH_ICON_SIZE = '1em';
+
+/**
+ * Renders a slash command icon from Flutter config.
+ * Supports: string (emoji/text), or object { type: 'text'|'svg'|'image', value|content|url }.
+ * @param {string|object|null} itemIcon - Icon from item.icon
+ * @returns {JSX.Element|undefined}
+ */
+function renderSlashCommandIcon(itemIcon) {
+  if (itemIcon == null) return undefined;
+  // Backward compat: plain string (emoji or text)
+  if (typeof itemIcon === 'string') {
+    return <span>{itemIcon}</span>;
+  }
+  if (typeof itemIcon !== 'object') return undefined;
+  switch (itemIcon.type) {
+    case 'text':
+      return (
+        <span>{itemIcon.value != null ? String(itemIcon.value) : ''}</span>
+      );
+    case 'svg':
+      if (itemIcon.content == null) return undefined;
+      return (
+        <div
+          className="bn-slash-icon-svg"
+          style={{
+            display: 'inline-flex',
+            width: SLASH_ICON_SIZE,
+            height: SLASH_ICON_SIZE,
+            minWidth: SLASH_ICON_SIZE,
+            minHeight: SLASH_ICON_SIZE,
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+          dangerouslySetInnerHTML={{ __html: itemIcon.content }}
+        />
+      );
+    case 'image':
+      if (itemIcon.url == null) return undefined;
+      return (
+        <img
+          src={itemIcon.url}
+          alt=""
+          className="bn-slash-icon-image"
+          style={{
+            width: SLASH_ICON_SIZE,
+            height: SLASH_ICON_SIZE,
+            objectFit: 'contain',
+          }}
+        />
+      );
+    default:
+      return undefined;
+  }
+}
+
 /**
  * Builds a custom slash menu component from slash command config.
  * @param {Object} slashCommandConfig - Slash command configuration from Flutter
@@ -56,7 +113,7 @@ export function buildSlashMenuItems(slashCommandConfig, editor) {
       badge: item.badge,
       aliases: item.aliases,
       group: item.group,
-      icon: item.icon ? <span>{item.icon}</span> : undefined,
+      icon: renderSlashCommandIcon(item.icon),
     })) || [];
 
   // Combine filtered default items with custom items

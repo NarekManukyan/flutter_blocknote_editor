@@ -24,6 +24,7 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
   bool _useAvailableSlashCommands = false;
   bool _useCustomFont = false;
   bool _isDocumentLoaded = false;
+  BlockNoteSlashCommandConfig? _customSlashConfig;
   final List<BlockNoteTransaction> _transactions = [];
   BlockNoteDocument _document = BlockNoteDocument.empty();
   BlockNoteController? _controller;
@@ -95,6 +96,25 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
     });
   }
 
+  Future<void> _loadCustomSlashConfigWithAsset() async {
+    if (!_useCustomSlashCommands || !mounted) return;
+    try {
+      final config = await EditorConfig.createCustomSlashCommandsWithAssetIcon();
+      if (mounted && _useCustomSlashCommands) {
+        setState(() => _customSlashConfig = config);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load slash config with asset icon: $e'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _handleLinkTap(String url) async {
     final uri = Uri.tryParse(url);
     if (uri == null) {
@@ -137,7 +157,6 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.red,
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('BlockNote Editor Example'),
@@ -229,6 +248,13 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
                     break;
                   case 'slash':
                     _useCustomSlashCommands = !_useCustomSlashCommands;
+                    if (!_useCustomSlashCommands) {
+                      _customSlashConfig = null;
+                    } else {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _loadCustomSlashConfigWithAsset();
+                      });
+                    }
                     break;
                   case 'availableSlash':
                     _useAvailableSlashCommands = !_useAvailableSlashCommands;
@@ -350,7 +376,8 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
                     slashCommandConfig: _useAvailableSlashCommands
                         ? EditorConfig.createAvailableSlashCommands()
                         : _useCustomSlashCommands
-                            ? EditorConfig.createCustomSlashCommands()
+                            ? (_customSlashConfig ??
+                                EditorConfig.createCustomSlashCommands())
                             : null,
                     onLinkTapped: _handleLinkTap,
                   )
@@ -551,7 +578,8 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
                           ? EditorConfig.createCustomToolbar()
                           : null,
                       slashCommandConfig: _useCustomSlashCommands
-                          ? EditorConfig.createCustomSlashCommands()
+                          ? (_customSlashConfig ??
+                              EditorConfig.createCustomSlashCommands())
                           : null,
                       onLinkTapped: _handleLinkTap,
                     )

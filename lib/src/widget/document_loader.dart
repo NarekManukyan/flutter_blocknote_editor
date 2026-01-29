@@ -125,7 +125,10 @@ class DocumentLoader {
     );
     await _applyIfPresent(
       value: widget.slashCommandConfig,
-      apply: (config) => bridge.setSlashCommandConfig(config.toJson()),
+      apply: (config) async {
+        final resolved = await config.toJsonResolved();
+        await bridge.setSlashCommandConfig(resolved);
+      },
     );
     if (options.applyCustomCss) {
       await _applyCustomCss(widget: widget, bridge: bridge);

@@ -1,3 +1,18 @@
+## 0.0.17
+
+* Slash command icons: flexible support for custom icons (like custom block types):
+  * New sealed type `BlockNoteSlashCommandIcon` with variants: `BlockNoteSlashCommandIconText` (emoji/short text), `BlockNoteSlashCommandIconSvg` (raw SVG string), `BlockNoteSlashCommandIconImage` (URL or data URL)
+  * `BlockNoteSlashCommandIconImage.fromAsset(String assetPath)` for loading PNG/JPEG from app assets (async)
+  * `BlockNoteSlashCommandItem.icon` now accepts `String` (backward compatible) or `BlockNoteSlashCommandIcon`
+  * Web: slash menu renders text, SVG (with wrapper + CSS), and image icons; SVG inherits text color for `currentColor`
+* Slash command handlers from JS file (like custom block type scripts):
+  * Added `onItemClickScriptPath` to `BlockNoteSlashCommandItem`: asset path to a JavaScript file whose content is used as the click handler (evaluated with `editor` in scope)
+  * `BlockNoteSlashCommandConfig.toJsonResolved()`: async method that loads script paths and returns JSON with resolved `onItemClick` for the web view
+  * DocumentLoader and BlockNoteEditor use `toJsonResolved()` when applying slash command config so the web only receives resolved handler code
+* Deprecated inline `onItemClick` string on `BlockNoteSlashCommandItem` in favor of `onItemClickScriptPath` for handler code (parameter and field are `@Deprecated`)
+* Example app: custom slash commands demo all icon variants (emoji, text, SVG, image data URL, image fromAsset) and "Insert current date" handler from `assets/slash_insert_date.js`
+* Updated embedded web editor bundle (`assets/web/editor.js`, `assets/web/editor.css`)
+
 ## 0.0.16
 
 * Block diff: emit only the blocks that actually changed (no redundant parent update):

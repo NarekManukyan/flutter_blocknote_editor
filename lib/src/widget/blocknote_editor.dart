@@ -69,6 +69,7 @@ class BlockNoteEditor extends StatefulWidget {
     this.extraBottomPadding = 0,
     this.loading = false,
     this.skeletonBackgroundColor,
+    this.skeletonShimmerColor,
     super.key,
   });
 
@@ -117,11 +118,17 @@ class BlockNoteEditor extends StatefulWidget {
   /// The skeleton is also automatically shown when the editor is not ready yet.
   final bool loading;
 
-  /// Custom background color for the loading skeleton shimmer.
+  /// Custom background color for the loading skeleton.
   ///
   /// If not provided, the skeleton will use the editor background color from
   /// the theme configuration, or white as a fallback.
   final Color? skeletonBackgroundColor;
+
+  /// Custom color for the loading skeleton shimmer (highlight).
+  ///
+  /// If not provided, the shimmer uses theme brightness: light greys in light
+  /// mode and darker greys in dark mode so the skeleton is visible on both.
+  final Color? skeletonShimmerColor;
 
   /// Whether the editor should be in read-only mode.
   final bool readOnly;
@@ -495,7 +502,13 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
         _bridge != null &&
         _isReady) {
       if (widget.slashCommandConfig != null) {
-        _bridge!.setSlashCommandConfig(widget.slashCommandConfig!.toJson());
+        final config = widget.slashCommandConfig!;
+        unawaited(Future(() async {
+          final resolved = await config.toJsonResolved();
+          if (mounted && _bridge != null) {
+            await _bridge!.setSlashCommandConfig(resolved);
+          }
+        }));
       }
     }
 
@@ -853,7 +866,11 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
                   },
             ),
             if (shouldShowSkeleton)
-              _EditorSkeletonOverlay(backgroundColor: skeletonBgColor),
+              _EditorSkeletonOverlay(
+                backgroundColor: skeletonBgColor,
+                shimmerColor: widget.skeletonShimmerColor,
+                brightness: Theme.of(context).brightness,
+              ),
           ],
         );
       },
@@ -882,13 +899,35 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
 /// Covers only the WebView area.
 class _EditorSkeletonOverlay extends StatelessWidget {
   /// Creates a new editor skeleton overlay.
-  const _EditorSkeletonOverlay({required this.backgroundColor});
+  const _EditorSkeletonOverlay({
+    required this.backgroundColor,
+    this.shimmerColor,
+    required this.brightness,
+  });
 
   /// Background color for the skeleton.
   final Color backgroundColor;
 
+  /// Custom shimmer highlight color; when null, uses brightness-based defaults.
+  final Color? shimmerColor;
+
+  /// Theme brightness for default shimmer (light greys vs dark greys).
+  final Brightness brightness;
+
+  List<Color> get _shimmerGradientColors {
+    if (shimmerColor != null) {
+      final c = shimmerColor!;
+      return [c.withValues(alpha: 0.5), c, c.withValues(alpha: 0.5)];
+    }
+    final isDark = brightness == Brightness.dark;
+    return isDark
+        ? [Colors.grey[600]!, Colors.grey[500]!, Colors.grey[600]!]
+        : [Colors.grey[300]!, Colors.grey[200]!, Colors.grey[300]!];
+  }
+
   @override
   Widget build(BuildContext context) {
+    final colors = _shimmerGradientColors;
     return Material(
       color: Colors.transparent,
       child: Container(
@@ -901,28 +940,94 @@ class _EditorSkeletonOverlay extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             spacing: 12,
             children: [
-              _SkeletonLine(width: double.infinity, height: 24),
-              _SkeletonLine(width: double.infinity, height: 20),
-              _SkeletonLine(width: 200, height: 20),
-              _SkeletonLine(width: double.infinity, height: 24),
-              _SkeletonLine(width: double.infinity, height: 20),
-              _SkeletonLine(width: 150, height: 20),
-              _SkeletonLine(width: double.infinity, height: 24),
-              _SkeletonLine(width: 180, height: 20),
-              _SkeletonLine(width: double.infinity, height: 24),
-              _SkeletonLine(width: double.infinity, height: 20),
-              _SkeletonLine(width: 250, height: 20),
-              _SkeletonLine(width: double.infinity, height: 24),
-              _SkeletonLine(width: double.infinity, height: 20),
-              _SkeletonLine(width: 200, height: 20),
-              _SkeletonLine(width: double.infinity, height: 24),
-              _SkeletonLine(width: double.infinity, height: 20),
-              _SkeletonLine(width: 150, height: 20),
-              _SkeletonLine(width: double.infinity, height: 24),
-              _SkeletonLine(width: 180, height: 20),
-              _SkeletonLine(width: double.infinity, height: 24),
-              _SkeletonLine(width: double.infinity, height: 20),
-              _SkeletonLine(width: 250, height: 20),
+              _SkeletonLine(
+                width: double.infinity,
+                height: 24,
+                gradientColors: colors,
+              ),
+              _SkeletonLine(
+                width: double.infinity,
+                height: 20,
+                gradientColors: colors,
+              ),
+              _SkeletonLine(width: 200, height: 20, gradientColors: colors),
+              _SkeletonLine(
+                width: double.infinity,
+                height: 24,
+                gradientColors: colors,
+              ),
+              _SkeletonLine(
+                width: double.infinity,
+                height: 20,
+                gradientColors: colors,
+              ),
+              _SkeletonLine(width: 150, height: 20, gradientColors: colors),
+              _SkeletonLine(
+                width: double.infinity,
+                height: 24,
+                gradientColors: colors,
+              ),
+              _SkeletonLine(
+                width: double.infinity,
+                height: 20,
+                gradientColors: colors,
+              ),
+              _SkeletonLine(width: 180, height: 20, gradientColors: colors),
+              _SkeletonLine(
+                width: double.infinity,
+                height: 24,
+                gradientColors: colors,
+              ),
+              _SkeletonLine(
+                width: double.infinity,
+                height: 20,
+                gradientColors: colors,
+              ),
+              _SkeletonLine(width: 250, height: 20, gradientColors: colors),
+              _SkeletonLine(
+                width: double.infinity,
+                height: 24,
+                gradientColors: colors,
+              ),
+              _SkeletonLine(
+                width: double.infinity,
+                height: 20,
+                gradientColors: colors,
+              ),
+              _SkeletonLine(width: 200, height: 20, gradientColors: colors),
+              _SkeletonLine(
+                width: double.infinity,
+                height: 24,
+                gradientColors: colors,
+              ),
+              _SkeletonLine(
+                width: double.infinity,
+                height: 20,
+                gradientColors: colors,
+              ),
+              _SkeletonLine(width: 150, height: 20, gradientColors: colors),
+              _SkeletonLine(
+                width: double.infinity,
+                height: 24,
+                gradientColors: colors,
+              ),
+              _SkeletonLine(
+                width: double.infinity,
+                height: 20,
+                gradientColors: colors,
+              ),
+              _SkeletonLine(width: 180, height: 20, gradientColors: colors),
+              _SkeletonLine(
+                width: double.infinity,
+                height: 24,
+                gradientColors: colors,
+              ),
+              _SkeletonLine(
+                width: double.infinity,
+                height: 20,
+                gradientColors: colors,
+              ),
+              _SkeletonLine(width: 250, height: 20, gradientColors: colors),
             ],
           ),
         ),
@@ -934,13 +1039,20 @@ class _EditorSkeletonOverlay extends StatelessWidget {
 /// A single skeleton line with shimmer effect.
 class _SkeletonLine extends StatefulWidget {
   /// Creates a new skeleton line.
-  const _SkeletonLine({required this.width, required this.height});
+  const _SkeletonLine({
+    required this.width,
+    required this.height,
+    required this.gradientColors,
+  });
 
   /// Width of the skeleton line.
   final double width;
 
   /// Height of the skeleton line.
   final double height;
+
+  /// Colors for the shimmer gradient (e.g. [side, highlight, side]).
+  final List<Color> gradientColors;
 
   @override
   State<_SkeletonLine> createState() => _SkeletonLineState();
@@ -967,6 +1079,7 @@ class _SkeletonLineState extends State<_SkeletonLine>
 
   @override
   Widget build(BuildContext context) {
+    final colors = widget.gradientColors;
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
@@ -978,7 +1091,9 @@ class _SkeletonLineState extends State<_SkeletonLine>
             gradient: LinearGradient(
               begin: Alignment(-1.0 - _controller.value * 2, 0),
               end: Alignment(1.0 - _controller.value * 2, 0),
-              colors: [Colors.grey[300]!, Colors.grey[200]!, Colors.grey[300]!],
+              colors: colors.length >= 3
+                  ? colors
+                  : [Colors.grey[300]!, Colors.grey[200]!, Colors.grey[300]!],
             ),
           ),
         );

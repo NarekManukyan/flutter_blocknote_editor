@@ -4,6 +4,10 @@
 /// types "/" in the editor.
 library;
 
+import 'dart:convert';
+
+import 'package:flutter/services.dart';
+
 /// Enumeration of default slash commands provided by BlockNote.
 ///
 /// Use this enum to easily reference and specify which default slash commands
@@ -109,12 +113,112 @@ enum BlockNoteDefaultSlashCommand {
   }
 }
 
+/// Icon for a slash command item.
+///
+/// Use [BlockNoteSlashCommandIcon.text] for emoji or short text,
+/// [BlockNoteSlashCommandIcon.svg] for raw SVG content, or
+/// [BlockNoteSlashCommandIcon.image] for PNG/JPEG via URL (including
+/// data URLs from app assets).
+sealed class BlockNoteSlashCommandIcon {
+  /// Creates an icon (subclasses use this for const constructors).
+  const BlockNoteSlashCommandIcon();
+
+  /// Creates an icon from a JSON map.
+  static BlockNoteSlashCommandIcon? fromJson(Object? json) {
+    if (json == null) return null;
+    if (json is String) {
+      return BlockNoteSlashCommandIconText(json);
+    }
+    if (json is! Map<String, dynamic>) return null;
+    final type = json['type'] as String?;
+    switch (type) {
+      case 'text':
+        final value = json['value'] as String?;
+        return value != null ? BlockNoteSlashCommandIconText(value) : null;
+      case 'svg':
+        final content = json['content'] as String?;
+        return content != null ? BlockNoteSlashCommandIconSvg(content) : null;
+      case 'image':
+        final url = json['url'] as String?;
+        return url != null ? BlockNoteSlashCommandIconImage(url) : null;
+      default:
+        return null;
+    }
+  }
+}
+
+/// Icon as emoji or short text (rendered in a span).
+class BlockNoteSlashCommandIconText extends BlockNoteSlashCommandIcon {
+  /// Creates a text/emoji icon.
+  const BlockNoteSlashCommandIconText(this.value) : super();
+
+  /// The text or emoji to display (e.g. '📝' or 'P').
+  final String value;
+
+  /// Serializes to JSON.
+  Map<String, dynamic> toJson() => {'type': 'text', 'value': value};
+}
+
+/// Icon as raw SVG markup (rendered inline).
+class BlockNoteSlashCommandIconSvg extends BlockNoteSlashCommandIcon {
+  /// Creates an SVG icon from raw SVG string.
+  const BlockNoteSlashCommandIconSvg(this.content) : super();
+
+  /// Raw SVG markup (e.g. from [rootBundle.loadString] of an .svg asset).
+  final String content;
+
+  /// Serializes to JSON.
+  Map<String, dynamic> toJson() => {'type': 'svg', 'content': content};
+}
+
+/// Icon as an image URL (PNG, JPEG, or data URL from app assets).
+class BlockNoteSlashCommandIconImage extends BlockNoteSlashCommandIcon {
+  /// Creates an image icon from a URL.
+  ///
+  /// [url] can be:
+  /// - A data URL (e.g. `data:image/png;base64,...`) from app assets.
+  /// - An HTTP(S) URL.
+  /// - Any URL the WebView can load.
+  const BlockNoteSlashCommandIconImage(this.url) : super();
+
+  /// Image URL (data URL, https:, or app-served URL).
+  final String url;
+
+  /// Creates an image icon by loading from an app asset (e.g. PNG, JPEG).
+  ///
+  /// Loads the asset as bytes, encodes as base64, and returns an icon with
+  /// a data URL. For SVG assets use [BlockNoteSlashCommandIconSvg] with
+  /// [rootBundle.loadString] instead.
+  static Future<BlockNoteSlashCommandIconImage> fromAsset(
+    String assetPath,
+  ) async {
+    final data = await rootBundle.load(assetPath);
+    final bytes = data.buffer.asUint8List();
+    final base64 = base64Encode(bytes);
+    final ext = assetPath.split('.').last.toLowerCase();
+    const mimeByExt = {
+      'png': 'image/png',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'gif': 'image/gif',
+      'webp': 'image/webp',
+    };
+    final mime = mimeByExt[ext] ?? 'image/png';
+    return BlockNoteSlashCommandIconImage('data:$mime;base64,$base64');
+  }
+
+  /// Serializes to JSON.
+  Map<String, dynamic> toJson() => {'type': 'image', 'url': url};
+}
+
 /// Slash command item configuration.
 class BlockNoteSlashCommandItem {
   /// Creates a new slash command item.
   const BlockNoteSlashCommandItem({
     required this.title,
+    @Deprecated('Prefer onItemClickScriptPath to load handler from a JS file')
     required this.onItemClick,
+    this.onItemClickScriptPath,
     this.subtext,
     this.badge,
     this.aliases,
@@ -127,11 +231,25 @@ class BlockNoteSlashCommandItem {
 
   /// JavaScript function code to execute when the item is clicked.
   ///
+  /// **Deprecated:** Prefer [onItemClickScriptPath] to load handler code from
+  /// a JS file (like [customJavaScriptAssetPaths] for block types).
+  ///
   /// This should be a string containing JavaScript code that will be
   /// evaluated. The code has access to the `editor` variable.
   ///
+  /// Ignored when [onItemClickScriptPath] is set (handler is loaded from
+  /// that asset instead).
+  ///
   /// Example: "editor.insertBlocks([{type: 'paragraph', content: 'Hello'}], editor.getTextCursorPosition().block, 'after');"
+  @Deprecated('Prefer onItemClickScriptPath to load handler from a JS file')
   final String onItemClick;
+
+  /// Asset path to a JavaScript file whose content is used as the click handler.
+  ///
+  /// When set, the file is loaded and its content is evaluated when the item
+  /// is clicked (with `editor` in scope), like [customJavaScriptAssetPaths].
+  /// Use this for longer or reusable handlers instead of inline [onItemClick].
+  final String? onItemClickScriptPath;
 
   /// Subtitle text (optional).
   final String? subtext;
@@ -145,8 +263,12 @@ class BlockNoteSlashCommandItem {
   /// Group name (optional).
   final String? group;
 
-  /// Icon identifier (optional).
-  final String? icon;
+  /// Icon (optional).
+  ///
+  /// Can be a [String] (emoji or short text, backward compatible) or
+  /// [BlockNoteSlashCommandIcon] for text, SVG, or image (e.g. PNG from
+  /// app assets via data URL).
+  final Object? icon;
 
   /// Creates a slash command that inserts a paragraph block.
   factory BlockNoteSlashCommandItem.paragraph({
@@ -158,7 +280,9 @@ class BlockNoteSlashCommandItem {
     String? badge,
     List<String>? aliases,
     String? group,
-    String? icon,
+
+    /// Optional icon: [String] (emoji/text) or [BlockNoteSlashCommandIcon].
+    Object? icon,
   }) {
     return BlockNoteSlashCommandItem(
       title: title,
@@ -181,7 +305,9 @@ class BlockNoteSlashCommandItem {
     String? badge,
     List<String>? aliases,
     String? group,
-    String? icon,
+
+    /// Optional icon: [String] (emoji/text) or [BlockNoteSlashCommandIcon].
+    Object? icon,
   }) {
     return BlockNoteSlashCommandItem(
       title: title,
@@ -204,7 +330,9 @@ class BlockNoteSlashCommandItem {
     String? badge,
     List<String>? aliases,
     String? group,
-    String? icon,
+
+    /// Optional icon: [String] (emoji/text) or [BlockNoteSlashCommandIcon].
+    Object? icon,
   }) {
     return BlockNoteSlashCommandItem(
       title: title,
@@ -227,7 +355,9 @@ class BlockNoteSlashCommandItem {
     String? badge,
     List<String>? aliases,
     String? group,
-    String? icon,
+
+    /// Optional icon: [String] (emoji/text) or [BlockNoteSlashCommandIcon].
+    Object? icon,
   }) {
     return BlockNoteSlashCommandItem(
       title: title,
@@ -250,7 +380,9 @@ class BlockNoteSlashCommandItem {
     String? badge,
     List<String>? aliases,
     String? group,
-    String? icon,
+
+    /// Optional icon: [String] (emoji/text) or [BlockNoteSlashCommandIcon].
+    Object? icon,
   }) {
     return BlockNoteSlashCommandItem(
       title: title,
@@ -273,7 +405,9 @@ class BlockNoteSlashCommandItem {
     String? badge,
     List<String>? aliases,
     String? group,
-    String? icon,
+
+    /// Optional icon: [String] (emoji/text) or [BlockNoteSlashCommandIcon].
+    Object? icon,
   }) {
     return BlockNoteSlashCommandItem(
       title: title,
@@ -296,7 +430,9 @@ class BlockNoteSlashCommandItem {
     String? badge,
     List<String>? aliases,
     String? group,
-    String? icon,
+
+    /// Optional icon: [String] (emoji/text) or [BlockNoteSlashCommandIcon].
+    Object? icon,
   }) {
     return BlockNoteSlashCommandItem(
       title: title,
@@ -319,7 +455,9 @@ class BlockNoteSlashCommandItem {
     String? badge,
     List<String>? aliases,
     String? group,
-    String? icon,
+
+    /// Optional icon: [String] (emoji/text) or [BlockNoteSlashCommandIcon].
+    Object? icon,
   }) {
     return BlockNoteSlashCommandItem(
       title: title,
@@ -342,7 +480,9 @@ class BlockNoteSlashCommandItem {
     String? badge,
     List<String>? aliases,
     String? group,
-    String? icon,
+
+    /// Optional icon: [String] (emoji/text) or [BlockNoteSlashCommandIcon].
+    Object? icon,
   }) {
     return BlockNoteSlashCommandItem(
       title: title,
@@ -428,16 +568,23 @@ class BlockNoteSlashCommandItem {
 
   /// Creates a BlockNoteSlashCommandItem from a JSON map.
   factory BlockNoteSlashCommandItem.fromJson(Map<String, dynamic> json) {
+    final iconJson = json['icon'];
+    final Object? parsedIcon = iconJson == null
+        ? null
+        : iconJson is String
+            ? iconJson
+            : BlockNoteSlashCommandIcon.fromJson(iconJson);
     return BlockNoteSlashCommandItem(
       title: json['title'] as String? ?? '',
       onItemClick: json['onItemClick'] as String? ?? '',
+      onItemClickScriptPath: json['onItemClickScriptPath'] as String?,
       subtext: json['subtext'] as String?,
       badge: json['badge'] as String?,
       aliases: (json['aliases'] as List<dynamic>?)
           ?.whereType<String>()
           .toList(),
       group: json['group'] as String?,
-      icon: json['icon'] as String?,
+      icon: parsedIcon,
     );
   }
 
@@ -447,6 +594,9 @@ class BlockNoteSlashCommandItem {
       'title': title,
       'onItemClick': onItemClick,
     };
+    if (onItemClickScriptPath != null) {
+      json['onItemClickScriptPath'] = onItemClickScriptPath;
+    }
     if (subtext != null) {
       json['subtext'] = subtext;
     }
@@ -460,7 +610,16 @@ class BlockNoteSlashCommandItem {
       json['group'] = group;
     }
     if (icon != null) {
-      json['icon'] = icon;
+      switch (icon!) {
+        case BlockNoteSlashCommandIconText e:
+          json['icon'] = e.toJson();
+        case BlockNoteSlashCommandIconSvg e:
+          json['icon'] = e.toJson();
+        case BlockNoteSlashCommandIconImage e:
+          json['icon'] = e.toJson();
+        default:
+          json['icon'] = icon as String;
+      }
     }
     return json;
   }
@@ -468,6 +627,7 @@ class BlockNoteSlashCommandItem {
   BlockNoteSlashCommandItem copyWith({
     String? title,
     String? onItemClick,
+    Object? onItemClickScriptPath = _unset,
     Object? subtext = _unset,
     Object? badge = _unset,
     Object? aliases = _unset,
@@ -477,19 +637,22 @@ class BlockNoteSlashCommandItem {
     return BlockNoteSlashCommandItem(
       title: title ?? this.title,
       onItemClick: onItemClick ?? this.onItemClick,
+      onItemClickScriptPath: identical(onItemClickScriptPath, _unset)
+          ? this.onItemClickScriptPath
+          : onItemClickScriptPath as String?,
       subtext: identical(subtext, _unset) ? this.subtext : subtext as String?,
       badge: identical(badge, _unset) ? this.badge : badge as String?,
       aliases: identical(aliases, _unset)
           ? this.aliases
           : aliases as List<String>?,
       group: identical(group, _unset) ? this.group : group as String?,
-      icon: identical(icon, _unset) ? this.icon : icon as String?,
+      icon: identical(icon, _unset) ? this.icon : icon,
     );
   }
 
   @override
   String toString() {
-    return 'BlockNoteSlashCommandItem(title: $title, onItemClick: $onItemClick, subtext: $subtext, badge: $badge, aliases: $aliases, group: $group, icon: $icon)';
+    return 'BlockNoteSlashCommandItem(title: $title, onItemClick: $onItemClick, onItemClickScriptPath: $onItemClickScriptPath, subtext: $subtext, badge: $badge, aliases: $aliases, group: $group, icon: $icon)';
   }
 
   @override
@@ -498,6 +661,7 @@ class BlockNoteSlashCommandItem {
         other is BlockNoteSlashCommandItem &&
             other.title == title &&
             other.onItemClick == onItemClick &&
+            other.onItemClickScriptPath == onItemClickScriptPath &&
             other.subtext == subtext &&
             other.badge == badge &&
             _listEquals(other.aliases, aliases) &&
@@ -509,6 +673,7 @@ class BlockNoteSlashCommandItem {
   int get hashCode => Object.hash(
         title,
         onItemClick,
+        onItemClickScriptPath,
         subtext,
         badge,
         _listHash(aliases),
@@ -607,6 +772,30 @@ class BlockNoteSlashCommandConfig {
         return item.toString();
       }).toList();
     }
+    return json;
+  }
+
+  /// Converts this config to JSON with [onItemClickScriptPath] resolved.
+  ///
+  /// For each item that has [onItemClickScriptPath], loads the asset and
+  /// replaces it with the file content in `onItemClick`. Use this before
+  /// sending config to the web view.
+  Future<Map<String, dynamic>> toJsonResolved() async {
+    final json = toJson();
+    if (items == null || items!.isEmpty) {
+      return json;
+    }
+    final resolvedItems = <Map<String, dynamic>>[];
+    for (final item in items!) {
+      final map = item.toJson();
+      if (item.onItemClickScriptPath != null) {
+        final content = await rootBundle.loadString(item.onItemClickScriptPath!);
+        map['onItemClick'] = content;
+        map.remove('onItemClickScriptPath');
+      }
+      resolvedItems.add(map);
+    }
+    json['items'] = resolvedItems;
     return json;
   }
 

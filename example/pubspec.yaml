@@ -26,3 +26,5 @@ flutter:
     - assets/sample_document.json
     - assets/custom_schema.js
     - assets/custom_schema.css
+    - assets/slash_icon_test.png
+    - assets/slash_insert_date.js
