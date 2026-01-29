@@ -71,7 +71,6 @@ void main() {
                 ],
               ),
             ),
-            index: 0,
           ),
         ],
         timestamp: 1234567890,

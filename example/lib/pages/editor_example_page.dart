@@ -64,7 +64,7 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
     return BlockNoteDocument.fromJson({
       'blocks': [
         {
-          'id': 'root',
+          'id': generateBlockId(),
           'type': 'paragraph',
           'content': [
             {

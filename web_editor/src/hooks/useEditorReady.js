@@ -89,8 +89,13 @@ export function useEditorReady(
   );
   const computeBlockDifferencesFn = useCallback(
     (previousBlocks, currentBlocks) =>
-      computeBlockDifferences(previousBlocks, currentBlocks, blocksEqualFn),
-    [blocksEqualFn],
+      computeBlockDifferences(
+        editor,
+        previousBlocks,
+        currentBlocks,
+        blocksEqualFn,
+      ),
+    [editor, blocksEqualFn],
   );
   const getSelectionVisibilityFn = useCallback(
     (view, root) => getSelectionVisibility(view, root),
@@ -110,7 +115,7 @@ export function useEditorReady(
 
       const operations =
         previousBlocksRef.current === null
-          ? createInitialOperations(serializedCurrentBlocks)
+          ? createInitialOperations(editor, serializedCurrentBlocks)
           : computeBlockDifferencesFn(
               previousBlocksRef.current,
               serializedCurrentBlocks,

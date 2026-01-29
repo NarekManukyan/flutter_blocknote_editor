@@ -18,38 +18,35 @@ enum BlockNoteTransactionOperation {
   /// Delete a block.
   delete,
 
-  /// Move a block (reorder).
-  move,
+  /// Reorder blocks within a parent (single op for one or more moved blocks).
+  reorder,
 }
 
 /// A single transaction operation.
 ///
-/// Represents one operation in a transaction (insert, update, delete, move).
+/// Represents one operation in a transaction (insert, update, delete, reorder).
 class BlockNoteTransactionOp {
   /// Creates a new transaction operation.
   const BlockNoteTransactionOp({
     required this.operation,
     required this.blockId,
     this.block,
-    this.index,
     this.parentId,
     this.afterChildId,
     this.beforeChildId,
+    this.orderedChildIds,
   });
 
   /// The type of operation.
   final BlockNoteTransactionOperation operation;
 
-  /// The ID of the block being operated on.
+  /// The ID of the block being operated on (empty for [BlockNoteTransactionOperation.reorder]).
   final String blockId;
 
   /// The block data (for insert/update operations).
   final BlockNoteBlock? block;
 
-  /// The index position (for insert/move operations).
-  final int? index;
-
-  /// The parent block ID (for nested structures).
+  /// The parent block ID (for nested structures; for reorder this is the "from" parent).
   final String? parentId;
 
   /// The ID of the block that comes after this block (next sibling).
@@ -66,8 +63,19 @@ class BlockNoteTransactionOp {
   /// transactions. Will be `null` if this block is the first block in its parent.
   final String? beforeChildId;
 
+  /// For [BlockNoteTransactionOperation.reorder], the list of block ids that were reordered.
+  final List<String>? orderedChildIds;
+
   /// Creates a BlockNoteTransactionOp from a JSON map.
   factory BlockNoteTransactionOp.fromJson(Map<String, dynamic> json) {
+    final orderedChildIdsRaw = json['orderedChildIds'];
+    final List<String>? orderedChildIds = orderedChildIdsRaw is List
+        ? (orderedChildIdsRaw)
+            .map((e) => e?.toString())
+            .whereType<String>()
+            .toList()
+        : null;
+
     return BlockNoteTransactionOp(
       operation: BlockNoteTransactionOperation.values.byName(
         json['operation'] as String,
@@ -78,10 +86,10 @@ class BlockNoteTransactionOp {
           : BlockNoteBlock.fromJson(
               Map<String, dynamic>.from(json['block'] as Map),
             ),
-      index: json['index'] as int?,
       parentId: json['parentId'] as String?,
       afterChildId: json['afterChildId'] as String?,
       beforeChildId: json['beforeChildId'] as String?,
+      orderedChildIds: orderedChildIds,
     );
   }
 
@@ -91,10 +99,11 @@ class BlockNoteTransactionOp {
       'operation': operation.name,
       'blockId': blockId,
       if (block != null) 'block': block!.toJson(),
-      if (index != null) 'index': index,
       if (parentId != null) 'parentId': parentId,
       if (afterChildId != null) 'afterChildId': afterChildId,
       if (beforeChildId != null) 'beforeChildId': beforeChildId,
+      if (orderedChildIds != null && orderedChildIds!.isNotEmpty)
+        'orderedChildIds': orderedChildIds,
     };
     return json;
   }
@@ -103,21 +112,19 @@ class BlockNoteTransactionOp {
   ///
   /// This method follows the standard Dart pattern for immutable classes.
   /// The number of parameters matches the number of fields in this class.
-  // ignore: code_scene.excess_number_of_function_arguments
   BlockNoteTransactionOp copyWith({
     BlockNoteTransactionOperation? operation,
     String? blockId,
     Object? block = _unset,
-    Object? index = _unset,
     Object? parentId = _unset,
     Object? afterChildId = _unset,
     Object? beforeChildId = _unset,
+    Object? orderedChildIds = _unset,
   }) {
     return BlockNoteTransactionOp(
       operation: operation ?? this.operation,
       blockId: blockId ?? this.blockId,
       block: identical(block, _unset) ? this.block : block as BlockNoteBlock?,
-      index: identical(index, _unset) ? this.index : index as int?,
       parentId: identical(parentId, _unset)
           ? this.parentId
           : parentId as String?,
@@ -127,12 +134,15 @@ class BlockNoteTransactionOp {
       beforeChildId: identical(beforeChildId, _unset)
           ? this.beforeChildId
           : beforeChildId as String?,
+      orderedChildIds: identical(orderedChildIds, _unset)
+          ? this.orderedChildIds
+          : orderedChildIds as List<String>?,
     );
   }
 
   @override
   String toString() {
-    return 'BlockNoteTransactionOp(operation: $operation, blockId: $blockId, block: $block, index: $index, parentId: $parentId, afterChildId: $afterChildId, beforeChildId: $beforeChildId)';
+    return 'BlockNoteTransactionOp(operation: $operation, blockId: $blockId, block: $block, parentId: $parentId, afterChildId: $afterChildId, beforeChildId: $beforeChildId, orderedChildIds: $orderedChildIds)';
   }
 
   @override
@@ -142,10 +152,10 @@ class BlockNoteTransactionOp {
     return other.operation == operation &&
         other.blockId == blockId &&
         other.block == block &&
-        other.index == index &&
         other.parentId == parentId &&
         other.afterChildId == afterChildId &&
-        other.beforeChildId == beforeChildId;
+        other.beforeChildId == beforeChildId &&
+        _listEquals(other.orderedChildIds, orderedChildIds);
   }
 
   @override
@@ -153,10 +163,10 @@ class BlockNoteTransactionOp {
     operation,
     blockId,
     block,
-    index,
     parentId,
     afterChildId,
     beforeChildId,
+    _listHash(orderedChildIds),
   );
 }
 
