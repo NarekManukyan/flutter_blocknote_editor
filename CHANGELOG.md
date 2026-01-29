@@ -1,3 +1,15 @@
+## 0.0.14
+
+* Document and transaction model updates:
+  * Added `generateBlockId()` in Dart (UUID v4) and used in `BlockNoteDocument.empty()`
+  * Transaction operations now include `afterChildId`, `beforeChildId`, and `orderedChildIds` for block ordering and reorder support
+* Web editor: block ID and transaction improvements:
+  * New `idGenerator.js` for UUID v4 block IDs (crypto.randomUUID with RFC 4122 fallback)
+  * Document loader and cleaner use centralized ID generation for blocks missing IDs
+  * Block diff and transaction sender support sibling links and reorder operations; initial operations include `beforeChildId`/`afterChildId`/`parentId`
+  * Editor initial content and transaction ops use generated block IDs consistently
+* Updated embedded web editor bundle (`assets/web/editor.js`)
+
 ## 0.0.13
 
 * Improved custom slash menu support:

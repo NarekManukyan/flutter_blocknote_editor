@@ -5,6 +5,7 @@
 import { useCreateBlockNote } from '@blocknote/react';
 import { useEffect, useMemo } from 'react';
 import { buildSchemaFromConfig } from '../utils/schemaRegistry';
+import { generateBlockId } from '../utils/idGenerator.js';
 
 /**
  * Custom hook to initialize BlockNote editor and set up lifecycle.
@@ -20,7 +21,7 @@ export function useBlockNoteEditor(schemaConfig) {
     schema,
     initialContent: [
       {
-        id: 'root',
+        id: generateBlockId(),
         type: 'paragraph',
         content: [
           {

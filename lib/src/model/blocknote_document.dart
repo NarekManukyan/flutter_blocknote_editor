@@ -5,7 +5,16 @@
 /// for future compatibility.
 library;
 
+import 'package:uuid/uuid.dart';
+
 import 'blocknote_block.dart';
+
+const Uuid _uuid = Uuid();
+
+/// Generates a unique block id (UUID v4).
+String generateBlockId() {
+  return _uuid.v4();
+}
 
 /// BlockNote document schema version.
 ///
@@ -93,7 +102,7 @@ class BlockNoteDocument {
     return BlockNoteDocument(
       blocks: [
         BlockNoteBlock(
-          id: 'root',
+          id: generateBlockId(),
           type: BlockNoteBlockType.paragraph,
           content: BlockNoteBlockContent.inline(
             content: [

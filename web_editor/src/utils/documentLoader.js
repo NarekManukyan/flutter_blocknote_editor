@@ -9,6 +9,7 @@ import {
   cleanTableContent,
   cleanBlock,
 } from './documentCleaner';
+import { generateBlockId } from './idGenerator.js';
 
 /**
  * Loads a document into the BlockNote editor.
@@ -66,7 +67,7 @@ export function loadDocument(
         console.warn('[BlockNote] Empty blocks array, using default block');
         doc.blocks = [
           {
-            id: 'root',
+            id: generateBlockId(),
             type: 'paragraph',
             content: [{ type: 'text', text: '', styles: {} }],
             props: {},

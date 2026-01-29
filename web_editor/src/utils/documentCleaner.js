@@ -3,6 +3,8 @@
  * Extracted from documentLoader to reduce complexity.
  */
 
+import { generateBlockId } from './idGenerator.js';
+
 /**
  * Normalize a styled text item into a plain text node.
  * @param {Object} item - Source item that may contain `text` and `styles`.
@@ -83,14 +85,14 @@ export function cleanTableContent(content, cleanInlineContentFn) {
 /**
  * Produce a minimal default block object used when no block data is provided.
  * @returns {{id: string, type: string, content: Array, props: Object}} An object with:
- *  - `id`: a unique id prefixed with "block_" and the current timestamp,
+ *  - `id`: a UUID v4 block id,
  *  - `type`: the block type (`"paragraph"`),
  *  - `content`: an array containing a single empty text node `{ type: "text", text: "", styles: {} }`,
  *  - `props`: an empty object for block-specific properties.
  */
 export function createDefaultBlock() {
   return {
-    id: 'block_' + Date.now(),
+    id: generateBlockId(),
     type: 'paragraph',
     content: [{ type: 'text', text: '', styles: {} }],
     props: {},
@@ -129,7 +131,7 @@ export function cleanBlock(block, cleanInlineContentFn, cleanTableContentFn) {
   }
 
   const cleanedBlock = {
-    id: block.id || 'block_' + Date.now(),
+    id: block.id || generateBlockId(),
     type: block.type || 'paragraph',
     props: block.props && typeof block.props === 'object' ? block.props : {},
   };

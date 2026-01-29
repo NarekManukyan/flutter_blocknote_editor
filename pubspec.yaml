@@ -1,6 +1,6 @@
 name: flutter_blocknote_editor
 description: 'A Flutter package (beta) that embeds BlockNoteJS inside a WebView with bidirectional communication, transaction batching, and undo/redo safety.'
-version: 0.0.13
+version: 0.0.14
 homepage: https://github.com/NarekManukyan/flutter_blocknote_editor
 repository: https://github.com/NarekManukyan/flutter_blocknote_editor
 issue_tracker: https://github.com/NarekManukyan/flutter_blocknote_editor/issues
@@ -20,6 +20,7 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_inappwebview: ^6.1.5
+  uuid: ^4.5.1
   flutter_svg: ^2.0.10+1
   shelf: ^1.4.2
   shelf_static: ^1.1.2

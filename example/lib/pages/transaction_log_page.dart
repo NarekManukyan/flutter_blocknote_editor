@@ -468,17 +468,18 @@ class _TransactionCardState extends State<_TransactionCard> {
                                 ),
                               ),
                             ],
-                            if (op.index != null) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                'Index: ${op.index}',
-                                style: const TextStyle(fontSize: 11),
-                              ),
-                            ],
                             if (op.parentId != null) ...[
                               const SizedBox(height: 4),
                               Text(
                                 'Parent ID: ${op.parentId}',
+                                style: const TextStyle(fontSize: 11),
+                              ),
+                            ],
+                            if (op.orderedChildIds != null &&
+                                op.orderedChildIds!.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                'Ordered child IDs: ${op.orderedChildIds!.join(", ")}',
                                 style: const TextStyle(fontSize: 11),
                               ),
                             ],
