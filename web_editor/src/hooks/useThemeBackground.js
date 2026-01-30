@@ -1,49 +1,52 @@
 /**
  * Custom hook for applying theme background color.
- * Extracted from App.jsx to reduce complexity.
+ * Syncs the editor's appearance (light/dark) and background to the page using .bn-container
+ * so the padding area matches the editor and follows system/theme appearance.
  */
 
 import { useEffect } from 'react';
-import { setTheme } from '../utils/webViewHeightManager';
+import {
+  setTheme,
+  syncEditorAppearanceToPage,
+} from '../utils/webViewHeightManager';
 
 /**
- * Apply the editor background color from the provided theme to the document root, html, body, and #root elements.
+ * Sync the editor's background and data-color-scheme to the page (html, body, #root).
+ * Uses .bn-container's appearance so it follows the editor's light/dark theme.
  *
- * @param {object} theme - Theme object expected to contain color definitions; the hook reads `colors.editor.background` or falls back to `light`/`dark`.
- * @param {object} blockNoteTheme - BlockNote theme instance whose presence and changes trigger the background synchronization.
+ * @param {object} theme - Theme object from Flutter (stored for webViewHeightManager).
+ * @param {object} blockNoteTheme - BlockNote theme instance; when present we sync after the editor has rendered.
  */
 export function useThemeBackground(theme, blockNoteTheme) {
   useEffect(() => {
-    // Store theme globally so webViewHeightManager can access it
     setTheme(theme);
 
-    if (!theme || !blockNoteTheme) {
-      return;
-    }
+    // Sync from .bn-container once it's in the DOM (editor may not be mounted yet)
+    const rafId = requestAnimationFrame(() => {
+      syncEditorAppearanceToPage();
+      requestAnimationFrame(syncEditorAppearanceToPage);
+    });
 
-    const colors = theme.colors || theme.light || theme.dark;
-    const editorBackground = colors?.editor?.background;
+    let observer = null;
+    const timeoutId = setTimeout(() => {
+      const container = document.querySelector('.bn-container');
+      if (container) {
+        observer = new MutationObserver(() => {
+          syncEditorAppearanceToPage();
+        });
+        observer.observe(container, {
+          attributes: true,
+          attributeFilter: ['data-color-scheme', 'class'],
+        });
+      }
+    }, 300);
 
-    if (!editorBackground) {
-      return;
-    }
-
-    const bgColor = editorBackground.startsWith('#')
-      ? editorBackground
-      : `#${editorBackground}`;
-
-    const html = document.documentElement;
-    const body = document.body;
-    const root = document.getElementById('root');
-
-    if (html) {
-      html.style.backgroundColor = bgColor;
-    }
-    if (body) {
-      body.style.backgroundColor = bgColor;
-    }
-    if (root) {
-      root.style.backgroundColor = bgColor;
-    }
+    return () => {
+      cancelAnimationFrame(rafId);
+      clearTimeout(timeoutId);
+      if (observer) {
+        observer.disconnect();
+      }
+    };
   }, [theme, blockNoteTheme]);
 }

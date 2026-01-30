@@ -4,10 +4,28 @@
  */
 
 /**
+ * Effective visible bottom when the keyboard is likely open: bottom of the visual viewport.
+ * Otherwise the root's bottom is used. This prevents treating content under the keyboard as "visible".
+ * @param {DOMRect} rootRect - Root element bounding rect.
+ * @returns {number} Vertical coordinate (bottom) of the visible area.
+ */
+function getEffectiveVisibleBottom(rootRect) {
+  const visualViewport = window.visualViewport;
+  if (!visualViewport || visualViewport.height >= window.innerHeight - 24) {
+    return rootRect.bottom;
+  }
+  return Math.min(
+    rootRect.bottom,
+    visualViewport.offsetTop + visualViewport.height,
+  );
+}
+
+/**
  * Determine whether the editor's current text selection is fully visible within a given root element.
+ * When the keyboard is likely open, the visible area uses the visual viewport bottom so content under the keyboard is not considered visible (fixes scroll-up-when-typing).
  * @param {object} view - ProseMirror EditorView that provides the selection and coordinate methods.
  * @param {Element} root - DOM element whose bounding rectangle defines the visible area.
- * @returns {{isVisible: boolean, selectionTop: number, selectionBottom: number, rootTop: number, rootBottom: number}|null} An object containing visibility details, or `null` if `view`, `root`, or the selection is unavailable. `isVisible` is `true` if the selection's top is greater than or equal to `rootTop` and the selection's bottom is less than or equal to `rootBottom`; `selectionTop` and `selectionBottom` are the vertical coordinates of the selection, and `rootTop` and `rootBottom` are the root element's top and bottom coordinates respectively.
+ * @returns {{isVisible: boolean, selectionTop: number, selectionBottom: number, rootTop: number, rootBottom: number}|null} An object containing visibility details, or `null` if `view`, `root`, or the selection is unavailable.
  */
 export function getSelectionVisibility(view, root) {
   if (!view || !root) return null;
@@ -18,14 +36,15 @@ export function getSelectionVisibility(view, root) {
   const selectionTop = Math.min(fromCoords.top, toCoords.top);
   const selectionBottom = Math.max(fromCoords.bottom, toCoords.bottom);
   const rootRect = root.getBoundingClientRect();
+  const visibleBottom = getEffectiveVisibleBottom(rootRect);
   const isVisible =
-    selectionTop >= rootRect.top && selectionBottom <= rootRect.bottom;
+    selectionTop >= rootRect.top && selectionBottom <= visibleBottom;
   return {
     isVisible,
     selectionTop,
     selectionBottom,
     rootTop: rootRect.top,
-    rootBottom: rootRect.bottom,
+    rootBottom: visibleBottom,
   };
 }
 
@@ -97,6 +116,56 @@ export function setupFocusListeners(tiptapEditor, getSelectionVisibilityFn) {
 
       editorDOM.addEventListener('focus', handleFocus, true);
       editorDOM.addEventListener('click', handleFocus, true);
+    } catch {
+      setTimeout(setup, 200);
+    }
+  };
+
+  setup();
+}
+
+/**
+ * Blur the editor after a checklist checkbox is toggled so the editor does not retain focus.
+ * BlockNote renders check list items with an input[type="checkbox"] inside the editor; clicking
+ * it toggles the state but also focuses the editor. This listener blurs the editor after such a click.
+ *
+ * @param {object} tiptapEditor - TipTap editor instance (expected to expose a `.view` with a `.dom` and `.commands.blur()`).
+ */
+export function setupChecklistBlurOnToggle(tiptapEditor) {
+  const setup = () => {
+    try {
+      const proseMirrorView = tiptapEditor.view;
+      if (!proseMirrorView || !proseMirrorView.dom) {
+        setTimeout(setup, 100);
+        return;
+      }
+
+      const editorDOM = proseMirrorView.dom;
+
+      const isChecklistCheckbox = (el) =>
+        el &&
+        el.tagName === 'INPUT' &&
+        el.getAttribute('type') === 'checkbox' &&
+        editorDOM.contains(el);
+
+      const handleClick = (event) => {
+        if (!isChecklistCheckbox(event.target)) return;
+
+        setTimeout(() => {
+          try {
+            const canBlur =
+              tiptapEditor.commands &&
+              typeof tiptapEditor.commands.blur === 'function';
+            if (canBlur) {
+              tiptapEditor.commands.blur();
+            }
+          } catch {
+            // Silently fail
+          }
+        }, 0);
+      };
+
+      editorDOM.addEventListener('click', handleClick, true);
     } catch {
       setTimeout(setup, 200);
     }
