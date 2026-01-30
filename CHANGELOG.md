@@ -1,3 +1,22 @@
+## 0.0.19
+
+* Keyboard and WebView (Scaffold):
+  * README: new section "Keyboard and WebView (Scaffold)" documenting `resizeToAvoidBottomInset: false` so the WebView handles keyboard padding and avoids scroll jump or ~40–60px gap when typing
+  * Example app: Scaffold uses `resizeToAvoidBottomInset: false`; editor uses `extraBottomPadding` for demo
+* Theme and background sync:
+  * New `syncEditorAppearanceToPage()` in webViewHeightManager: syncs editor appearance (light/dark and background) from `.bn-container` (`data-color-scheme`, `--bn-colors-editor-background`) to html, body, and #root so the bottom padding area (keyboard/extraBottomPadding) matches the editor
+  * `useThemeBackground` refactored to use `syncEditorAppearanceToPage()` and to observe `.bn-container` for theme/appearance changes via MutationObserver; page background now follows editor theme
+  * Padding update in webViewHeightManager calls `syncEditorAppearanceToPage()` instead of inline background logic; removed debug console logging
+  * Default white background for html, body, #root in index.css and index.html so padding area matches before theme applies
+* Selection visibility and keyboard:
+  * When the keyboard is likely open (visual viewport height reduced), the visible area uses the visual viewport bottom so content under the keyboard is not considered visible; fixes scroll-up-when-typing
+  * New helper `getEffectiveVisibleBottom(rootRect)` in selectionVisibility
+* Checklist focus:
+  * New `setupChecklistBlurOnToggle(tiptapEditor)`: blurs the editor after the user toggles a checklist checkbox so the editor does not retain focus
+  * `useEditorReady` wires up checklist blur on toggle after focus listeners
+* WebView height manager: clarified that total bottom padding is always keyboard height + extraBottomPadding (additive); added `_clearDelayedRechecks()` for cleanup
+* Updated embedded web editor bundle (`assets/web/editor.js`, `assets/web/editor.css`)
+
 ## 0.0.18
 
 * Environment constraints:

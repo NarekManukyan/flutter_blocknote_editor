@@ -28,7 +28,103 @@ export function setTheme(theme) {
 }
 
 /**
+ * Syncs the editor's appearance (light/dark) and background color to the page so the bottom
+ * padding area (keyboard/extraBottomPadding) matches the editor. Uses .bn-container's
+ * data-color-scheme and --bn-colors-editor-background so it follows the editor's theme.
+ * Call this when padding is applied or when theme/appearance may have changed.
+ */
+export function syncEditorAppearanceToPage() {
+  try {
+    const container = document.querySelector('.bn-container');
+    const html = document.documentElement;
+    const body = document.body;
+    const root = document.getElementById('root');
+    if (!root) return;
+
+    if (!container) {
+      // Editor not mounted yet; use Flutter theme if available
+      const colors =
+        currentTheme?.colors || currentTheme?.light || currentTheme?.dark;
+      const editorBg = colors?.editor?.background;
+      if (editorBg) {
+        const c = editorBg.startsWith('#') ? editorBg : `#${editorBg}`;
+        html.style.backgroundColor = c;
+        body.style.backgroundColor = c;
+        root.style.backgroundColor = c;
+      }
+      return;
+    }
+
+    const scheme = container.getAttribute('data-color-scheme');
+    if (scheme) {
+      html.setAttribute('data-color-scheme', scheme);
+      root.setAttribute('data-color-scheme', scheme);
+    }
+
+    const computed = window.getComputedStyle(container);
+    let bg =
+      computed.getPropertyValue('--bn-colors-editor-background').trim() ||
+      computed.backgroundColor;
+    if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+      if (bg.startsWith('var(')) bg = null;
+      else if (bg && !bg.startsWith('#')) {
+        const hex = rgbToHex(bg);
+        if (hex) bg = hex;
+      }
+    }
+    if (!bg || bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') {
+      const editorEl = document.querySelector('.bn-editor');
+      if (editorEl) {
+        bg = window.getComputedStyle(editorEl).backgroundColor;
+        if (
+          bg &&
+          bg !== 'rgba(0, 0, 0, 0)' &&
+          bg !== 'transparent' &&
+          !bg.startsWith('var(')
+        ) {
+          const hex = rgbToHex(bg);
+          if (hex) bg = hex;
+        } else {
+          bg = null;
+        }
+      } else {
+        bg = null;
+      }
+    }
+    const color = bg || '#ffffff';
+    html.style.backgroundColor = color;
+    body.style.backgroundColor = color;
+    root.style.backgroundColor = color;
+  } catch {
+    // Fallback: ensure a default so padding area is never transparent
+    try {
+      const c = '#ffffff';
+      document.documentElement.style.backgroundColor = c;
+      document.body.style.backgroundColor = c;
+      const r = document.getElementById('root');
+      if (r) r.style.backgroundColor = c;
+    } catch {
+      // ignore
+    }
+  }
+}
+
+function rgbToHex(rgb) {
+  const m = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  if (!m) return null;
+  const hex = (x) => {
+    const h = parseInt(x, 10).toString(16);
+    return h.length === 1 ? '0' + h : h;
+  };
+  return '#' + hex(m[1]) + hex(m[2]) + hex(m[3]);
+}
+
+/** Buffer (px) added to detected keyboard height to account for safe area, browser chrome, and viewport timing. */
+const KEYBOARD_HEIGHT_BUFFER = 48;
+
+/**
  * Detects keyboard height using visualViewport API.
+ * Uses the obscured region (innerHeight minus visible region) and adds a buffer so padding is not 40–60px short.
  * @returns {number} Keyboard height in pixels, or 0 if keyboard is closed
  */
 function _detectKeyboardHeight() {
@@ -42,36 +138,42 @@ function _detectKeyboardHeight() {
     }
 
     // Update baseline when keyboard is clearly closed (large height)
-    // Only update if we're getting a significantly larger height
     if (layoutHeight > baselineHeight + 50) {
       baselineHeight = layoutHeight;
     }
 
     if (!visualViewport) {
-      // Fallback: use baseline comparison if visualViewport is not available
       if (baselineHeight && layoutHeight < baselineHeight - 100) {
         const calculatedHeight = baselineHeight - layoutHeight;
-        // Only return if the difference is significant (keyboard is likely open)
-        return calculatedHeight > 100 ? calculatedHeight : 0;
+        return calculatedHeight > 100
+          ? calculatedHeight + KEYBOARD_HEIGHT_BUFFER
+          : 0;
       }
       return 0;
     }
 
     const visualHeight = visualViewport.height;
-    const heightDiff = layoutHeight - visualHeight;
+    const visualBottom = visualViewport.offsetTop + visualHeight;
+    // When keyboard opens, WebView/layout often shrinks (innerHeight drops). Use baseline
+    // (pre-keyboard layout height) so we don't under-report keyboard height as layout shrinks.
+    const effectiveLayoutHeight =
+      baselineHeight && layoutHeight < baselineHeight - 50
+        ? baselineHeight
+        : layoutHeight;
+    const obscuredHeight = effectiveLayoutHeight - visualBottom;
+    const heightDiff = effectiveLayoutHeight - visualHeight;
 
-    // Keyboard is open if visual height is significantly less than layout height
-    // Use 50px threshold to account for browser UI and avoid false positives
+    // Keyboard is open if visual height is significantly less than layout height (50px threshold)
     if (heightDiff > 50) {
-      return heightDiff;
+      const rawHeight = Math.max(obscuredHeight, heightDiff, 0);
+      return rawHeight + KEYBOARD_HEIGHT_BUFFER;
     }
 
-    // Also check against baseline if available
-    // This helps catch cases where visualViewport might not update immediately
     if (baselineHeight && layoutHeight < baselineHeight - 100) {
       const calculatedHeight = baselineHeight - layoutHeight;
-      // Only return if the difference is significant
-      return calculatedHeight > 100 ? calculatedHeight : 0;
+      return calculatedHeight > 100
+        ? calculatedHeight + KEYBOARD_HEIGHT_BUFFER
+        : 0;
     }
 
     return 0;
@@ -80,25 +182,23 @@ function _detectKeyboardHeight() {
   }
 }
 
+/** Timeouts for delayed re-checks when extra padding is set (to pick up keyboard height after viewport updates). */
+let delayedRecheckTimeoutIds = [];
+
 /**
  * Updates the WebView bottom padding to ensure proper scrolling when keyboard opens.
+ * Total padding is always: detected keyboard height + extraBottomPadding (extra is additive).
  * Keyboard detection is handled internally using visualViewport API.
- * @param {number} extraBottomPadding - Extra bottom padding in pixels (optional, defaults to 0)
+ * @param {number} extraBottomPadding - Extra bottom padding in pixels (optional, defaults to 0). Always added to keyboard height.
  * @param {Object} editor - The BlockNote editor instance
  */
 export function updateWebViewHeight(extraBottomPadding, editor) {
   try {
-    // Store editor instance for keyboard listener
     editorInstance = editor;
 
-    // Default extraBottomPadding to 0 if not provided
     const padding = extraBottomPadding ?? 0;
-
-    // Detect keyboard height internally
     const keyboardHeight = _detectKeyboardHeight();
 
-    // Skip update if padding hasn't changed significantly (more than 5 pixels)
-    // This prevents excessive DOM updates during keyboard animations
     if (
       lastKeyboardHeight !== null &&
       lastExtraBottomPadding !== null &&
@@ -108,30 +208,51 @@ export function updateWebViewHeight(extraBottomPadding, editor) {
       return;
     }
 
-    // Update cached values
     lastKeyboardHeight = keyboardHeight;
     lastExtraBottomPadding = padding;
 
-    // Cancel any pending padding update
     if (heightUpdateRafId !== null) {
       cancelAnimationFrame(heightUpdateRafId);
     }
 
-    // Use requestAnimationFrame to batch DOM updates
     heightUpdateRafId = requestAnimationFrame(() => {
       heightUpdateRafId = null;
       _performPaddingUpdate(keyboardHeight, padding, editor);
     });
 
-    // Set up keyboard listener if not already set up
     if (!isKeyboardListenerSetup) {
       _setupKeyboardListener();
+    }
+
+    // When extra padding is provided, viewport may not have updated yet. Re-check after a delay
+    // so total padding = keyboard height + extra (we never use extra alone when keyboard is open).
+    if (padding > 0) {
+      _clearDelayedRechecks();
+      const runRecheck = () => {
+        const currentKeyboard = _detectKeyboardHeight();
+        if (
+          currentKeyboard !== lastKeyboardHeight ||
+          (lastKeyboardHeight === 0 && currentKeyboard > 0)
+        ) {
+          lastKeyboardHeight = currentKeyboard;
+          _performPaddingUpdate(currentKeyboard, padding, editor);
+        }
+      };
+      delayedRecheckTimeoutIds = [
+        setTimeout(runRecheck, 150),
+        setTimeout(runRecheck, 400),
+      ];
     }
   } catch (error) {
     if (window.BlockNoteDebugLogging) {
       console.error('[BlockNote] Error updating WebView padding:', error);
     }
   }
+}
+
+function _clearDelayedRechecks() {
+  delayedRecheckTimeoutIds.forEach((id) => clearTimeout(id));
+  delayedRecheckTimeoutIds = [];
 }
 
 /**
@@ -170,13 +291,12 @@ function _setupKeyboardListener() {
  */
 function _handleKeyboardChange() {
   if (editorInstance && lastExtraBottomPadding !== null) {
-    // Use requestAnimationFrame to debounce rapid changes
+    _clearDelayedRechecks();
     if (heightUpdateRafId !== null) {
       cancelAnimationFrame(heightUpdateRafId);
     }
     heightUpdateRafId = requestAnimationFrame(() => {
       heightUpdateRafId = null;
-      // Re-detect keyboard and update padding
       updateWebViewHeight(lastExtraBottomPadding, editorInstance);
     });
   }
@@ -184,6 +304,7 @@ function _handleKeyboardChange() {
 
 /**
  * Performs the actual bottom padding update DOM manipulation.
+ * Total padding is always keyboard height + extraBottomPadding (extra is additive; we never use extra alone when keyboard is open).
  * @private
  */
 function _performPaddingUpdate(keyboardHeight, extraBottomPadding, editor) {
@@ -192,7 +313,7 @@ function _performPaddingUpdate(keyboardHeight, extraBottomPadding, editor) {
     const body = document.body;
     const root = document.getElementById('root');
 
-    // Calculate total bottom padding (keyboard height + extra padding)
+    // Always add extra to keyboard height so both apply (never ignore keyboard when extra is provided)
     const totalBottomPadding = keyboardHeight + extraBottomPadding;
 
     // Set html and body to full height
@@ -220,218 +341,15 @@ function _performPaddingUpdate(keyboardHeight, extraBottomPadding, editor) {
       // 250ms matches typical keyboard animation duration
       root.style.transition = 'padding-bottom 0.25s ease-out';
 
-      // Get editor background color to ensure padding area matches
-      // Background color should already be set by useThemeBackground hook
-      // #region agent log
-      console.log('[DEBUG] Background color detection start', {
-        keyboardHeight,
-        totalBottomPadding,
-        hasRoot: !!root,
-        hypothesisId: 'A,B',
-      });
-      // #endregion
-      try {
-        const computedStyle = window.getComputedStyle(root);
-        const rootComputedBg = computedStyle.backgroundColor;
-        const rootStyleBg = root.style.backgroundColor;
-        const bodyComputedBg = window.getComputedStyle(
-          document.body,
-        ).backgroundColor;
-        const htmlComputedBg = window.getComputedStyle(
-          document.documentElement,
-        ).backgroundColor;
-
-        // Try to get background from BlockNote editor container element
-        // This is more reliable than root/body/html which might not have background set
-        let editorContainerBg = null;
-        try {
-          const editorContainer = document.querySelector('.bn-container');
-          if (editorContainer) {
-            editorContainerBg =
-              window.getComputedStyle(editorContainer).backgroundColor;
-          }
-        } catch {
-          // Ignore if editor container not found
-        }
-
-        // Try to get background from BlockNoteView wrapper
-        let editorViewBg = null;
-        try {
-          const editorView =
-            document.querySelector('[data-blocknote-view]') ||
-            document.querySelector('.bn-block-content') ||
-            document.querySelector('.bn-editor');
-          if (editorView) {
-            editorViewBg = window.getComputedStyle(editorView).backgroundColor;
-          }
-        } catch {
-          // Ignore if editor view not found
-        }
-
-        // Helper function to check if a color is valid (non-transparent)
-        const isValidColor = (color) => {
-          return (
-            color &&
-            color !== 'rgba(0, 0, 0, 0)' &&
-            color !== 'transparent' &&
-            color !== 'initial' &&
-            color !== 'inherit' &&
-            color !== ''
-          );
-        };
-
-        // Try to get background color from theme object first (highest priority)
-        // This ensures we use the actual theme color even if useThemeBackground hasn't applied it yet
-        let themeBgColor = null;
-        if (currentTheme) {
-          try {
-            const colors =
-              currentTheme.colors || currentTheme.light || currentTheme.dark;
-            const editorBackground = colors?.editor?.background;
-            if (editorBackground) {
-              themeBgColor = editorBackground.startsWith('#')
-                ? editorBackground
-                : `#${editorBackground}`;
-            }
-          } catch {
-            // Ignore if theme parsing fails
-          }
-        }
-
-        // Priority: theme > editor container > editor view > root computed > root style > body > html
-        // Only use colors that are valid (non-transparent)
-        let bgColor = null;
-        if (isValidColor(themeBgColor)) {
-          bgColor = themeBgColor;
-        } else if (isValidColor(editorContainerBg)) {
-          bgColor = editorContainerBg;
-        } else if (isValidColor(editorViewBg)) {
-          bgColor = editorViewBg;
-        } else if (isValidColor(rootComputedBg)) {
-          bgColor = rootComputedBg;
-        } else if (isValidColor(rootStyleBg)) {
-          bgColor = rootStyleBg;
-        } else if (isValidColor(bodyComputedBg)) {
-          bgColor = bodyComputedBg;
-        } else if (isValidColor(htmlComputedBg)) {
-          bgColor = htmlComputedBg;
-        }
-
-        // #region agent log
-        console.log('[DEBUG] Background colors detected', {
-          rootComputedBg,
-          rootStyleBg,
-          bodyComputedBg,
-          htmlComputedBg,
-          editorContainerBg,
-          editorViewBg,
-          themeBgColor,
-          hasTheme: !!currentTheme,
-          selectedBgColor: bgColor,
-          isValid:
-            bgColor &&
-            bgColor !== 'rgba(0, 0, 0, 0)' &&
-            bgColor !== 'transparent' &&
-            bgColor !== 'initial' &&
-            bgColor !== 'inherit',
-          hypothesisId: 'A,B',
-        });
-        // #endregion
-
-        // Ensure root, body, and html all have background color set
-        // This ensures padding area matches editor background
-        // If no valid color found, use white as fallback (default editor background)
-        if (isValidColor(bgColor)) {
-          root.style.backgroundColor = bgColor;
-          // Also ensure body and html have the same background
-          // This prevents white space showing through padding
-          body.style.backgroundColor = bgColor;
-          html.style.backgroundColor = bgColor;
-          // #region agent log
-          console.log('[DEBUG] Background color applied', {
-            bgColor,
-            appliedToRoot: true,
-            appliedToBody: true,
-            appliedToHtml: true,
-            hypothesisId: 'B',
-          });
-          // #endregion
-        } else {
-          // Fallback: use white background if no valid color found
-          // This prevents white space from showing through padding
-          const fallbackBg = '#ffffff';
-          root.style.backgroundColor = fallbackBg;
-          body.style.backgroundColor = fallbackBg;
-          html.style.backgroundColor = fallbackBg;
-          // #region agent log
-          console.log('[DEBUG] Background color invalid, using fallback', {
-            bgColor,
-            rootComputedBg,
-            rootStyleBg,
-            bodyComputedBg,
-            editorContainerBg,
-            editorViewBg,
-            fallbackBg,
-            hypothesisId: 'A',
-          });
-          // #endregion
-        }
-      } catch (error) {
-        // #region agent log
-        console.log('[DEBUG] Error getting background color', {
-          error: error?.message,
-          hypothesisId: 'A',
-        });
-        // #endregion
-        // Fallback: set white background on error
-        try {
-          const fallbackBg = '#ffffff';
-          root.style.backgroundColor = fallbackBg;
-          body.style.backgroundColor = fallbackBg;
-          html.style.backgroundColor = fallbackBg;
-        } catch {
-          // Silently fail
-        }
-      }
-
-      // #region agent log
-      console.log('[DEBUG] Padding about to be set', {
-        keyboardHeight,
-        extraBottomPadding,
-        totalBottomPadding,
-        rootFinalBg: root?.style?.backgroundColor,
-        bodyFinalBg: body?.style?.backgroundColor,
-        htmlFinalBg: html?.style?.backgroundColor,
-        hypothesisId: 'C,D',
-      });
-      // #endregion
+      // Sync page background to editor appearance (light/dark) and color from .bn-container
+      syncEditorAppearanceToPage();
 
       // Only apply padding if keyboard is actually open or extra padding is provided
       // This prevents white space when keyboard closes
       if (keyboardHeight > 0 || extraBottomPadding > 0) {
         root.style.paddingBottom = `${totalBottomPadding}px`;
-        // #region agent log
-        console.log('[DEBUG] Padding applied', {
-          totalBottomPadding,
-          keyboardHeight,
-          extraBottomPadding,
-          rootBgAfter: root.style.backgroundColor,
-          bodyBgAfter: body.style.backgroundColor,
-          htmlBgAfter: html.style.backgroundColor,
-          rootComputedBgAfter: window.getComputedStyle(root).backgroundColor,
-          hypothesisId: 'C,D',
-        });
-        // #endregion
       } else {
-        // Remove padding when keyboard is closed and no extra padding
         root.style.paddingBottom = '0px';
-        // #region agent log
-        console.log('[DEBUG] Padding removed', {
-          keyboardHeight,
-          extraBottomPadding,
-          hypothesisId: 'C',
-        });
-        // #endregion
       }
     }
 

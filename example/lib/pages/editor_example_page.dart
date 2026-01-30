@@ -157,6 +157,7 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('BlockNote Editor Example'),
@@ -380,6 +381,7 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
                                 EditorConfig.createCustomSlashCommands())
                             : null,
                     onLinkTapped: _handleLinkTap,
+                    extraBottomPadding: 500,
                   )
                 : const Center(child: CircularProgressIndicator()),
           ),

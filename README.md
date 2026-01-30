@@ -175,6 +175,50 @@ iOS requires App Transport Security (ATS) configuration to allow HTTP connection
 
 ## Usage
 
+### Keyboard and WebView (Scaffold)
+
+For smooth keyboard behavior (correct bottom padding and no scroll jump when typing), **disable** the Scaffold’s resize-to-avoid-bottom-inset so the WebView handles keyboard height itself:
+
+```dart
+Scaffold(
+  resizeToAvoidBottomInset: false, // Let the WebView handle keyboard padding
+  body: BlockNoteEditor(
+    initialDocument: BlockNoteDocument.empty(),
+    onReady: (controller) {},
+  ),
+)
+```
+
+If you leave `resizeToAvoidBottomInset` at its default (`true`), the scaffold will resize when the keyboard opens, which can conflict with the WebView’s own padding and cause a ~40–60px gap or the content jumping when you type.
+
+### BlockNoteEditor parameters
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `initialDocument` | Yes | The initial document to load into the editor. |
+| `onTransactions` | No | Callback invoked when new transactions are available (batched). |
+| `onReady` | No | Callback invoked when the editor is ready; receives `BlockNoteController`. |
+| `readOnly` | No | Whether the editor is read-only. Default: `false`. |
+| `debugLogging` | No | Enable debug logging. Default: `false`. |
+| `localhostUrl` | No | URL for serving built assets (e.g. Vite preview). If null, uses bundled assets. |
+| `theme` | No | Theme configuration for colors, fonts, and styling. |
+| `toolbarConfig` | No | Toolbar configuration for formatting toolbar buttons. |
+| `slashCommandConfig` | No | Slash command configuration for slash menu items. |
+| `schemaConfig` | No | Schema configuration for custom blocks, inline content, or styles. |
+| `schemaConfigs` | No | Schema configurations keyed by identifier; use with `activeSchemaId`. |
+| `activeSchemaId` | No | Active schema identifier used with `schemaConfigs`. |
+| `customJavaScript` | No | Custom JavaScript to run in the editor context. |
+| `customJavaScriptAssetPaths` | No | Asset paths for custom JavaScript files. |
+| `customCss` | No | Custom CSS to inject (e.g. `@font-face`). |
+| `customCssAssetPaths` | No | Asset paths for custom CSS files. |
+| `onToolbarPopupRequest` | No | Callback when a toolbar popup is clicked (e.g. color, block type). |
+| `transactionDebounceDuration` | No | Debounce duration for batching transactions. Default: 400 ms. |
+| `onLinkTapped` | No | Callback when a link is tapped in the editor (URL passed). |
+| `extraBottomPadding` | No | Extra bottom padding in logical pixels (added to keyboard height). Default: `0`. |
+| `loading` | No | Show loading skeleton overlay. Default: `false`. |
+| `skeletonBackgroundColor` | No | Custom background color for the loading skeleton. |
+| `skeletonShimmerColor` | No | Custom color for the loading skeleton shimmer. |
+
 ### Basic Usage
 
 Simple editor with empty document:

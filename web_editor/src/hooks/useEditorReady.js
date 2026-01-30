@@ -14,6 +14,7 @@ import {
   getSelectionVisibility,
   scrollSelectionIntoView,
   setupFocusListeners,
+  setupChecklistBlurOnToggle,
 } from '../utils/selectionVisibility';
 import {
   createInitialOperations,
@@ -245,6 +246,9 @@ export function useEditorReady(
 
         // Set up focus listeners
         setupFocusListeners(tiptapEditor, getSelectionVisibilityFn);
+
+        // Blur editor when user toggles a checklist checkbox so the editor does not retain focus
+        setupChecklistBlurOnToggle(tiptapEditor);
       }
     }
 
