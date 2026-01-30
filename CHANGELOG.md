@@ -1,3 +1,13 @@
+## 0.0.18
+
+* Environment constraints:
+  * SDK: `^3.10.7` → `^3.8.0` (support Dart 3.8.x and up)
+  * Flutter: `>=1.17.0` → `>=3.32.0` (align with current Flutter stable)
+* Slash command handler: removed deprecated `onItemClick` requirement:
+  * `BlockNoteSlashCommandItem` accepts optional [onItemClick] (inline JS) and optional [onItemClickScriptPath] (asset path to a JS file); at least one must be provided (assert)
+  * When both are set, file takes priority when resolving; if the file cannot be loaded, inline is used
+  * `toJsonResolved()`: loads script path first, falls back to inline on load failure
+
 ## 0.0.17
 
 * Slash command icons: flexible support for custom icons (like custom block types):

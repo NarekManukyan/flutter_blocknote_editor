@@ -214,41 +214,46 @@ class BlockNoteSlashCommandIconImage extends BlockNoteSlashCommandIcon {
 /// Slash command item configuration.
 class BlockNoteSlashCommandItem {
   /// Creates a new slash command item.
-  const BlockNoteSlashCommandItem({
+  ///
+  /// Provide exactly one of [onItemClick] (inline JS) or [onItemClickScriptPath]
+  /// (asset path to a JS file). When both are provided, file is used first at
+  /// resolution time; if the file cannot be loaded, inline is used.
+  BlockNoteSlashCommandItem({
     required this.title,
-    @Deprecated('Prefer onItemClickScriptPath to load handler from a JS file')
-    required this.onItemClick,
+    this.onItemClick,
     this.onItemClickScriptPath,
     this.subtext,
     this.badge,
     this.aliases,
     this.group,
     this.icon,
-  });
+  }) : assert(
+          (onItemClick != null && onItemClick.isNotEmpty) ||
+              (onItemClickScriptPath != null &&
+                  onItemClickScriptPath.isNotEmpty),
+          'Either onItemClick or onItemClickScriptPath must be provided',
+        );
 
   /// Title of the command item.
   final String title;
 
-  /// JavaScript function code to execute when the item is clicked.
+  /// Inline JavaScript code to execute when the item is clicked.
   ///
-  /// **Deprecated:** Prefer [onItemClickScriptPath] to load handler code from
-  /// a JS file (like [customJavaScriptAssetPaths] for block types).
+  /// The code is evaluated with `editor` in scope. Use for short handlers.
+  /// Prefer [onItemClickScriptPath] for longer or reusable handlers.
   ///
-  /// This should be a string containing JavaScript code that will be
-  /// evaluated. The code has access to the `editor` variable.
-  ///
-  /// Ignored when [onItemClickScriptPath] is set (handler is loaded from
-  /// that asset instead).
-  ///
-  /// Example: "editor.insertBlocks([{type: 'paragraph', content: 'Hello'}], editor.getTextCursorPosition().block, 'after');"
-  @Deprecated('Prefer onItemClickScriptPath to load handler from a JS file')
-  final String onItemClick;
+  /// Either [onItemClick] or [onItemClickScriptPath] must be provided.
+  /// When both are set, [onItemClickScriptPath] takes priority when
+  /// resolving; if the file cannot be loaded, this value is used.
+  final String? onItemClick;
 
   /// Asset path to a JavaScript file whose content is used as the click handler.
   ///
   /// When set, the file is loaded and its content is evaluated when the item
-  /// is clicked (with `editor` in scope), like [customJavaScriptAssetPaths].
-  /// Use this for longer or reusable handlers instead of inline [onItemClick].
+  /// is clicked (with `editor` in scope). Takes priority over [onItemClick]
+  /// when resolving; if the file cannot be loaded, [onItemClick] is used.
+  ///
+  /// Either [onItemClick] or [onItemClickScriptPath] must be provided.
   final String? onItemClickScriptPath;
 
   /// Subtitle text (optional).
@@ -574,10 +579,19 @@ class BlockNoteSlashCommandItem {
         : iconJson is String
             ? iconJson
             : BlockNoteSlashCommandIcon.fromJson(iconJson);
+    final title = json['title'] as String? ?? '';
+    final parsedInline = json['onItemClick'] as String?;
+    final parsedPath = json['onItemClickScriptPath'] as String?;
+    final hasInline = parsedInline != null && parsedInline.isNotEmpty;
+    final hasPath = parsedPath != null && parsedPath.isNotEmpty;
+    final String? onItemClick = hasInline
+        ? parsedInline
+        : (hasPath ? null : 'void 0;'); // no-op when neither in JSON
+    final String? onItemClickScriptPath = hasPath ? parsedPath : null;
     return BlockNoteSlashCommandItem(
-      title: json['title'] as String? ?? '',
-      onItemClick: json['onItemClick'] as String? ?? '',
-      onItemClickScriptPath: json['onItemClickScriptPath'] as String?,
+      title: title,
+      onItemClick: onItemClick,
+      onItemClickScriptPath: onItemClickScriptPath,
       subtext: json['subtext'] as String?,
       badge: json['badge'] as String?,
       aliases: (json['aliases'] as List<dynamic>?)
@@ -590,10 +604,10 @@ class BlockNoteSlashCommandItem {
 
   /// Converts this slash command item to JSON.
   Map<String, dynamic> toJson() {
-    final json = <String, dynamic>{
-      'title': title,
-      'onItemClick': onItemClick,
-    };
+    final json = <String, dynamic>{'title': title};
+    if (onItemClick != null) {
+      json['onItemClick'] = onItemClick;
+    }
     if (onItemClickScriptPath != null) {
       json['onItemClickScriptPath'] = onItemClickScriptPath;
     }
@@ -777,8 +791,9 @@ class BlockNoteSlashCommandConfig {
 
   /// Converts this config to JSON with [onItemClickScriptPath] resolved.
   ///
-  /// For each item that has [onItemClickScriptPath], loads the asset and
-  /// replaces it with the file content in `onItemClick`. Use this before
+  /// For each item: if [onItemClickScriptPath] is set, loads the asset and
+  /// uses its content for `onItemClick`; if the file cannot be loaded, uses
+  /// [onItemClick] if set. Otherwise uses [onItemClick]. Use this before
   /// sending config to the web view.
   Future<Map<String, dynamic>> toJsonResolved() async {
     final json = toJson();
@@ -788,11 +803,21 @@ class BlockNoteSlashCommandConfig {
     final resolvedItems = <Map<String, dynamic>>[];
     for (final item in items!) {
       final map = item.toJson();
+      String? resolvedHandler;
       if (item.onItemClickScriptPath != null) {
-        final content = await rootBundle.loadString(item.onItemClickScriptPath!);
-        map['onItemClick'] = content;
-        map.remove('onItemClickScriptPath');
+        try {
+          resolvedHandler =
+              await rootBundle.loadString(item.onItemClickScriptPath!);
+        } catch (_) {
+          resolvedHandler = item.onItemClick;
+        }
+      } else {
+        resolvedHandler = item.onItemClick;
       }
+      if (resolvedHandler != null) {
+        map['onItemClick'] = resolvedHandler;
+      }
+      map.remove('onItemClickScriptPath');
       resolvedItems.add(map);
     }
     json['items'] = resolvedItems;

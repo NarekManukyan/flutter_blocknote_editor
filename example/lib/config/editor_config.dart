@@ -125,12 +125,20 @@ class EditorConfig {
         ),
         BlockNoteSlashCommandItem(
           title: 'Insert current date',
-          onItemClick: '',
           onItemClickScriptPath: 'assets/slash_insert_date.js',
           aliases: ['date', 'today'],
-          group: 'Custom',
+          group: 'Click handlers',
           subtext: 'Handler from JS file (onItemClickScriptPath)',
           icon: '📅',
+        ),
+        BlockNoteSlashCommandItem(
+          title: 'Insert clicked',
+          onItemClick:
+              "editor.insertBlocks([{type: 'paragraph', content: [{type: 'text', text: 'Clicked!'}]}], editor.getTextCursorPosition().block, 'after');",
+          aliases: ['clicked', 'click'],
+          group: 'Click handlers',
+          subtext: 'Handler from inline JS (onItemClick)',
+          icon: '⚡',
         ),
       ],
     );
