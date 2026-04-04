@@ -73,6 +73,17 @@ example/          # Example Flutter app demonstrating all features
 
 test/
 └── blocknotejs_test.dart   # Unit tests for document/transaction serialization
+
+web_editor/              # React/Vite source for the bundled JS editor
+├── src/
+│   ├── main.jsx                    # Entry point
+│   ├── App.jsx                     # Root React component
+│   ├── hooks/                      # React hooks (useBlockNoteEditor, useFlutterMessages, etc.)
+│   ├── handlers/messageHandlers.js # JS→Flutter message routing
+│   ├── utils/                      # blockDiff, transactionSender, documentLoader, etc.
+│   └── *.test.js                   # Vitest unit tests
+├── vite.config.js                  # Vite build config
+└── package.json                    # Node deps (@blocknote/*, React 19, Vite, Vitest)
 ```
 
 ## Architecture
@@ -136,7 +147,11 @@ Run with: `flutter test`
 4. Update `BlockNoteController` if it needs programmatic access
 
 ### Updating the web editor bundle
-The files in `assets/web/` (editor.js, editor.css) are pre-built bundles of the BlockNoteJS editor. These are generated externally and committed as assets.
+The files in `assets/web/` (editor.js, editor.css) are pre-built from the React app in `web_editor/`:
+```bash
+cd web_editor && npm install && npm run build:minified
+```
+The build output is copied to `assets/web/` and committed. The web editor has its own Vitest tests: `cd web_editor && npm test`.
 
 ### Versioning
 - Version in `pubspec.yaml`
