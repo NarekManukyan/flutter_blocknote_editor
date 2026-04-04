@@ -1,20 +1,11 @@
 /**
  * Error display component.
- * Extracted from App.jsx to reduce complexity.
  */
 
-import React from 'react';
-import PropTypes from 'prop-types';
-
 /**
- * Render a full-page error view showing a message and a reload control.
- *
- * The displayed message is the provided `error` string. Activating the "Reload"
- * button will reload the current page.
- *
- * @param {Object} props
- * @param {string} props.error - Error message to display.
- * @returns {JSX.Element} The rendered error view.
+ * Render a full-page error view with a reload control.
+ * @param {{ error: string }} props
+ * @returns {JSX.Element}
  */
 export function ErrorDisplay({ error }) {
   return (
@@ -42,7 +33,3 @@ export function ErrorDisplay({ error }) {
     </div>
   );
 }
-
-ErrorDisplay.propTypes = {
-  error: PropTypes.string.isRequired,
-};

@@ -4,24 +4,24 @@
 
 /**
  * Handles toolbar popup response from Flutter.
- * @param {Object} message - Message from Flutter
- * @param {Object} toolbarPopupCallbacksRef - Ref to store popup callbacks
+ * @param {Object} message - Message from Flutter with requestId and selectedValue
+ * @param {Map} toolbarPopupCallbacks - Map storing popup callbacks by requestId
  */
-export function handleToolbarPopupResponse(message, toolbarPopupCallbacksRef) {
+export function handleToolbarPopupResponse(message, toolbarPopupCallbacks) {
   const { requestId, selectedValue } = message;
-  const callback = toolbarPopupCallbacksRef.current.get(requestId);
-  if (callback) {
-    // Handle the case where selectedValue might be a JSON string that needs parsing
-    let processedValue = selectedValue;
-    if (typeof selectedValue === 'string' && selectedValue.startsWith('{')) {
-      try {
-        processedValue = JSON.parse(selectedValue);
-      } catch {
-        // If parsing fails, use the string as-is
-        processedValue = selectedValue;
-      }
+  const callback = toolbarPopupCallbacks.get(requestId);
+  if (!callback) return;
+
+  // Parse JSON string values if needed
+  let processedValue = selectedValue;
+  if (typeof selectedValue === 'string' && selectedValue.startsWith('{')) {
+    try {
+      processedValue = JSON.parse(selectedValue);
+    } catch {
+      // Use string as-is if parsing fails
     }
-    callback(processedValue);
-    toolbarPopupCallbacksRef.current.delete(requestId);
   }
+
+  callback(processedValue);
+  toolbarPopupCallbacks.delete(requestId);
 }
