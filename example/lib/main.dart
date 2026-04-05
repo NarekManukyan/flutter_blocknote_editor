@@ -6,7 +6,7 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   // Pre-warm the editor WebView so modals and subsequent editor instances
   // display instantly without loading delay.
-  BlockNoteEditorPool.instance.warmup();
+  BlockNoteEditorPool.instance.warmup(debugLogging: true);
   runApp(const MyApp());
 }
 

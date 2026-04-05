@@ -140,6 +140,10 @@ class BlockNoteEditorPool {
                   )
                   : null,
         ),
+        shouldOverrideUrlLoading: (controller, navigationAction) async {
+          // Allow all navigation during warmup - the page must load.
+          return NavigationActionPolicy.ALLOW;
+        },
         onWebViewCreated: (controller) {
           warmController = controller;
 
