@@ -2,35 +2,41 @@
 library;
 
 import 'package:flutter/foundation.dart';
-import 'asset_server.dart';
+import 'asset_loader.dart';
 
 /// WebView initialization result.
 class WebViewInitializationResult {
   /// Creates a new initialization result.
   const WebViewInitializationResult({
     required this.url,
-    required this.assetServer,
+    this.assetLoader,
   });
 
   /// The URL to load in the WebView.
+  ///
+  /// This is either a file:// URL pointing to the local assets directory,
+  /// or an external HTTP URL when [localhostUrl] is provided.
   final String url;
 
-  /// The asset server instance (null if using external localhost).
-  final AssetServer? assetServer;
+  /// The asset loader instance (null if using external localhost).
+  ///
+  /// Must be disposed when the editor is disposed.
+  final AssetLoader? assetLoader;
 }
 
 /// Initializes the WebView and determines the URL to load.
 class WebViewInitializer {
   /// Initializes the WebView and returns the URL to load.
   ///
-  /// If [localhostUrl] is provided, uses that URL directly.
-  /// Otherwise, starts a Flutter asset server to serve bundled assets.
+  /// If [localhostUrl] is provided, uses that URL directly (for development).
+  /// Otherwise, copies bundled assets to a temp directory and returns a
+  /// file:// URL for direct WebView loading — no HTTP server needed.
   static Future<WebViewInitializationResult> initialize({
     required String? localhostUrl,
     required bool debugLogging,
   }) async {
     String url;
-    AssetServer? assetServer;
+    AssetLoader? assetLoader;
 
     if (localhostUrl != null) {
       // External localhost URL (for development/preview)
@@ -41,17 +47,18 @@ class WebViewInitializer {
       }
       url = localhostUrl;
     } else {
-      // Start Flutter asset server to serve built files
+      // Copy assets to temp directory and load directly via file://
       if (debugLogging) {
-        debugPrint('[BlockNoteEditor] Starting Flutter asset server...');
+        debugPrint('[BlockNoteEditor] Loading assets directly via file://...');
       }
-      assetServer = AssetServer(debugLogging: debugLogging);
-      url = await assetServer.start();
+      assetLoader = AssetLoader(debugLogging: debugLogging);
+      final indexPath = await assetLoader.load();
+      url = Uri.file(indexPath).toString();
       if (debugLogging) {
-        debugPrint('[BlockNoteEditor] Asset server started: $url');
+        debugPrint('[BlockNoteEditor] Assets ready: $url');
       }
     }
 
-    return WebViewInitializationResult(url: url, assetServer: assetServer);
+    return WebViewInitializationResult(url: url, assetLoader: assetLoader);
   }
 }
