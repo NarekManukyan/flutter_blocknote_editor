@@ -9,57 +9,72 @@ import {
 } from '@blocknote/react';
 import { filterSuggestionItems } from '@blocknote/core/extensions';
 
-const SLASH_ICON_SIZE = '1em';
+/** Match the default BlockNote icon size (18px) */
+const SLASH_ICON_SIZE = 18;
 
 /**
  * Renders a slash command icon from Flutter config.
+ * All icons are wrapped in an SVG-sized container matching BlockNote's default
+ * icon dimensions (18×18px) so they render consistently alongside default items.
+ *
  * Supports: string (emoji/text), or object { type: 'text'|'svg'|'image', value|content|url }.
  * @param {string|object|null} itemIcon - Icon from item.icon
  * @returns {JSX.Element|undefined}
  */
 function renderSlashCommandIcon(itemIcon) {
   if (itemIcon == null) return undefined;
+
+  // Common wrapper style matching default icon sizing
+  const wrapperStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: SLASH_ICON_SIZE,
+    height: SLASH_ICON_SIZE,
+    minWidth: SLASH_ICON_SIZE,
+    minHeight: SLASH_ICON_SIZE,
+    flexShrink: 0,
+    fontSize: SLASH_ICON_SIZE,
+    lineHeight: 1,
+  };
+
   // Backward compat: plain string (emoji or text)
   if (typeof itemIcon === 'string') {
-    return <span>{itemIcon}</span>;
+    return <div style={wrapperStyle}>{itemIcon}</div>;
   }
   if (typeof itemIcon !== 'object') return undefined;
   switch (itemIcon.type) {
     case 'text':
       return (
-        <span>{itemIcon.value != null ? String(itemIcon.value) : ''}</span>
+        <div style={wrapperStyle}>
+          {itemIcon.value != null ? String(itemIcon.value) : ''}
+        </div>
       );
     case 'svg':
       if (itemIcon.content == null) return undefined;
       return (
         <div
           className="bn-slash-icon-svg"
-          style={{
-            display: 'inline-flex',
-            width: SLASH_ICON_SIZE,
-            height: SLASH_ICON_SIZE,
-            minWidth: SLASH_ICON_SIZE,
-            minHeight: SLASH_ICON_SIZE,
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-          }}
+          style={wrapperStyle}
           dangerouslySetInnerHTML={{ __html: itemIcon.content }}
         />
       );
     case 'image':
       if (itemIcon.url == null) return undefined;
       return (
-        <img
-          src={itemIcon.url}
-          alt=""
-          className="bn-slash-icon-image"
-          style={{
-            width: SLASH_ICON_SIZE,
-            height: SLASH_ICON_SIZE,
-            objectFit: 'contain',
-          }}
-        />
+        <div style={wrapperStyle}>
+          <img
+            src={itemIcon.url}
+            alt=""
+            className="bn-slash-icon-image"
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              display: 'block',
+            }}
+          />
+        </div>
       );
     default:
       return undefined;

@@ -2,13 +2,13 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
+  useReducer,
   useRef,
   useState,
 } from 'react';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
 import '@blocknote/core/fonts/inter.css';
-import PropTypes from 'prop-types';
 import { useBlockNoteEditor } from './hooks/useBlockNoteEditor';
 import { useEditorReady } from './hooks/useEditorReady';
 import { useFlutterMessages } from './hooks/useFlutterMessages';
@@ -21,6 +21,31 @@ import { buildFormattingToolbar } from './utils/toolbarBuilder.jsx';
 import { buildSlashMenuItems } from './utils/slashMenuBuilder.jsx';
 import { buildBlockNoteTheme } from './utils/themeBuilder';
 import { ErrorDisplay } from './components/ErrorDisplay';
+
+// --- Schema state reducer ---
+
+const SCHEMA_ACTIONS = {
+  SET_CONFIG: 'SET_CONFIG',
+  SET_READY: 'SET_READY',
+  SET_REQUIRED: 'SET_REQUIRED',
+};
+
+function schemaReducer(state, action) {
+  switch (action.type) {
+    case SCHEMA_ACTIONS.SET_CONFIG:
+      return { ...state, config: action.payload };
+    case SCHEMA_ACTIONS.SET_READY:
+      return { ...state, ready: action.payload };
+    case SCHEMA_ACTIONS.SET_REQUIRED:
+      return { ...state, required: action.payload };
+    default:
+      return state;
+  }
+}
+
+const initialSchemaState = { config: null, ready: false, required: true };
+
+// --- Error Boundary ---
 
 class BlockNoteErrorBoundary extends React.Component {
   constructor(props) {
@@ -38,9 +63,7 @@ class BlockNoteErrorBoundary extends React.Component {
 
   render() {
     const { error } = this.state;
-    if (!error) {
-      return this.props.children;
-    }
+    if (!error) return this.props.children;
 
     return (
       <div
@@ -67,37 +90,21 @@ class BlockNoteErrorBoundary extends React.Component {
   }
 }
 
-BlockNoteErrorBoundary.propTypes = {
-  children: PropTypes.node.isRequired,
-};
+// --- Editor Host (manages editor instance lifecycle) ---
 
 function EditorHost({ schemaConfig, onEditorChange }) {
   const editor = useBlockNoteEditor(schemaConfig);
 
   useEffect(() => {
     onEditorChange(editor);
-    return () => {
-      onEditorChange(null);
-    };
+    return () => onEditorChange(null);
   }, [editor, onEditorChange]);
 
   return null;
 }
 
-EditorHost.propTypes = {
-  schemaConfig: PropTypes.object,
-  onEditorChange: PropTypes.func.isRequired,
-};
+// --- Main App ---
 
-/**
- * Top-level React component that hosts and manages the BlockNote editor and its UI.
- *
- * Manages editor lifecycle and readiness, wires external (Flutter) message handling,
- * applies theming to the page, and chooses between editor view, loading display,
- * or error display based on current state and configuration.
- *
- * @returns {JSX.Element} The rendered React element tree for the BlockNote application.
- */
 function App() {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -105,20 +112,19 @@ function App() {
   const [theme, setTheme] = useState(null);
   const [toolbarConfig, setToolbarConfig] = useState(null);
   const [slashCommandConfig, setSlashCommandConfig] = useState(null);
-  const [schemaConfig, setSchemaConfig] = useState(null);
-  const [schemaConfigReady, setSchemaConfigReady] = useState(false);
-  const [schemaConfigRequired, setSchemaConfigRequired] = useState(true);
+  const [schema, dispatchSchema] = useReducer(schemaReducer, initialSchemaState);
   const [editor, setEditor] = useState(null);
-  const documentVersionRef = useRef(0);
-  const hasLoadedDocumentRef = useRef(false);
-  const toolbarPopupCallbacksRef = useRef(new Map());
-  const pendingDocumentRef = useRef(null);
-  const schemaChangePendingRef = useRef(false);
 
-  const shouldRenderEditor = useMemo(
-    () => schemaConfigReady || !schemaConfigRequired,
-    [schemaConfigReady, schemaConfigRequired],
-  );
+  // Refs for mutable cross-hook state
+  const refs = useRef({
+    documentVersion: 0,
+    hasLoadedDocument: false,
+    toolbarPopupCallbacks: new Map(),
+    pendingDocument: null,
+    schemaChangePending: false,
+  }).current;
+
+  const shouldRenderEditor = schema.ready || !schema.required;
 
   const updateEditor = useCallback((nextEditor) => {
     setEditor(nextEditor ?? null);
@@ -126,76 +132,47 @@ function App() {
 
   const allowMissingEditor = !shouldRenderEditor || !editor;
 
-  // Handle editor ready state
   const isReady = useEditorReady(
     editor,
-    documentVersionRef,
+    refs,
     setIsLoading,
     setError,
     allowMissingEditor,
   );
 
-  // Set up Flutter message handling
   useFlutterMessages(
     editor,
-    setIsReadonly,
-    setTheme,
-    setToolbarConfig,
-    setSlashCommandConfig,
-    setSchemaConfig,
-    setSchemaConfigReady,
-    setSchemaConfigRequired,
-    documentVersionRef,
-    hasLoadedDocumentRef,
-    toolbarPopupCallbacksRef,
-    pendingDocumentRef,
-    schemaChangePendingRef,
+    { setIsReadonly, setTheme, setToolbarConfig, setSlashCommandConfig },
+    { dispatchSchema, SCHEMA_ACTIONS },
+    refs,
   );
 
+  // Load pending document after editor + schema are ready
   useEffect(() => {
-    if (!editor || !pendingDocumentRef.current) {
-      return;
-    }
+    if (!editor || !refs.pendingDocument) return;
 
-    loadDocument(
-      editor,
-      pendingDocumentRef.current,
-      documentVersionRef,
-      hasLoadedDocumentRef,
-    );
-    pendingDocumentRef.current = null;
-    schemaChangePendingRef.current = false;
-  }, [editor, documentVersionRef, hasLoadedDocumentRef]);
+    loadDocument(editor, refs.pendingDocument, refs);
+    refs.pendingDocument = null;
+    refs.schemaChangePending = false;
+  }, [editor, refs]);
 
-  // Set up toolbar popup interception
-  useToolbarPopup(editor, isReady, toolbarPopupCallbacksRef);
-
-  // Ensure popup portals can render correctly
+  useToolbarPopup(editor, isReady, refs.toolbarPopupCallbacks);
   usePopupPortals();
-
-  // Set up link tap handler
   useLinkTapHandler(editor);
 
-  // Memoize toolbar and slash menu components to prevent unnecessary rebuilds
-  const useCustomToolbar = useMemo(
-    () =>
-      toolbarConfig && toolbarConfig.buttons && toolbarConfig.enabled !== false,
-    [toolbarConfig],
-  );
+  // Memoize toolbar component
+  const useCustomToolbar =
+    toolbarConfig?.buttons && toolbarConfig.enabled !== false;
   const formattingToolbarComponent = useMemo(
     () => (useCustomToolbar ? buildFormattingToolbar(toolbarConfig) : null),
     [useCustomToolbar, toolbarConfig],
   );
 
-  const useCustomSlashMenu = useMemo(
-    () =>
-      slashCommandConfig &&
-      slashCommandConfig.enabled !== false &&
-      (slashCommandConfig.items ||
-        (slashCommandConfig.availableSlashCommands &&
-          slashCommandConfig.availableSlashCommands.length > 0)),
-    [slashCommandConfig],
-  );
+  // Memoize slash menu component
+  const useCustomSlashMenu =
+    slashCommandConfig?.enabled !== false &&
+    (slashCommandConfig?.items ||
+      slashCommandConfig?.availableSlashCommands?.length > 0);
   const slashMenuComponent = useMemo(
     () =>
       useCustomSlashMenu
@@ -204,19 +181,14 @@ function App() {
     [useCustomSlashMenu, slashCommandConfig, editor],
   );
 
+  // Cleanup editor when schema rendering changes
   useEffect(() => {
-    if (!shouldRenderEditor) {
-      return;
-    }
-    return () => {
-      updateEditor(null);
-    };
+    if (!shouldRenderEditor) return;
+    return () => updateEditor(null);
   }, [shouldRenderEditor, updateEditor]);
 
-  // Memoize theme conversion to prevent unnecessary rebuilds
   const blockNoteTheme = useMemo(() => buildBlockNoteTheme(theme), [theme]);
 
-  // Apply theme background color to page elements
   useThemeBackground(theme, blockNoteTheme);
 
   return (
@@ -231,40 +203,23 @@ function App() {
       >
         {shouldRenderEditor && (
           <EditorHost
-            schemaConfig={schemaConfig}
+            schemaConfig={schema.config}
             onEditorChange={updateEditor}
           />
         )}
         {error ? (
-          <>
-            {window.BlockNoteDebugLogging &&
-              (() => {
-                console.error('[BlockNote] App error:', error);
-                return null;
-              })()}
-            <ErrorDisplay error={error} />
-          </>
+          <ErrorDisplay error={error} />
         ) : !shouldRenderEditor || isLoading || !editor ? null : (
-          <>
-            {window.BlockNoteDebugLogging &&
-              (() => {
-                console.log(
-                  '[BlockNote] Rendering BlockNoteView with editor:',
-                  !!editor,
-                );
-                return null;
-              })()}
-            <BlockNoteView
-              editor={editor}
-              editable={!isReadonly}
-              {...(blockNoteTheme ? { theme: blockNoteTheme } : {})}
-              formattingToolbar={useCustomToolbar ? false : undefined}
-              slashMenu={useCustomSlashMenu ? false : undefined}
-            >
-              {formattingToolbarComponent}
-              {slashMenuComponent}
-            </BlockNoteView>
-          </>
+          <BlockNoteView
+            editor={editor}
+            editable={!isReadonly}
+            {...(blockNoteTheme ? { theme: blockNoteTheme } : {})}
+            formattingToolbar={useCustomToolbar ? false : undefined}
+            slashMenu={useCustomSlashMenu ? false : undefined}
+          >
+            {formattingToolbarComponent}
+            {slashMenuComponent}
+          </BlockNoteView>
         )}
       </div>
     </BlockNoteErrorBoundary>

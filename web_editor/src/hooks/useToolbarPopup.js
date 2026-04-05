@@ -4,6 +4,7 @@
 
 import { useEffect } from 'react';
 import { TOOLBAR_POPUP_OPTIONS } from '../constants/toolbarOptions';
+import { sendToFlutter } from '../utils/flutterBridge';
 import {
   hidePopupElement,
   removeHiddenPopups,
@@ -13,122 +14,87 @@ import {
 } from '../utils/popupHelpers';
 
 /**
- * Intercepts editor toolbar popups and forwards a popup request (with options) to the Flutter layer via window.BlockNoteChannel.
- * @param {Object} editor - BlockNote editor instance used to apply a selection when a response arrives.
- * @param {boolean} isReady - Whether the editor is initialized and ready for interaction.
- * @param {Object} toolbarPopupCallbacksRef - Mutable ref (Map-like) used to store response callbacks keyed by the generated requestId.
+ * Intercepts editor toolbar popups and forwards them to Flutter.
+ * @param {Object} editor - BlockNote editor instance.
+ * @param {boolean} isReady - Whether the editor is ready.
+ * @param {Map} toolbarPopupCallbacks - Map storing response callbacks by requestId.
  */
-export function useToolbarPopup(editor, isReady, toolbarPopupCallbacksRef) {
+export function useToolbarPopup(editor, isReady, toolbarPopupCallbacks) {
   useEffect(() => {
     if (!editor || !isReady) return;
 
-    // Function to detect and intercept toolbar popup clicks
     const setupToolbarPopupObserver = () => {
-      // Wait for toolbar to be rendered
       const toolbar = document.querySelector('.bn-toolbar');
       if (!toolbar) {
         setTimeout(setupToolbarPopupObserver, 100);
         return;
       }
 
-      // Observer to detect when popups are created from toolbar
       const popupObserver = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          mutation.addedNodes.forEach((node) => {
-            if (node.nodeType !== 1) return;
+        for (const mutation of mutations) {
+          for (const node of mutation.addedNodes) {
+            if (node.nodeType !== 1) continue;
 
-            const popup = node;
-            // Check if this is a Mantine popup (Menu or Popover)
             const isMantinePopup =
-              popup.classList?.contains('mantine-Menu-dropdown') ||
-              popup.classList?.contains('mantine-Popover-dropdown');
+              node.classList?.contains('mantine-Menu-dropdown') ||
+              node.classList?.contains('mantine-Popover-dropdown');
 
-            if (isMantinePopup) {
-              const popupClasses = Array.from(popup.classList || []);
-              const { type: popupType } = identifyPopupType(popupClasses);
+            if (!isMantinePopup) continue;
 
-              if (!popupType) return;
+            const { type: popupType } = identifyPopupType(
+              Array.from(node.classList || []),
+            );
+            if (!popupType) continue;
 
-              // Get options for the popup type
-              const options =
-                popupType === 'blockTypeSelect'
-                  ? TOOLBAR_POPUP_OPTIONS.blockTypeSelect
-                  : TOOLBAR_POPUP_OPTIONS.colorStyle;
+            const options =
+              popupType === 'blockTypeSelect'
+                ? TOOLBAR_POPUP_OPTIONS.blockTypeSelect
+                : TOOLBAR_POPUP_OPTIONS.colorStyle;
 
-              // Only intercept toolbar popups (not side menu or other popups)
-              if (
-                popupType === 'blockTypeSelect' &&
-                !isPopupNearToolbar(toolbar, popup)
-              ) {
-                return;
-              }
-
-              if (options.length > 0) {
-                // Hide the default popup
-                hidePopupElement(popup);
-
-                // Close any other popups
-                const existingPopups = document.querySelectorAll(
-                  '.mantine-Menu-dropdown, .mantine-Popover-dropdown',
-                );
-                existingPopups.forEach((p) => {
-                  if (p !== popup) {
-                    hidePopupElement(p);
-                  }
-                });
-
-                // Send request to Flutter
-                const requestId = `popup_${Date.now()}_${Math.random()}`;
-                const messagePayload = {
-                  type: 'toolbar_popup_request',
-                  requestId: requestId,
-                  popupType: popupType,
-                  options: options,
-                };
-
-                if (options.length > 0 && !options[0].id) {
-                  console.warn(
-                    '[BlockNote] Warning: Options missing IDs:',
-                    options,
-                  );
-                }
-
-                try {
-                  window.BlockNoteChannel.postMessage(
-                    JSON.stringify(messagePayload),
-                  );
-                } catch (err) {
-                  console.error(
-                    '[BlockNote] Error sending toolbar popup request:',
-                    err,
-                  );
-                }
-
-                // Set up callback to handle response
-                toolbarPopupCallbacksRef.current.set(
-                  requestId,
-                  (selectedValue) => {
-                    if (selectedValue !== null && selectedValue !== undefined) {
-                      applyPopupSelection(editor, popupType, selectedValue);
-                    }
-                    removeHiddenPopups();
-                  },
-                );
-              }
+            // Only intercept toolbar popups (not side menu)
+            if (
+              popupType === 'blockTypeSelect' &&
+              !isPopupNearToolbar(toolbar, node)
+            ) {
+              continue;
             }
-          });
-        });
+
+            if (options.length === 0) continue;
+
+            // Hide default popup and close siblings
+            hidePopupElement(node);
+            document
+              .querySelectorAll(
+                '.mantine-Menu-dropdown, .mantine-Popover-dropdown',
+              )
+              .forEach((p) => {
+                if (p !== node) hidePopupElement(p);
+              });
+
+            // Send request to Flutter
+            const requestId = `popup_${Date.now()}_${Math.random()}`;
+            sendToFlutter('toolbar_popup_request', {
+              requestId,
+              popupType,
+              options,
+            });
+
+            // Store callback for response
+            toolbarPopupCallbacks.set(requestId, (selectedValue) => {
+              if (selectedValue != null) {
+                applyPopupSelection(editor, popupType, selectedValue);
+              }
+              removeHiddenPopups();
+            });
+          }
+        }
       });
 
-      // Observe document body for new popups
       popupObserver.observe(document.body, { childList: true, subtree: true });
-
-      return () => {
-        popupObserver.disconnect();
-      };
+      return () => popupObserver.disconnect();
     };
 
     const cleanup = setupToolbarPopupObserver();
     return cleanup;
-  }, [editor, isReady, toolbarPopupCallbacksRef]);
+  }, [editor, isReady, toolbarPopupCallbacks]);
 }
