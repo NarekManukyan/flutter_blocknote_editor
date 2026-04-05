@@ -117,6 +117,9 @@ class BlockNoteEditorPool {
     _isWarming = true;
     _warmupCompleter = Completer<void>();
 
+    BlockNoteAssetLoader? assetLoader;
+    HeadlessInAppWebView? headless;
+
     try {
       if (debugLogging) {
         debugPrint('[BlockNoteEditorPool] Starting warmup...');
@@ -127,12 +130,13 @@ class BlockNoteEditorPool {
         localhostUrl: localhostUrl,
         debugLogging: debugLogging,
       );
+      assetLoader = result.assetLoader;
 
       // Create headless WebView.
       late final InAppWebViewController warmController;
       final pageLoadCompleter = Completer<void>();
 
-      final headless = HeadlessInAppWebView(
+      headless = HeadlessInAppWebView(
         initialUrlRequest: URLRequest(url: WebUri(result.url)),
         initialSettings: WebViewConfig.getDefaultSettings(
           allowingReadAccessTo:
@@ -205,6 +209,9 @@ class BlockNoteEditorPool {
         assetLoader: result.assetLoader,
         assetUrl: result.url,
       );
+      // Clear local references — ownership transferred to pool entry.
+      assetLoader = null;
+      headless = null;
       _isReady = true;
       _isWarming = false;
 
@@ -216,6 +223,10 @@ class BlockNoteEditorPool {
         _warmupCompleter!.complete();
       }
     } catch (e) {
+      // Dispose any resources created before the failure.
+      await assetLoader?.dispose();
+      await headless?.dispose();
+
       _isWarming = false;
       if (debugLogging) {
         debugPrint('[BlockNoteEditorPool] Warmup failed: $e');
@@ -228,14 +239,26 @@ class BlockNoteEditorPool {
 
   /// Acquires a pre-warmed entry from the pool.
   ///
-  /// Returns `null` if no warm entry is available. After acquisition,
+  /// Returns `null` if no warm entry is available or if the warm entry was
+  /// created for a different [localhostUrl] than requested. After acquisition,
   /// the pool automatically starts warming a new entry in the background.
   ///
   /// The caller is responsible for the entry's lifecycle. The entry's
   /// [HeadlessInAppWebView] should be passed to `InAppWebView(headlessWebView:)`
   /// for display.
-  BlockNotePoolEntry? acquire() {
+  BlockNotePoolEntry? acquire({String? localhostUrl}) {
     if (!_isReady || _warmEntry == null) {
+      return null;
+    }
+
+    // Only reuse the entry if it was warmed with the same asset source.
+    if (_localhostUrl != localhostUrl) {
+      if (_debugLogging) {
+        debugPrint(
+          '[BlockNoteEditorPool] Pool entry asset source mismatch '
+          '(pool: $_localhostUrl, requested: $localhostUrl) - skipping',
+        );
+      }
       return null;
     }
 

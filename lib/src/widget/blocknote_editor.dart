@@ -295,7 +295,9 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
       );
 
       // Try to acquire a pre-warmed entry from the pool.
-      final poolEntry = BlockNoteEditorPool.instance.acquire();
+      final poolEntry = BlockNoteEditorPool.instance.acquire(
+        localhostUrl: widget.localhostUrl,
+      );
       if (poolEntry != null) {
         if (widget.debugLogging) {
           debugPrint('[BlockNoteEditor] Using pre-warmed pool entry');
