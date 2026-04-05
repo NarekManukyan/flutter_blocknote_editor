@@ -204,7 +204,7 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
   InAppWebViewController? _controller;
   JsBridge? _bridge;
   TransactionBatcher? _batcher;
-  AssetLoader? _assetLoader;
+  BlockNoteAssetLoader? _assetLoader;
   BlockNoteController? _blockNoteController;
   bool _isReady = false;
   bool _isEditorInitialized = false;
@@ -222,7 +222,7 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
   double _pendingExtraBottomPadding = 0;
 
   /// Pool entry acquired from [BlockNoteEditorPool], if any.
-  PoolEntry? _poolEntry;
+  BlockNotePoolEntry? _poolEntry;
 
   @override
   void initState() {
@@ -257,10 +257,11 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
 
   @override
   void dispose() {
-    // Clean up pool entry delegates to avoid leaks.
+    // Clean up pool entry delegates and its asset loader to avoid leaks.
     if (_poolEntry != null) {
       _poolEntry!.onRawJsMessage = null;
       _poolEntry!.onConsoleMessage = null;
+      _poolEntry!.assetLoader?.dispose();
       _poolEntry = null;
     }
     // Clean up asset loader temp directory (only if not using pool).
@@ -279,49 +280,54 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
 
     _isInitializing = true;
 
-    // Create transaction batcher
-    _batcher = TransactionBatcher(
-      onBatch: (transactions) {
-        if (widget.onTransactions != null) {
-          widget.onTransactions!(transactions);
-        }
-      },
-      batchWindow:
-          widget.transactionDebounceDuration ??
-          const Duration(milliseconds: 400),
-      debugLogging: widget.debugLogging,
-    );
+    try {
+      // Create transaction batcher
+      _batcher = TransactionBatcher(
+        onBatch: (transactions) {
+          if (widget.onTransactions != null) {
+            widget.onTransactions!(transactions);
+          }
+        },
+        batchWindow:
+            widget.transactionDebounceDuration ??
+            const Duration(milliseconds: 400),
+        debugLogging: widget.debugLogging,
+      );
 
-    // Try to acquire a pre-warmed entry from the pool.
-    final poolEntry = BlockNoteEditorPool.instance.acquire();
-    if (poolEntry != null) {
-      if (widget.debugLogging) {
-        debugPrint('[BlockNoteEditor] Using pre-warmed pool entry');
+      // Try to acquire a pre-warmed entry from the pool.
+      final poolEntry = BlockNoteEditorPool.instance.acquire();
+      if (poolEntry != null) {
+        if (widget.debugLogging) {
+          debugPrint('[BlockNoteEditor] Using pre-warmed pool entry');
+        }
+        _poolEntry = poolEntry;
+        // The pool entry's asset loader owns the temp directory.
+        // Don't create a new one.
+        if (mounted) {
+          setState(() {
+            _initialUrl = poolEntry.assetUrl;
+            _isInitializing = false;
+          });
+        }
+        return;
       }
-      _poolEntry = poolEntry;
-      // The pool entry's asset loader owns the temp directory.
-      // Don't create a new one.
+
+      // No pool entry available - initialize from scratch.
+      final result = await WebViewInitializer.initialize(
+        localhostUrl: widget.localhostUrl,
+        debugLogging: widget.debugLogging,
+      );
+      _assetLoader = result.assetLoader;
+
       if (mounted) {
         setState(() {
-          _initialUrl = poolEntry.assetUrl;
+          _initialUrl = result.url;
           _isInitializing = false;
         });
       }
-      return;
-    }
-
-    // No pool entry available - initialize from scratch.
-    final result = await WebViewInitializer.initialize(
-      localhostUrl: widget.localhostUrl,
-      debugLogging: widget.debugLogging,
-    );
-    _assetLoader = result.assetLoader;
-
-    if (mounted) {
-      setState(() {
-        _initialUrl = result.url;
-        _isInitializing = false;
-      });
+    } catch (e) {
+      _isInitializing = false;
+      rethrow;
     }
   }
 

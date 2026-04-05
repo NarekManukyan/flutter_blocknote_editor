@@ -21,7 +21,7 @@ class WebViewInitializationResult {
   /// The asset loader instance (null if using external localhost).
   ///
   /// Must be disposed when the editor is disposed.
-  final AssetLoader? assetLoader;
+  final BlockNoteAssetLoader? assetLoader;
 }
 
 /// Initializes the WebView and determines the URL to load.
@@ -36,7 +36,7 @@ class WebViewInitializer {
     required bool debugLogging,
   }) async {
     String url;
-    AssetLoader? assetLoader;
+    BlockNoteAssetLoader? assetLoader;
 
     if (localhostUrl != null) {
       // External localhost URL (for development/preview)
@@ -51,7 +51,7 @@ class WebViewInitializer {
       if (debugLogging) {
         debugPrint('[BlockNoteEditor] Loading assets directly via file://...');
       }
-      assetLoader = AssetLoader(debugLogging: debugLogging);
+      assetLoader = BlockNoteAssetLoader(debugLogging: debugLogging);
       final indexPath = await assetLoader.load();
       url = Uri.file(indexPath).toString();
       if (debugLogging) {
