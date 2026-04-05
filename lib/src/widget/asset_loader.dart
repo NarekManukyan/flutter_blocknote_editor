@@ -1,92 +1,54 @@
-/// HTTP server for serving BlockNote web assets from Flutter.
+/// Asset loader for BlockNote web assets.
 ///
-/// This server runs inside the Flutter app and serves the built React app
-/// from assets/web/ directory on localhost, allowing the WebView to load it.
+/// Copies BlockNote web assets from the Flutter package bundle into a
+/// temporary directory so the WebView can load them directly via file:// URL,
+/// eliminating the need for a local HTTP server.
 library;
 
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:shelf/shelf.dart';
-import 'package:shelf/shelf_io.dart' as shelf_io;
-import 'package:shelf_static/shelf_static.dart';
 
-/// HTTP server that serves BlockNote web assets from Flutter package.
-class AssetServer {
-  /// Creates a new asset server.
-  AssetServer({this.port = 0, this.debugLogging = false});
-
-  /// Port to bind to (0 = auto-assign).
-  final int port;
+/// Loads BlockNote web assets from the Flutter package bundle into a temporary
+/// directory for direct file:// access by the WebView.
+class AssetLoader {
+  /// Creates a new asset loader.
+  AssetLoader({this.debugLogging = false});
 
   /// Whether to enable debug logging.
   final bool debugLogging;
 
-  HttpServer? _server;
-  int? _actualPort;
   Directory? _tempDir;
 
-  /// Starts the server and returns the URL.
-  Future<String> start() async {
-    if (_server != null) {
-      return 'http://localhost:$_actualPort';
+  /// Copies assets to a temporary directory and returns the file path to
+  /// index.html.
+  ///
+  /// The returned path can be used directly as a file:// URL in the WebView.
+  Future<String> load() async {
+    if (_tempDir != null) {
+      return '${_tempDir!.path}/index.html';
     }
 
     try {
-      // Create a temporary directory and copy assets
-      _tempDir = await _createTempAssetDirectory();
+      _tempDir = await _copyAssetsToTempDirectory();
 
-      // Create static file handler with proper MIME types
-      // Use absolute path to ensure files are found
-      final absolutePath = _tempDir!.absolute.path;
+      final indexPath = '${_tempDir!.path}/index.html';
 
       if (debugLogging) {
-        debugPrint('[AssetServer] Serving from: $absolutePath');
+        debugPrint('[AssetLoader] Assets ready at: $indexPath');
       }
 
-      var handler = createStaticHandler(
-        absolutePath,
-        defaultDocument: 'index.html',
-        serveFilesOutsidePath: false,
-      );
-
-      // Add request logging middleware
-      if (debugLogging) {
-        final originalHandler = handler;
-        handler = (Request request) async {
-          debugPrint('[AssetServer] Request: ${request.method} ${request.url}');
-          final response = await originalHandler(request);
-          debugPrint(
-            '[AssetServer] Response: ${response.statusCode} for ${request.url}',
-          );
-          return response;
-        };
-      }
-
-      // Start server on localhost
-      _server = await shelf_io.serve(
-        handler,
-        InternetAddress.loopbackIPv4,
-        port,
-      );
-
-      _actualPort = _server!.port;
-
-      if (debugLogging) {
-        debugPrint('[AssetServer] Started on http://localhost:$_actualPort');
-      }
-
-      return 'http://localhost:$_actualPort';
+      return indexPath;
     } catch (e) {
       if (debugLogging) {
-        debugPrint('[AssetServer] Error starting server: $e');
+        debugPrint('[AssetLoader] Error loading assets: $e');
       }
       rethrow;
     }
   }
 
-  /// Creates a temporary directory with assets copied from package.
-  Future<Directory> _createTempAssetDirectory() async {
+  /// Copies assets from the Flutter package bundle into a temporary directory.
+  Future<Directory> _copyAssetsToTempDirectory() async {
     final tempDir = await Directory.systemTemp.createTemp('blocknote_assets');
 
     try {
@@ -127,7 +89,6 @@ class AssetServer {
       }
 
       int copiedCount = 0;
-      final failedAssets = <String>[];
 
       // Copy required assets first
       for (final fileName in requiredAssets) {
@@ -141,18 +102,17 @@ class AssetServer {
 
           if (debugLogging) {
             debugPrint(
-              '[AssetServer] Copied: $fileName (${data.lengthInBytes} bytes)',
+              '[AssetLoader] Copied: $fileName (${data.lengthInBytes} bytes)',
             );
           }
         } catch (e) {
-          failedAssets.add(fileName);
           if (debugLogging) {
-            debugPrint('[AssetServer] ERROR: Could not load $fileName: $e');
+            debugPrint('[AssetLoader] ERROR: Could not load $fileName: $e');
           }
         }
       }
 
-      // Copy optional assets
+      // Copy optional assets (failures are silent)
       for (final fileName in optionalAssets) {
         try {
           final assetPath =
@@ -167,13 +127,12 @@ class AssetServer {
       }
 
       if (debugLogging) {
-        debugPrint('[AssetServer] Copied $copiedCount assets total');
+        debugPrint('[AssetLoader] Copied $copiedCount assets total');
       }
 
       // Verify required files were copied
       final indexFile = File('${tempDir.path}/index.html');
       final jsFile = File('${tempDir.path}/editor.js');
-      final cssFile = File('${tempDir.path}/editor.css');
 
       if (!await indexFile.exists()) {
         throw Exception(
@@ -185,15 +144,9 @@ class AssetServer {
           'Failed to copy editor.js. Make sure web_editor is built: cd web_editor && npm run build',
         );
       }
-      if (!await cssFile.exists()) {
-        if (debugLogging) {
-          debugPrint('[AssetServer] Warning: editor.css not found (optional)');
-        }
-      }
 
       if (debugLogging) {
-        debugPrint('[AssetServer] Temp directory: ${tempDir.path}');
-        debugPrint('[AssetServer] Files in temp dir:');
+        debugPrint('[AssetLoader] Temp directory: ${tempDir.path}');
         final files = await tempDir.list().toList();
         for (final file in files) {
           debugPrint('  - ${file.path.split('/').last}');
@@ -203,37 +156,26 @@ class AssetServer {
       return tempDir;
     } catch (e) {
       if (debugLogging) {
-        debugPrint('[AssetServer] Error creating temp directory: $e');
+        debugPrint('[AssetLoader] Error creating temp directory: $e');
       }
       rethrow;
     }
   }
 
-  /// Stops the server and cleans up.
-  Future<void> stop() async {
-    if (_server != null) {
-      await _server!.close(force: true);
-      _server = null;
-      _actualPort = null;
-      if (debugLogging) {
-        debugPrint('[AssetServer] Stopped');
-      }
-    }
-
-    // Clean up temp directory
+  /// Cleans up the temporary directory.
+  Future<void> dispose() async {
     if (_tempDir != null) {
       try {
         await _tempDir!.delete(recursive: true);
       } catch (e) {
         if (debugLogging) {
-          debugPrint('[AssetServer] Error deleting temp dir: $e');
+          debugPrint('[AssetLoader] Error deleting temp dir: $e');
         }
       }
       _tempDir = null;
     }
   }
 
-  /// Gets the current server URL.
-  String? get url =>
-      _actualPort != null ? 'http://localhost:$_actualPort' : null;
+  /// Gets the path to the temporary assets directory, if loaded.
+  String? get tempDirPath => _tempDir?.path;
 }

@@ -19,7 +19,7 @@ import '../bridge/js_bridge.dart';
 import '../bridge/message_types.dart';
 import 'blocknote_controller.dart';
 import '../batching/transaction_batcher.dart';
-import 'asset_server.dart';
+import 'asset_loader.dart';
 import 'webview_initializer.dart';
 import 'document_loader.dart';
 import 'message_handlers.dart';
@@ -203,7 +203,7 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
   InAppWebViewController? _controller;
   JsBridge? _bridge;
   TransactionBatcher? _batcher;
-  AssetServer? _assetServer;
+  AssetLoader? _assetLoader;
   BlockNoteController? _blockNoteController;
   bool _isReady = false;
   bool _isEditorInitialized = false;
@@ -253,8 +253,8 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
 
   @override
   void dispose() {
-    // Stop asset server if running
-    _assetServer?.stop();
+    // Clean up asset loader temp directory
+    _assetLoader?.dispose();
     // Flush any pending transactions before disposing
     _batcher?.dispose();
     // Cancel debounce timers
@@ -287,7 +287,7 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
       localhostUrl: widget.localhostUrl,
       debugLogging: widget.debugLogging,
     );
-    _assetServer = result.assetServer;
+    _assetLoader = result.assetLoader;
 
     if (mounted) {
       setState(() {
@@ -739,6 +739,12 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
               initialUrlRequest: URLRequest(url: WebUri(_initialUrl!)),
               initialSettings: WebViewConfig.getDefaultSettings(
                 backgroundColor: editorBackgroundColor,
+                allowingReadAccessTo:
+                    _assetLoader?.tempDirPath != null
+                        ? WebUri(
+                          Uri.directory(_assetLoader!.tempDirPath!).toString(),
+                        )
+                        : null,
               ),
               onWebViewCreated: (controller) {
                 _controller = controller;
