@@ -507,6 +507,66 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
     }));
   }
 
+  /// Probes the pooled WebView to check if the React/BlockNote editor is ready.
+  ///
+  /// The pool only waits for page load (`onLoadStop`), not the full React
+  /// initialization. This method checks if `window.sendPendingTransaction`
+  /// exists (set by `useEditorReady.js` when the editor is ready).
+  /// If ready, proceeds with pool flow. Otherwise, falls through to the
+  /// normal `_handleReady()` flow that listens for the "ready" message.
+  void _probeEditorReadiness() {
+    if (_controller == null || !mounted) return;
+
+    unawaited(Future(() async {
+      if (!mounted || _controller == null) return;
+
+      try {
+        final result = await _controller!.evaluateJavascript(
+          source: 'typeof window.sendPendingTransaction !== "undefined"',
+        );
+
+        if (!mounted) return;
+
+        final isEditorReady = result == true || result == 'true';
+
+        if (widget.debugLogging) {
+          debugPrint(
+            '[BlockNoteEditor] Pool entry editor ready probe: $isEditorReady',
+          );
+        }
+
+        if (isEditorReady) {
+          // Editor JS is ready - proceed with pool flow.
+          _isEditorInitialized = true;
+          _handleReadyFromPool();
+        } else {
+          // Editor JS is not ready yet - apply pre-config and let the normal
+          // _handleReady() flow handle it when "ready" message arrives.
+          if (widget.debugLogging) {
+            debugPrint(
+              '[BlockNoteEditor] Pool entry: editor not ready yet, waiting for ready signal',
+            );
+          }
+          await _preloadEditorConfiguration();
+          if (!mounted || _bridge == null) return;
+          if (widget.transactionDebounceDuration != null) {
+            await _bridge!.setDebounceDuration(
+              widget.transactionDebounceDuration!.inMilliseconds,
+            );
+          }
+          // _handleReady() will be called when JS sends "ready" via the bridge.
+        }
+      } catch (e) {
+        if (widget.debugLogging) {
+          debugPrint(
+            '[BlockNoteEditor] Error probing editor readiness: $e',
+          );
+        }
+        // Fall through to normal ready flow.
+      }
+    }));
+  }
+
   /// Handles transactions from JavaScript.
   void _handleTransactions(TransactionsMessage message) {
     MessageHandlers.handleTransactions(
@@ -852,9 +912,9 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
                       debugPrint('[JS Console] $msg');
                     }
                   };
-                  // Editor is already initialized - trigger document loading.
-                  _isEditorInitialized = true;
-                  _handleReadyFromPool();
+                  // The pool only waits for page load, not React/BlockNote
+                  // initialization. Probe JS to check if editor is ready.
+                  _probeEditorReadiness();
                   return;
                 }
 

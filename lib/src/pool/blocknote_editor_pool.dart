@@ -1,7 +1,9 @@
 /// Singleton pool for pre-warming BlockNote WebView instances.
 ///
-/// Pre-initializes a [HeadlessInAppWebView] with BlockNote.js fully loaded,
-/// so subsequent editor instances can display instantly without loading delay.
+/// Pre-initializes a [HeadlessInAppWebView] with the editor page and JS bridge
+/// loaded, so subsequent editor instances can display instantly without loading
+/// delay. The React/BlockNote.js editor may still be initializing; the widget
+/// handles that by listening for the "ready" signal.
 ///
 /// Usage:
 /// ```dart
@@ -14,7 +16,6 @@
 library;
 
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -58,7 +59,7 @@ class PoolEntry {
 
 /// Singleton pool that pre-warms BlockNote WebView instances.
 ///
-/// Call [warmup] to pre-initialize a WebView with BlockNote.js loaded.
+/// Call [warmup] to pre-initialize a WebView with the editor page loaded.
 /// When a [BlockNoteEditor] widget is created, it automatically checks
 /// this pool for a warm entry, making the editor appear instantly.
 ///
@@ -85,13 +86,14 @@ class BlockNoteEditorPool {
   /// Whether the pool is currently warming up an entry.
   bool get isWarming => _isWarming;
 
-  /// Pre-warms a WebView instance with BlockNote.js fully initialized.
+  /// Pre-warms a WebView instance with the editor page and JS bridge loaded.
   ///
   /// This copies assets, creates a [HeadlessInAppWebView], loads the editor
-  /// HTML/JS, and waits for the BlockNote "ready" signal. After this completes,
-  /// the next [BlockNoteEditor] widget will display instantly.
+  /// HTML page, and sets up the JS bridge. The React/BlockNote.js editor may
+  /// still be initializing when this completes — that's OK; the widget handles
+  /// the "ready" signal.
   ///
-  /// Safe to call multiple times - subsequent calls return the same future
+  /// Safe to call multiple times — subsequent calls return the same future
   /// if warmup is already in progress.
   Future<void> warmup({
     String? localhostUrl,
@@ -125,10 +127,7 @@ class BlockNoteEditorPool {
 
       // Create headless WebView.
       late final InAppWebViewController warmController;
-      final readyCompleter = Completer<void>();
-
-      // Temporary raw message handler to detect the "ready" signal.
-      void Function(String)? tempRawMessageHandler;
+      final pageLoadCompleter = Completer<void>();
 
       final headless = HeadlessInAppWebView(
         initialUrlRequest: URLRequest(url: WebUri(result.url)),
@@ -141,22 +140,17 @@ class BlockNoteEditorPool {
                   : null,
         ),
         shouldOverrideUrlLoading: (controller, navigationAction) async {
-          // Allow all navigation during warmup - the page must load.
+          // Allow all navigation during warmup — the page must load.
           return NavigationActionPolicy.ALLOW;
         },
         onWebViewCreated: (controller) {
           warmController = controller;
 
-          // Set up JS handlers with mutable delegates.
+          // Set up placeholder JS handlers. The claiming widget will replace
+          // these with its own via addJavaScriptHandler (which replaces by name).
           controller.addJavaScriptHandler(
             handlerName: 'onMessage',
-            callback: (args) {
-              if (args.isNotEmpty) {
-                final msg = args[0].toString();
-                tempRawMessageHandler?.call(msg);
-              }
-              return null;
-            },
+            callback: (args) => null,
           );
           controller.addJavaScriptHandler(
             handlerName: 'flutterConsole',
@@ -172,48 +166,34 @@ class BlockNoteEditorPool {
           if (debugLogging) {
             debugPrint('[BlockNoteEditorPool] Page loaded: $url');
           }
-          // Inject JS bridge objects.
+          // Inject JS bridge objects so the React app can communicate.
           await WebViewConfig.setupJavaScriptBridge(
             controller: controller,
             debugLogging: debugLogging,
           );
+          if (!pageLoadCompleter.isCompleted) {
+            pageLoadCompleter.complete();
+          }
         },
       );
-
-      // Listen for "ready" message from BlockNote.js.
-      tempRawMessageHandler = (message) {
-        try {
-          final json = jsonDecode(message) as Map<String, dynamic>;
-          if (json['type'] == 'ready' && !readyCompleter.isCompleted) {
-            if (debugLogging) {
-              debugPrint(
-                '[BlockNoteEditorPool] Editor ready signal received',
-              );
-            }
-            readyCompleter.complete();
-          }
-        } catch (_) {
-          // Ignore parse errors during warmup.
-        }
-      };
 
       // Start the headless WebView.
       await headless.run();
 
-      // Wait for BlockNote.js to initialize (with timeout).
-      await readyCompleter.future.timeout(
-        const Duration(seconds: 15),
+      // Wait for the page to fully load and the JS bridge to be set up.
+      // We do NOT wait for the React/BlockNote "ready" signal here — that
+      // can take 15+ seconds in headless mode. The widget will handle it.
+      await pageLoadCompleter.future.timeout(
+        const Duration(seconds: 30),
         onTimeout: () {
           if (debugLogging) {
             debugPrint(
-              '[BlockNoteEditorPool] Warmup timed out waiting for ready signal',
+              '[BlockNoteEditorPool] Warmup timed out waiting for page load',
             );
           }
+          throw TimeoutException('Page load timed out');
         },
       );
-
-      // Clear temp handler - the claiming widget will set its own.
-      tempRawMessageHandler = null;
 
       // Store the warm entry.
       _warmEntry = PoolEntry(
