@@ -44,12 +44,52 @@ A Flutter package that embeds [BlockNoteJS](https://github.com/TypeCellOS/BlockN
 - ✅ **Read-only Mode**: Toggle editor between editable and read-only states
 - ✅ **Document Loading**: Load initial documents with blocks and content
 - ✅ **Transaction Handling**: Receive and process editor changes via transactions
+- ✅ **Editor Pool**: Pre-warm WebView instances for instant editor loading in modals
+- ✅ **Dark Mode**: Built-in dark theme support with light/dark color schemes
 
 ### Platform Support
 
 - ✅ **iOS** (via `flutter_inappwebview`)
 - ✅ **Android** (via `flutter_inappwebview`)
 - ❌ **Web** (not yet supported - WebView limitations)
+
+## Screenshots
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/NarekManukyan/flutter_blocknote_editor/main/screenshots/editor_light.png" width="280" alt="Editor - Light Mode" />
+  &nbsp;&nbsp;
+  <img src="https://raw.githubusercontent.com/NarekManukyan/flutter_blocknote_editor/main/screenshots/editor_dark.png" width="280" alt="Editor - Dark Mode" />
+</p>
+<p align="center">
+  <em>Light Mode</em> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <em>Dark Mode</em>
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/NarekManukyan/flutter_blocknote_editor/main/screenshots/custom_theme.png" width="280" alt="Custom Theme" />
+  &nbsp;&nbsp;
+  <img src="https://raw.githubusercontent.com/NarekManukyan/flutter_blocknote_editor/main/screenshots/custom_font.png" width="280" alt="Custom Font" />
+</p>
+<p align="center">
+  <em>Custom Theme</em> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <em>Custom Font</em>
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/NarekManukyan/flutter_blocknote_editor/main/screenshots/toolbar.png" width="280" alt="Formatting Toolbar" />
+  &nbsp;&nbsp;
+  <img src="https://raw.githubusercontent.com/NarekManukyan/flutter_blocknote_editor/main/screenshots/custom_block.png" width="280" alt="Custom Block" />
+</p>
+<p align="center">
+  <em>Formatting Toolbar</em> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <em>Custom Block</em>
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/NarekManukyan/flutter_blocknote_editor/main/screenshots/modal_editor.png" width="280" alt="Modal Editor" />
+  &nbsp;&nbsp;
+  <img src="https://raw.githubusercontent.com/NarekManukyan/flutter_blocknote_editor/main/screenshots/read_only.png" width="280" alt="Read-only Mode" />
+</p>
+<p align="center">
+  <em>Modal Editor</em> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <em>Read-only Mode</em>
+</p>
 
 ## How It Works
 
@@ -73,6 +113,7 @@ graph LR
 3. **JS Bridge**: Handles message protocol between Flutter and JavaScript
 4. **Transaction Batcher**: Batches transactions to prevent excessive rebuilds
 5. **Document Models**: Type-safe Dart models for documents, blocks, and transactions
+6. **BlockNoteEditorPool**: Singleton pool that pre-warms WebView instances for instant editor loading in modals
 
 ### Transaction Batching
 
@@ -99,8 +140,7 @@ Add this package to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_blocknote_editor:
-    path: ../path/to/blocknotejs
+  flutter_blocknote_editor: ^0.0.20
 ```
 
 Then run:
@@ -111,19 +151,20 @@ flutter pub get
 
 ## Setup
 
-The package uses a local HTTP server to serve the BlockNote editor assets. To allow the WebView to load content from `localhost`, you need to configure platform-specific security settings.
+The package loads BlockNote editor assets directly via `file://` URLs from a temporary directory. **No platform-specific configuration is required** for the default setup.
 
-### Android Setup
+<details>
+<summary><strong>Advanced: Using <code>localhostUrl</code> for development</strong></summary>
 
-Android blocks cleartext (HTTP) traffic by default. To allow localhost HTTP connections, you need to add a network security configuration.
+If you use the `localhostUrl` parameter to serve assets from a local dev server (e.g. Vite), you need to allow cleartext HTTP traffic for localhost:
 
-1. **Create a network security configuration file** at `android/app/src/main/res/xml/network_security_config.xml`:
+#### Android
+
+1. Create `android/app/src/main/res/xml/network_security_config.xml`:
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Allow cleartext traffic for localhost only -->
-    <!-- This is safe because localhost traffic never leaves the device -->
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">localhost</domain>
         <domain includeSubdomains="true">127.0.0.1</domain>
@@ -132,46 +173,23 @@ Android blocks cleartext (HTTP) traffic by default. To allow localhost HTTP conn
 </network-security-config>
 ```
 
-2. **Update your AndroidManifest.xml** to reference this configuration. Add `android:networkSecurityConfig="@xml/network_security_config"` to the `<application>` tag:
+2. Add `android:networkSecurityConfig="@xml/network_security_config"` to your `<application>` tag in `AndroidManifest.xml`.
 
-```xml
-<application
-    android:label="your_app_name"
-    android:name="${applicationName}"
-    android:icon="@mipmap/ic_launcher"
-    android:networkSecurityConfig="@xml/network_security_config">
-    <!-- ... rest of your application configuration ... -->
-</application>
-```
+#### iOS
 
-### iOS Setup
-
-iOS requires App Transport Security (ATS) configuration to allow HTTP connections to localhost.
-
-**Update your Info.plist** (typically at `ios/Runner/Info.plist`) to add the following configuration:
+Add to your `Info.plist`:
 
 ```xml
 <key>NSAppTransportSecurity</key>
 <dict>
     <key>NSAllowsLocalNetworking</key>
     <true/>
-    <key>NSExceptionDomains</key>
-    <dict>
-        <key>localhost</key>
-        <dict>
-            <key>NSExceptionAllowsInsecureHTTPLoads</key>
-            <true/>
-        </dict>
-        <key>127.0.0.1</key>
-        <dict>
-            <key>NSExceptionAllowsInsecureHTTPLoads</key>
-            <true/>
-        </dict>
-    </dict>
 </dict>
 ```
 
-**Note:** These configurations only allow cleartext traffic for localhost, which is safe since localhost traffic never leaves the device. This does not affect the security of your app's external network connections.
+These configurations only allow cleartext traffic for localhost, which is safe since it never leaves the device.
+
+</details>
 
 ## Usage
 
@@ -549,6 +567,20 @@ BlockNoteEditor(
   },
 )
 ```
+
+### Editor Pool (Instant Loading)
+
+Use `BlockNoteEditorPool` to pre-warm a WebView instance so editors in modals or new screens appear instantly:
+
+```dart
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  BlockNoteEditorPool.instance.warmup();
+  runApp(const MyApp());
+}
+```
+
+The pool is a singleton that pre-initializes a `HeadlessInAppWebView` with BlockNote.js fully loaded. When a `BlockNoteEditor` widget is created, it automatically checks the pool for a warm entry. After an entry is consumed, the pool re-warms in the background for the next use.
 
 ### Complete Example
 

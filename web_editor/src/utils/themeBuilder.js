@@ -3,52 +3,45 @@
  * Converts Flutter theme format to BlockNote format.
  */
 
+import { debugLog } from './flutterBridge';
+
 /**
  * Converts a Flutter theme to BlockNote theme format.
  * @param {Object} theme - Theme object from Flutter
  * @returns {Object|null} BlockNote theme object or null if invalid
  */
 export function buildBlockNoteTheme(theme) {
-  if (!theme) {
-    return null;
-  }
+  if (!theme) return null;
 
   try {
-    console.log('[BlockNote] Processing theme:', theme);
+    debugLog('Processing theme:', theme);
     // Deep clone to avoid mutation issues
-    const themeClone = JSON.parse(JSON.stringify(theme));
+    const cloned = JSON.parse(JSON.stringify(theme));
 
-    // BlockNote expects theme in a specific format
-    // If light/dark are provided, use them; otherwise use colors directly
+    // Extract fontFamily from Flutter's font config ({family, files}) or direct fontFamily
+    const fontFamily = cloned.font?.family || cloned.fontFamily;
+    // Remove font object so it doesn't leak into BlockNote theme
+    delete cloned.font;
+
     let blockNoteTheme = {};
-    if (themeClone.light || themeClone.dark) {
-      if (themeClone.light) {
-        blockNoteTheme.light = themeClone.light;
-      }
-      if (themeClone.dark) {
-        blockNoteTheme.dark = themeClone.dark;
-      }
-      // Add borderRadius and fontFamily if provided
-      if (themeClone.borderRadius !== undefined) {
-        blockNoteTheme.borderRadius = themeClone.borderRadius;
-      }
-      if (themeClone.fontFamily) {
-        blockNoteTheme.fontFamily = themeClone.fontFamily;
-      }
+    if (cloned.light || cloned.dark) {
+      if (cloned.light) blockNoteTheme.light = cloned.light;
+      if (cloned.dark) blockNoteTheme.dark = cloned.dark;
+      if (cloned.borderRadius !== undefined) blockNoteTheme.borderRadius = cloned.borderRadius;
+      if (fontFamily) blockNoteTheme.fontFamily = fontFamily;
     } else {
-      // Use theme as-is (it should already be in the correct format)
-      blockNoteTheme = themeClone;
+      blockNoteTheme = cloned;
     }
 
-    // Ensure fontFamily is always set if provided in theme
-    if (themeClone.fontFamily && !blockNoteTheme.fontFamily) {
-      blockNoteTheme.fontFamily = themeClone.fontFamily;
+    // Ensure fontFamily propagates
+    if (fontFamily && !blockNoteTheme.fontFamily) {
+      blockNoteTheme.fontFamily = fontFamily;
     }
 
-    console.log('[BlockNote] Converted theme:', blockNoteTheme);
+    debugLog('Converted theme:', blockNoteTheme);
     return blockNoteTheme;
   } catch (error) {
-    console.error('[BlockNote] Error converting theme:', error, theme);
+    console.error('[BlockNote] Error converting theme:', error);
     return null;
   }
 }

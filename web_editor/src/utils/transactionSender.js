@@ -1,29 +1,15 @@
 /**
  * Transaction sending utilities.
- * Extracted from useEditorReady to reduce complexity.
  */
 
 import { generateBlockId } from './idGenerator.js';
+import { sendToFlutter } from './flutterBridge';
 
 /**
- * Build the initial list of update operations representing the current document state.
- *
- * When no blocks are provided, returns a single operation that updates the root with a null block.
- * When blocks are provided, returns one 'update' operation per block with surrounding child links
- * derived solely from the BlockNote editor getPrevBlock/getNextBlock/getParentBlock (no fallback).
- * Semantics: beforeChildId = previous sibling, afterChildId = next sibling (matches Dart model).
- *
- * @param {Object} editor - The BlockNote editor instance (used for getPrevBlock/getNextBlock/getParentBlock).
- * @param {Array<Object>|null|undefined} serializedCurrentBlocks - Array of block objects in document order, or falsy if no blocks exist.
- * @returns {Array<Object>} An array of operation objects. Each operation has the form:
- *   {
- *     operation: 'update',
- *     blockId: string,        // block.id if present, otherwise a UUID v4
- *     block: Object|null,     // the block object (null for the root update when no blocks)
- *     parentId: string|null,  // parent block id or null for top-level
- *     beforeChildId: string|null, // id of the previous sibling block or null
- *     afterChildId: string|null   // id of the next sibling block or null
- *   }
+ * Build initial update operations representing the current document state.
+ * @param {Object} editor - The BlockNote editor instance.
+ * @param {Array<Object>|null} serializedCurrentBlocks - Serialized blocks or null.
+ * @returns {Array<Object>} Array of update operations.
  */
 export function createInitialOperations(editor, serializedCurrentBlocks) {
   if (!serializedCurrentBlocks) {
@@ -46,8 +32,8 @@ export function createInitialOperations(editor, serializedCurrentBlocks) {
 
     return {
       operation: 'update',
-      blockId: blockId,
-      block: block,
+      blockId,
+      block,
       parentId: parentBlock?.id ?? null,
       beforeChildId: prevBlock?.id ?? null,
       afterChildId: nextBlock?.id ?? null,
@@ -56,27 +42,21 @@ export function createInitialOperations(editor, serializedCurrentBlocks) {
 }
 
 /**
- * Remove redundant operations: when the same block has both insert and delete in the same batch, drop both
- * (e.g. block added then removed before send, or when merging multiple batches).
- *
- * @param {Array<Object>} operations - Raw operations from diff.
+ * Remove redundant insert+delete pairs for the same blockId.
+ * @param {Array<Object>} operations
  * @returns {Array<Object>} Filtered operations.
  */
 export function filterRedundantOperations(operations) {
   const insertIds = new Set(
-    operations
-      .filter((op) => op.operation === 'insert')
-      .map((op) => op.blockId),
+    operations.filter((op) => op.operation === 'insert').map((op) => op.blockId),
   );
   const deleteIds = new Set(
-    operations
-      .filter((op) => op.operation === 'delete')
-      .map((op) => op.blockId),
+    operations.filter((op) => op.operation === 'delete').map((op) => op.blockId),
   );
-  const redundantIds = new Set(
-    [...insertIds].filter((id) => deleteIds.has(id)),
-  );
+  const redundantIds = new Set([...insertIds].filter((id) => deleteIds.has(id)));
+
   if (redundantIds.size === 0) return operations;
+
   return operations.filter((op) => {
     if (op.operation === 'insert' || op.operation === 'delete') {
       return !redundantIds.has(op.blockId);
@@ -86,22 +66,11 @@ export function filterRedundantOperations(operations) {
 }
 
 /**
- * Send a transaction payload containing the provided operations to the Flutter channel.
- *
- * Constructs a single transaction object using documentVersionRef.current as the baseVersion,
- * increments documentVersionRef.current, and posts the transaction array to window.BlockNoteChannel.
- * Redundant insert+delete pairs for the same blockId are filtered out before sending.
- *
- * @param {Array<Object>} operations - Array of operation objects to include in the transaction. Each operation typically contains:
- *   - `operation` (string): the action type (e.g., 'update'),
- *   - `blockId` (string): identifier for the block,
- *   - `block` (Object|null): the block payload or null,
- *   - `parentId` (string|null): parent block id or null,
- *   - `beforeChildId` (string|null): preceding sibling block id or null,
- *   - `afterChildId` (string|null): following sibling block id or null.
- * @param {{ current: number }} documentVersionRef - Mutable ref object whose `current` value is used as the transaction's baseVersion and then incremented.
+ * Send a transaction payload to Flutter.
+ * @param {Array<Object>} operations - Operations for the transaction.
+ * @param {Object} refs - Shared mutable refs with documentVersion property.
  */
-export function sendTransactionsToFlutter(operations, documentVersionRef) {
+export function sendTransactionsToFlutter(operations, refs) {
   const filtered = filterRedundantOperations(operations);
   if (filtered.length === 0) return;
 
@@ -109,18 +78,15 @@ export function sendTransactionsToFlutter(operations, documentVersionRef) {
 
   const transactions = [
     {
-      baseVersion: documentVersionRef.current,
+      baseVersion: refs.documentVersion,
       operations: operationsWithIndex,
     },
   ];
 
-  documentVersionRef.current++;
+  refs.documentVersion++;
 
-  window.BlockNoteChannel.postMessage(
-    JSON.stringify({
-      type: 'transactions',
-      data: transactions,
-      timestamp: Date.now(),
-    }),
-  );
+  sendToFlutter('transactions', {
+    data: transactions,
+    timestamp: Date.now(),
+  });
 }

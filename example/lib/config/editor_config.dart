@@ -39,6 +39,78 @@ class EditorConfig {
     );
   }
 
+  /// Creates a dark theme.
+  static BlockNoteTheme createDarkTheme({bool useCustomFont = false}) {
+    return BlockNoteTheme(
+      colors: BlockNoteColorScheme(
+        editor: const BlockNoteColorPair(
+          text: Color(0xFFE0E0E0),
+          background: Color(0xFF1A1A1A),
+        ),
+        menu: const BlockNoteColorPair(
+          text: Color(0xFFE0E0E0),
+          background: Color(0xFF2D2D2D),
+        ),
+        tooltip: const BlockNoteColorPair(
+          text: Color(0xFFE0E0E0),
+          background: Color(0xFF383838),
+        ),
+        hovered: const BlockNoteColorPair(
+          text: Color(0xFFFFFFFF),
+          background: Color(0xFF3D3D3D),
+        ),
+        selected: const BlockNoteColorPair(
+          text: Color(0xFFFFFFFF),
+          background: Color(0xFF4A4A4A),
+        ),
+        shadow: const Color(0xFF000000),
+        border: const Color(0xFF444444),
+      ),
+      borderRadius: 4,
+      font: useCustomFont
+          ? const BlockNoteFontConfig(
+              family: "'Georgia', 'Times New Roman', serif",
+            )
+          : null,
+    );
+  }
+
+  /// Creates a dark variant of the custom red theme.
+  static BlockNoteTheme createDarkCustomTheme({bool useCustomFont = false}) {
+    return BlockNoteTheme(
+      colors: BlockNoteColorScheme(
+        editor: const BlockNoteColorPair(
+          text: Color(0xFFE0E0E0),
+          background: Color(0xFF1A0000),
+        ),
+        menu: const BlockNoteColorPair(
+          text: Color(0xFFFFFFFF),
+          background: Color(0xFF7B0000),
+        ),
+        tooltip: const BlockNoteColorPair(
+          text: Color(0xFFFFFFFF),
+          background: Color(0xFF900000),
+        ),
+        hovered: const BlockNoteColorPair(
+          text: Color(0xFFFFFFFF),
+          background: Color(0xFF900000),
+        ),
+        selected: const BlockNoteColorPair(
+          text: Color(0xFFFFFFFF),
+          background: Color(0xFFA50000),
+        ),
+        shadow: const Color(0xFF400000),
+        border: const Color(0xFF600000),
+      ),
+      borderRadius: 4,
+      font: useCustomFont
+          ? const BlockNoteFontConfig(
+              family: "'Georgia', 'Times New Roman', serif",
+            )
+          : null,
+    );
+  }
+
   /// Creates a simple font-only theme.
   static BlockNoteTheme createFontTheme() {
     return BlockNoteTheme(
@@ -81,6 +153,10 @@ class EditorConfig {
   static const String _kTestPngDataUrl =
       'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
+  /// Sample image URL for demonstrating image block insertion.
+  static const String _kSampleImageUrl =
+      'https://upload.wikimedia.org/wikipedia/commons/7/70/Example.png';
+   
   /// Small circle SVG string (for testing SVG icon).
   static const String _kTestSvgCircle =
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>';
@@ -96,7 +172,7 @@ class EditorConfig {
           content: 'Hello World',
           aliases: ['helloworld', 'hw'],
           group: 'Custom',
-          subtext: 'Icon: emoji string',
+          subtext: 'Inserts paragraph with emoji icon',
           icon: '📝',
         ),
         BlockNoteSlashCommandItem.paragraph(
@@ -104,24 +180,25 @@ class EditorConfig {
           content: 'Hi there!',
           aliases: ['greeting', 'hi'],
           group: 'Custom',
-          subtext: 'Icon: BlockNoteSlashCommandIconText',
+          subtext: 'Inserts paragraph with text icon',
           icon: const BlockNoteSlashCommandIconText('Hi'),
         ),
-        BlockNoteSlashCommandItem.paragraph(
-          title: 'Insert SVG block',
-          content: 'SVG icon item',
-          aliases: ['svg'],
+        BlockNoteSlashCommandItem(
+          title: 'Insert Image',
+          onItemClick:
+              "editor.insertBlocks([{type: 'image', props: {url: '$_kSampleImageUrl'}}], editor.getTextCursorPosition().block, 'after');",
+          aliases: ['image', 'img', 'photo'],
           group: 'Custom',
-          subtext: 'Icon: BlockNoteSlashCommandIconSvg (circle)',
-          icon: const BlockNoteSlashCommandIconSvg(_kTestSvgCircle),
+          subtext: 'Inserts an image block',
+          icon: const BlockNoteSlashCommandIconImage(_kTestPngDataUrl),
         ),
         BlockNoteSlashCommandItem.paragraph(
-          title: 'Insert image-icon block',
-          content: 'Image icon item',
-          aliases: ['imgicon', 'imageicon'],
+          title: 'Insert Note',
+          content: 'This is a note block.',
+          aliases: ['note', 'memo'],
           group: 'Custom',
-          subtext: 'Icon: BlockNoteSlashCommandIconImage (data URL)',
-          icon: const BlockNoteSlashCommandIconImage(_kTestPngDataUrl),
+          subtext: 'Inserts paragraph with SVG icon',
+          icon: const BlockNoteSlashCommandIconSvg(_kTestSvgCircle),
         ),
         BlockNoteSlashCommandItem(
           title: 'Insert current date',
@@ -156,12 +233,13 @@ class EditorConfig {
     final base = createCustomSlashCommands();
     final items = List<BlockNoteSlashCommandItem>.from(base.items!);
     items.add(
-      BlockNoteSlashCommandItem.paragraph(
-        title: 'Insert fromAsset icon block',
-        content: 'Loaded from app asset (PNG)',
+      BlockNoteSlashCommandItem(
+        title: 'Insert Asset Image',
+        onItemClick:
+            "editor.insertBlocks([{type: 'image', props: {url: '$_kSampleImageUrl'}}], editor.getTextCursorPosition().block, 'after');",
         aliases: ['fromasset', 'asset'],
         group: 'Custom',
-        subtext: 'Icon: BlockNoteSlashCommandIconImage.fromAsset()',
+        subtext: 'Image icon loaded from app asset (PNG)',
         icon: imageIcon,
       ),
     );

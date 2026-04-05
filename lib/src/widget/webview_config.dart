@@ -96,7 +96,13 @@ class WebViewConfig {
   /// [backgroundColor] is optional. If provided, the WebView will use this
   /// color as its background instead of being transparent. The background color
   /// is applied via the theme system in JavaScript, not through WebView settings.
-  static InAppWebViewSettings getDefaultSettings({Color? backgroundColor}) {
+  ///
+  /// [allowingReadAccessTo] is the directory path that the WebView is allowed
+  /// to read from when using file:// URLs. Required on iOS for WKWebView.
+  static InAppWebViewSettings getDefaultSettings({
+    Color? backgroundColor,
+    WebUri? allowingReadAccessTo,
+  }) {
     return InAppWebViewSettings(
       javaScriptEnabled: true,
       transparentBackground: backgroundColor == null,
@@ -107,6 +113,9 @@ class WebViewConfig {
       disableVerticalScroll: false,
       disableHorizontalScroll: true,
       useShouldOverrideUrlLoading: true,
+      // Allow file:// access for loading local assets directly
+      allowFileAccessFromFileURLs: true,
+      allowUniversalAccessFromFileURLs: true,
       // Performance optimizations for Android
       cacheEnabled: true,
       clearCache: false,
@@ -122,13 +131,12 @@ class WebViewConfig {
       disableContextMenu: true,
       // Reduce overhead
       thirdPartyCookiesEnabled: false,
-      // Android-specific performance settings
-      // Note: MixedContentMode may not be available in all versions
-      // mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
       // iOS-specific performance settings
       allowsBackForwardNavigationGestures: false,
       // Reduce JavaScript bridge overhead
       javaScriptCanOpenWindowsAutomatically: false,
+      // iOS: allow WKWebView to read from the assets directory for file:// URLs
+      allowingReadAccessTo: allowingReadAccessTo,
     );
   }
 }

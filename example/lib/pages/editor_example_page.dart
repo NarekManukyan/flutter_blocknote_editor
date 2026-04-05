@@ -18,6 +18,7 @@ class EditorExamplePage extends StatefulWidget {
 class _EditorExamplePageState extends State<EditorExamplePage> {
   bool _isReady = false;
   bool _readOnly = false;
+  bool _useDarkMode = false;
   bool _useCustomTheme = false;
   bool _useCustomToolbar = false;
   bool _useCustomSlashCommands = false;
@@ -168,6 +169,15 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
               _showEditorInModalBottomSheet(context);
             },
             tooltip: 'Open editor in modal bottom sheet',
+          ),
+          IconButton(
+            icon: Icon(_useDarkMode ? Icons.light_mode : Icons.dark_mode),
+            onPressed: () {
+              setState(() {
+                _useDarkMode = !_useDarkMode;
+              });
+            },
+            tooltip: _useDarkMode ? 'Switch to light mode' : 'Switch to dark mode',
           ),
           IconButton(
             icon: Icon(_readOnly ? Icons.lock : Icons.lock_open),
@@ -381,7 +391,7 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
                                 EditorConfig.createCustomSlashCommands())
                             : null,
                     onLinkTapped: _handleLinkTap,
-                    extraBottomPadding: 500,
+                    // extraBottomPadding: 500,
                   )
                 : const Center(child: CircularProgressIndicator()),
           ),
@@ -393,7 +403,7 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
   Widget _buildStatusBar() {
     return Container(
       padding: const EdgeInsets.all(8.0),
-      color: Colors.grey[200],
+      color: _useDarkMode ? Colors.grey[850] : Colors.grey[200],
       child: Row(
         children: [
           Icon(
@@ -443,13 +453,15 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
             'Read-only: ${_readOnly ? "Yes" : "No"}',
             style: const TextStyle(fontSize: 12),
           ),
-          if (_useCustomTheme ||
+          if (_useDarkMode ||
+              _useCustomTheme ||
               _useCustomToolbar ||
               _useCustomSlashCommands ||
               _useAvailableSlashCommands ||
               _useCustomFont)
             const SizedBox(width: 8),
-          if (_useCustomTheme ||
+          if (_useDarkMode ||
+              _useCustomTheme ||
               _useCustomToolbar ||
               _useCustomSlashCommands ||
               _useAvailableSlashCommands ||
@@ -459,6 +471,12 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
                 spacing: 4,
                 runSpacing: 4,
                 children: [
+                  if (_useDarkMode)
+                    const Chip(
+                      label: Text('Dark'),
+                      labelStyle: TextStyle(fontSize: 10),
+                      padding: EdgeInsets.symmetric(horizontal: 4),
+                    ),
                   if (_useCustomTheme)
                     const Chip(
                       label: Text('Theme'),
@@ -498,18 +516,352 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
   }
 
   BlockNoteTheme? _buildTheme() {
-    if (_useCustomTheme) {
+    if (_useCustomTheme && _useDarkMode) {
+      return EditorConfig.createDarkCustomTheme(useCustomFont: _useCustomFont);
+    } else if (_useCustomTheme) {
       return EditorConfig.createCustomTheme(useCustomFont: _useCustomFont);
+    } else if (_useDarkMode) {
+      return EditorConfig.createDarkTheme(useCustomFont: _useCustomFont);
     } else if (_useCustomFont) {
       return EditorConfig.createFontTheme();
     }
     return null;
   }
 
+  /// Sample documents for the document picker.
+  static final List<_SampleDocument> _sampleDocuments = [
+    _SampleDocument(
+      title: 'Meeting Notes',
+      subtitle: 'Team standup notes with action items',
+      icon: Icons.groups,
+      document: BlockNoteDocument.fromJson({
+        'blocks': [
+          {
+            'id': 'meeting-h1',
+            'type': 'heading',
+            'content': [
+              {'type': 'text', 'text': 'Team Standup - April 5', 'styles': {}},
+            ],
+            'props': {'level': 1},
+          },
+          {
+            'id': 'meeting-p1',
+            'type': 'paragraph',
+            'content': [
+              {
+                'type': 'text',
+                'text':
+                    'Attendees: Alice, Bob, Charlie, Diana',
+                'styles': {},
+              },
+            ],
+          },
+          {
+            'id': 'meeting-h2',
+            'type': 'heading',
+            'content': [
+              {'type': 'text', 'text': 'Updates', 'styles': {}},
+            ],
+            'props': {'level': 2},
+          },
+          {
+            'id': 'meeting-bl1',
+            'type': 'bulletListItem',
+            'content': [
+              {
+                'type': 'text',
+                'text': 'Alice: Completed API integration for user profiles',
+                'styles': {},
+              },
+            ],
+          },
+          {
+            'id': 'meeting-bl2',
+            'type': 'bulletListItem',
+            'content': [
+              {
+                'type': 'text',
+                'text': 'Bob: Working on database migration scripts',
+                'styles': {},
+              },
+            ],
+          },
+          {
+            'id': 'meeting-bl3',
+            'type': 'bulletListItem',
+            'content': [
+              {
+                'type': 'text',
+                'text': 'Charlie: Fixed 3 critical bugs in auth flow',
+                'styles': {},
+              },
+            ],
+          },
+          {
+            'id': 'meeting-h3',
+            'type': 'heading',
+            'content': [
+              {'type': 'text', 'text': 'Action Items', 'styles': {}},
+            ],
+            'props': {'level': 2},
+          },
+          {
+            'id': 'meeting-cl1',
+            'type': 'checkListItem',
+            'content': [
+              {
+                'type': 'text',
+                'text': 'Review PR #42 by end of day',
+                'styles': {},
+              },
+            ],
+            'props': {'checked': false},
+          },
+          {
+            'id': 'meeting-cl2',
+            'type': 'checkListItem',
+            'content': [
+              {
+                'type': 'text',
+                'text': 'Schedule design review for next week',
+                'styles': {},
+              },
+            ],
+            'props': {'checked': true},
+          },
+        ],
+      }),
+    ),
+    _SampleDocument(
+      title: 'Project README',
+      subtitle: 'Documentation with code examples',
+      icon: Icons.description,
+      document: BlockNoteDocument.fromJson({
+        'blocks': [
+          {
+            'id': 'readme-h1',
+            'type': 'heading',
+            'content': [
+              {'type': 'text', 'text': 'My Awesome Project', 'styles': {}},
+            ],
+            'props': {'level': 1},
+          },
+          {
+            'id': 'readme-p1',
+            'type': 'paragraph',
+            'content': [
+              {
+                'type': 'text',
+                'text':
+                    'A lightweight and fast library for building modern applications. '
+                    'It provides a clean API with zero dependencies.',
+                'styles': {},
+              },
+            ],
+          },
+          {
+            'id': 'readme-h2',
+            'type': 'heading',
+            'content': [
+              {'type': 'text', 'text': 'Installation', 'styles': {}},
+            ],
+            'props': {'level': 2},
+          },
+          {
+            'id': 'readme-p2',
+            'type': 'paragraph',
+            'content': [
+              {
+                'type': 'text',
+                'text': 'Add the dependency to your ',
+                'styles': {},
+              },
+              {
+                'type': 'text',
+                'text': 'pubspec.yaml',
+                'styles': {'code': true},
+              },
+              {
+                'type': 'text',
+                'text': ' file:',
+                'styles': {},
+              },
+            ],
+          },
+          {
+            'id': 'readme-h3',
+            'type': 'heading',
+            'content': [
+              {'type': 'text', 'text': 'Features', 'styles': {}},
+            ],
+            'props': {'level': 2},
+          },
+          {
+            'id': 'readme-nl1',
+            'type': 'numberedListItem',
+            'content': [
+              {
+                'type': 'text',
+                'text': 'Hot reload support',
+                'styles': {'bold': true},
+              },
+              {
+                'type': 'text',
+                'text': ' - instant feedback during development',
+                'styles': {},
+              },
+            ],
+          },
+          {
+            'id': 'readme-nl2',
+            'type': 'numberedListItem',
+            'content': [
+              {
+                'type': 'text',
+                'text': 'Type safety',
+                'styles': {'bold': true},
+              },
+              {
+                'type': 'text',
+                'text': ' - catch errors at compile time',
+                'styles': {},
+              },
+            ],
+          },
+          {
+            'id': 'readme-nl3',
+            'type': 'numberedListItem',
+            'content': [
+              {
+                'type': 'text',
+                'text': 'Cross-platform',
+                'styles': {'bold': true},
+              },
+              {
+                'type': 'text',
+                'text': ' - iOS, Android, web, and desktop',
+                'styles': {},
+              },
+            ],
+          },
+        ],
+      }),
+    ),
+    _SampleDocument(
+      title: 'Shopping List',
+      subtitle: 'Weekly grocery checklist',
+      icon: Icons.shopping_cart,
+      document: BlockNoteDocument.fromJson({
+        'blocks': [
+          {
+            'id': 'shop-h1',
+            'type': 'heading',
+            'content': [
+              {'type': 'text', 'text': 'Weekly Groceries', 'styles': {}},
+            ],
+            'props': {'level': 1},
+          },
+          {
+            'id': 'shop-h2a',
+            'type': 'heading',
+            'content': [
+              {'type': 'text', 'text': 'Fruits & Vegetables', 'styles': {}},
+            ],
+            'props': {'level': 2},
+          },
+          {
+            'id': 'shop-cl1',
+            'type': 'checkListItem',
+            'content': [
+              {'type': 'text', 'text': 'Bananas (1 bunch)', 'styles': {}},
+            ],
+            'props': {'checked': true},
+          },
+          {
+            'id': 'shop-cl2',
+            'type': 'checkListItem',
+            'content': [
+              {'type': 'text', 'text': 'Avocados x3', 'styles': {}},
+            ],
+            'props': {'checked': false},
+          },
+          {
+            'id': 'shop-cl3',
+            'type': 'checkListItem',
+            'content': [
+              {'type': 'text', 'text': 'Spinach (fresh)', 'styles': {}},
+            ],
+            'props': {'checked': false},
+          },
+          {
+            'id': 'shop-cl4',
+            'type': 'checkListItem',
+            'content': [
+              {'type': 'text', 'text': 'Bell peppers (red & yellow)', 'styles': {}},
+            ],
+            'props': {'checked': true},
+          },
+          {
+            'id': 'shop-h2b',
+            'type': 'heading',
+            'content': [
+              {'type': 'text', 'text': 'Dairy & Protein', 'styles': {}},
+            ],
+            'props': {'level': 2},
+          },
+          {
+            'id': 'shop-cl5',
+            'type': 'checkListItem',
+            'content': [
+              {'type': 'text', 'text': 'Greek yogurt', 'styles': {}},
+            ],
+            'props': {'checked': false},
+          },
+          {
+            'id': 'shop-cl6',
+            'type': 'checkListItem',
+            'content': [
+              {'type': 'text', 'text': 'Eggs (dozen)', 'styles': {}},
+            ],
+            'props': {'checked': false},
+          },
+          {
+            'id': 'shop-cl7',
+            'type': 'checkListItem',
+            'content': [
+              {'type': 'text', 'text': 'Chicken breast (1 lb)', 'styles': {}},
+            ],
+            'props': {'checked': false},
+          },
+          {
+            'id': 'shop-p1',
+            'type': 'paragraph',
+            'content': [
+              {
+                'type': 'text',
+                'text': 'Budget: ~\$50',
+                'styles': {'italic': true},
+              },
+            ],
+          },
+        ],
+      }),
+    ),
+    _SampleDocument(
+      title: 'Empty Document',
+      subtitle: 'Start from scratch',
+      icon: Icons.add_circle_outline,
+      document: BlockNoteDocument.empty(),
+    ),
+  ];
+
   void _showEditorInModalBottomSheet(BuildContext context) {
+    _showDocumentPickerModal(context);
+  }
+
+  void _showDocumentPickerModal(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
       enableDrag: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
@@ -519,6 +871,7 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               margin: const EdgeInsets.only(top: 12, bottom: 8),
@@ -535,7 +888,7 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Editor in Modal Bottom Sheet',
+                    'Select a Document',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   IconButton(
@@ -546,50 +899,148 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
               ),
             ),
             const Divider(),
-            Expanded(
-              child: _isDocumentLoaded
-                  ? BlockNoteEditor(
-                      initialDocument: _document,
-                      onReady: (controller) {
-                        if (!mounted) return;
-                        final messenger = ScaffoldMessenger.of(context);
-                        messenger.showSnackBar(
-                          const SnackBar(
-                            content: Text('Editor is ready in modal!'),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                      onTransactions: (transactions) {
-                        setState(() {
-                          _transactions.addAll(transactions);
-                        });
-                      },
-                      readOnly: _readOnly,
-                      debugLogging: true,
-                      theme: _buildTheme(),
-                      customJavaScriptAssetPaths: _customSchemaScriptAssets,
-                      customCssAssetPaths: _customSchemaCssAssets,
-                      schemaConfigs: const {
-                        'agenda': {
-                          'blockSpecs': ['agenda_item'],
-                        },
-                      },
-                      activeSchemaId: 'agenda',
-                      toolbarConfig: _useCustomToolbar
-                          ? EditorConfig.createCustomToolbar()
-                          : null,
-                      slashCommandConfig: _useCustomSlashCommands
-                          ? (_customSlashConfig ??
-                              EditorConfig.createCustomSlashCommands())
-                          : null,
-                      onLinkTapped: _handleLinkTap,
-                    )
-                  : const Center(child: CircularProgressIndicator()),
+            ..._sampleDocuments.map(
+              (doc) => ListTile(
+                leading: Icon(doc.icon, size: 32),
+                title: Text(doc.title),
+                subtitle: Text(doc.subtitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _openEditorModal(context, doc.title, doc.document);
+                },
+              ),
             ),
+            // Also offer the main loaded document if available
+            if (_isDocumentLoaded)
+              ListTile(
+                leading: const Icon(Icons.file_present, size: 32),
+                title: const Text('Sample Document (from JSON)'),
+                subtitle: const Text('The main page document'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _openEditorModal(context, 'Sample Document', _document);
+                },
+              ),
+            const SizedBox(height: 16),
           ],
         ),
       ),
     );
   }
+
+  void _openEditorModal(
+    BuildContext context,
+    String title,
+    BlockNoteDocument document,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      enableDrag: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Scaffold(
+        resizeToAvoidBottomInset: false,
+        backgroundColor: Colors.transparent,
+        body: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(),
+              Expanded(
+                child: BlockNoteEditor(
+                initialDocument: document,
+                onReady: (controller) {
+                  if (!mounted) return;
+                  final messenger = ScaffoldMessenger.of(context);
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('$title ready!'),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+                onTransactions: (transactions) {
+                  setState(() {
+                    _transactions.addAll(transactions);
+                  });
+                },
+                readOnly: _readOnly,
+                debugLogging: true,
+                theme: _buildTheme(),
+                customJavaScriptAssetPaths: _customSchemaScriptAssets,
+                customCssAssetPaths: _customSchemaCssAssets,
+                schemaConfigs: const {
+                  'agenda': {
+                    'blockSpecs': ['agenda_item'],
+                  },
+                },
+                activeSchemaId: 'agenda',
+                toolbarConfig: _useCustomToolbar
+                    ? EditorConfig.createCustomToolbar()
+                    : null,
+                slashCommandConfig: _useCustomSlashCommands
+                    ? (_customSlashConfig ??
+                        EditorConfig.createCustomSlashCommands())
+                    : null,
+                onLinkTapped: _handleLinkTap,
+              ),
+            ),
+          ],
+        ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SampleDocument {
+  const _SampleDocument({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.document,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final BlockNoteDocument document;
 }

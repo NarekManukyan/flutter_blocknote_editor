@@ -16,68 +16,29 @@ import {
 } from '../handlers/messageHandlers';
 
 /**
- * Listen for Flutter-originated messages and delegate them to handlers that update the editor state and related UI/configuration.
- *
- * Attaches a window 'flutterMessage' listener that routes incoming message payloads to the appropriate handler (document loading, schema updates, theme, toolbar, etc.) and cleans up the listener on unmount. Also processes any pending schema config left on window.__blockNotePendingSchemaConfig.
+ * Listen for Flutter-originated messages and delegate them to handlers.
  *
  * @param {Object} editor - The BlockNote editor instance.
- * @param {Function} setIsReadonly - Setter to update the editor read-only state.
- * @param {Function} setTheme - Setter to update the editor theme.
- * @param {Function} setToolbarConfig - Setter to update the toolbar configuration.
- * @param {Function} setSlashCommandConfig - Setter to update slash-command configuration.
- * @param {Function} setSchemaConfig - Setter to update the editor schema configuration.
- * @param {Function} setSchemaConfigReady - Setter to mark schema config as ready.
- * @param {Function} setSchemaConfigRequired - Setter to indicate that schema config is required.
- * @param {Object} documentVersionRef - Ref tracking the current document version.
- * @param {Object} hasLoadedDocumentRef - Ref indicating whether a document has been loaded.
- * @param {Object} toolbarPopupCallbacksRef - Ref storing callbacks for toolbar popup responses.
- * @param {Object} pendingDocumentRef - Ref storing a pending document awaiting processing.
- * @param {Object} schemaChangePendingRef - Ref indicating whether a schema change is pending.
+ * @param {Object} setters - State setter functions { setIsReadonly, setTheme, setToolbarConfig, setSlashCommandConfig }
+ * @param {Object} schemaControl - Schema dispatch { dispatchSchema, SCHEMA_ACTIONS }
+ * @param {Object} refs - Shared mutable refs object with documentVersion, hasLoadedDocument, toolbarPopupCallbacks, pendingDocument, schemaChangePending
  */
-export function useFlutterMessages(
-  editor,
-  setIsReadonly,
-  setTheme,
-  setToolbarConfig,
-  setSlashCommandConfig,
-  setSchemaConfig,
-  setSchemaConfigReady,
-  setSchemaConfigRequired,
-  documentVersionRef,
-  hasLoadedDocumentRef,
-  toolbarPopupCallbacksRef,
-  pendingDocumentRef,
-  schemaChangePendingRef,
-) {
-  // Memoize handlers to prevent unnecessary re-renders
+export function useFlutterMessages(editor, setters, schemaControl, refs) {
+  const { setIsReadonly, setTheme, setToolbarConfig, setSlashCommandConfig } =
+    setters;
+  const { dispatchSchema, SCHEMA_ACTIONS } = schemaControl;
+
   const handleFlutterMessage = useCallback(
     (message) => {
       switch (message.type) {
         case 'load_document':
-          handleLoadDocument(
-            editor,
-            message.data,
-            documentVersionRef,
-            hasLoadedDocumentRef,
-            pendingDocumentRef,
-            schemaChangePendingRef,
-          );
+          handleLoadDocument(editor, message.data, refs);
           break;
         case 'set_readonly':
           setIsReadonly(message.value);
           break;
         case 'set_schema_config':
-          handleSetSchemaConfig(
-            editor,
-            message,
-            setSchemaConfig,
-            setSchemaConfigReady,
-            setSchemaConfigRequired,
-            documentVersionRef,
-            hasLoadedDocumentRef,
-            pendingDocumentRef,
-            schemaChangePendingRef,
-          );
+          handleSetSchemaConfig(editor, message, dispatchSchema, SCHEMA_ACTIONS, refs);
           break;
         case 'flush':
           handleFlush(editor);
@@ -98,7 +59,7 @@ export function useFlutterMessages(
           injectCustomCss(message.css);
           break;
         case 'toolbar_popup_response':
-          handleToolbarPopupResponse(message, toolbarPopupCallbacksRef);
+          handleToolbarPopupResponse(message, refs.toolbarPopupCallbacks);
           break;
         case 'set_debounce_duration':
           handleSetDebounceDuration(message);
@@ -118,14 +79,9 @@ export function useFlutterMessages(
       setTheme,
       setToolbarConfig,
       setSlashCommandConfig,
-      setSchemaConfig,
-      setSchemaConfigReady,
-      setSchemaConfigRequired,
-      documentVersionRef,
-      hasLoadedDocumentRef,
-      toolbarPopupCallbacksRef,
-      pendingDocumentRef,
-      schemaChangePendingRef,
+      dispatchSchema,
+      SCHEMA_ACTIONS,
+      refs,
     ],
   );
 

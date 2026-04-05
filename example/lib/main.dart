@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_blocknote_editor/flutter_blocknote_editor.dart';
 import 'pages/editor_example_page.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Pre-warm the editor WebView so modals and subsequent editor instances
+  // display instantly without loading delay.
+  BlockNoteEditorPool.instance.warmup(debugLogging: true);
   runApp(const MyApp());
 }
 
@@ -16,6 +21,14 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+      ),
+      themeMode: ThemeMode.system,
       home: const EditorExamplePage(),
     );
   }
