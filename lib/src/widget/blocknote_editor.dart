@@ -505,13 +505,24 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
     // Apply editor configuration and load document.
     unawaited(Future(() async {
       if (!mounted || _bridge == null) return;
-      await _preloadEditorConfiguration();
-      if (widget.transactionDebounceDuration != null) {
-        await _bridge!.setDebounceDuration(
-          widget.transactionDebounceDuration!.inMilliseconds,
-        );
+      try {
+        await _preloadEditorConfiguration();
+        if (widget.transactionDebounceDuration != null) {
+          await _bridge!.setDebounceDuration(
+            widget.transactionDebounceDuration!.inMilliseconds,
+          );
+        }
+      } catch (e) {
+        if (widget.debugLogging) {
+          debugPrint(
+            '[BlockNoteEditor] Error during pool pre-configuration: $e',
+          );
+        }
+      } finally {
+        if (mounted) {
+          _loadInitialDocument();
+        }
       }
-      _loadInitialDocument();
     }));
   }
 
@@ -920,6 +931,15 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
                       debugPrint('[JS Console] $msg');
                     }
                   };
+                  // Re-inject JS bridge objects (idempotent) to ensure
+                  // window.onMessage/window.flutterConsole are present with
+                  // the correct debugLogging flag for this widget instance.
+                  unawaited(
+                    WebViewConfig.setupJavaScriptBridge(
+                      controller: controller,
+                      debugLogging: widget.debugLogging,
+                    ),
+                  );
                   // The pool only waits for page load, not React/BlockNote
                   // initialization. Probe JS to check if editor is ready.
                   _probeEditorReadiness();
