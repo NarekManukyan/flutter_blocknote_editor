@@ -7,6 +7,7 @@ library;
 
 export 'src/widget/blocknote_editor.dart';
 export 'src/widget/blocknote_controller.dart';
+export 'src/pool/blocknote_editor_pool.dart' show BlockNoteEditorPool;
 export 'src/model/blocknote_document.dart';
 export 'src/model/blocknote_transaction.dart';
 export 'src/model/blocknote_block.dart';
