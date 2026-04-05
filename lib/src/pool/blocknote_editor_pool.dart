@@ -65,6 +65,11 @@ class BlockNotePoolEntry {
 ///
 /// After an entry is consumed, the pool automatically starts warming
 /// a new one in the background for the next use.
+///
+/// [BlockNoteEditorPool.instance] is a persistent singleton. Calling
+/// [dispose] resets internal state (cancels any in-flight warmup and
+/// releases the warm entry) but does not destroy the singleton — callers
+/// may call [warmup] again after [dispose] to re-initialize the pool.
 class BlockNoteEditorPool {
   BlockNoteEditorPool._();
 
