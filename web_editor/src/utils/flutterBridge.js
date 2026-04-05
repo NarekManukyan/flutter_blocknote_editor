@@ -26,7 +26,7 @@ export function sendToFlutter(type, payload = {}) {
  * @param {string} message - Human-readable error description
  */
 export function sendErrorToFlutter(message) {
-  sendToFlutter('error', { data: { message } });
+  sendToFlutter('error', { message });
 }
 
 /**

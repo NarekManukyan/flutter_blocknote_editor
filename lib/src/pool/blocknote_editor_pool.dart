@@ -25,9 +25,9 @@ import '../widget/webview_config.dart';
 import '../widget/webview_initializer.dart';
 
 /// A pre-warmed WebView entry ready for use.
-class PoolEntry {
+class BlockNotePoolEntry {
   /// Creates a new pool entry.
-  PoolEntry({
+  BlockNotePoolEntry({
     required this.headlessWebView,
     required this.controller,
     required this.assetLoader,
@@ -41,7 +41,7 @@ class PoolEntry {
   final InAppWebViewController controller;
 
   /// The asset loader (owns the temp directory).
-  final AssetLoader? assetLoader;
+  final BlockNoteAssetLoader? assetLoader;
 
   /// The URL used to load the editor assets.
   final String assetUrl;
@@ -71,7 +71,7 @@ class BlockNoteEditorPool {
   /// The singleton instance.
   static final BlockNoteEditorPool instance = BlockNoteEditorPool._();
 
-  PoolEntry? _warmEntry;
+  BlockNotePoolEntry? _warmEntry;
   bool _isReady = false;
   Completer<void>? _warmupCompleter;
   bool _isWarming = false;
@@ -79,6 +79,7 @@ class BlockNoteEditorPool {
   // Stored config for re-warming after consumption.
   String? _localhostUrl;
   bool _debugLogging = false;
+  Duration _warmupTimeout = const Duration(seconds: 30);
 
   /// Whether a warm entry is available for immediate use.
   bool get hasWarmEntry => _warmEntry != null && _isReady;
@@ -98,10 +99,12 @@ class BlockNoteEditorPool {
   Future<void> warmup({
     String? localhostUrl,
     bool debugLogging = false,
+    Duration warmupTimeout = const Duration(seconds: 30),
   }) async {
     // Store config for re-warming.
     _localhostUrl = localhostUrl;
     _debugLogging = debugLogging;
+    _warmupTimeout = warmupTimeout;
 
     // If already warming or warm, return existing future.
     if (_isWarming && _warmupCompleter != null) {
@@ -184,7 +187,7 @@ class BlockNoteEditorPool {
       // We do NOT wait for the React/BlockNote "ready" signal here — that
       // can take 15+ seconds in headless mode. The widget will handle it.
       await pageLoadCompleter.future.timeout(
-        const Duration(seconds: 30),
+        _warmupTimeout,
         onTimeout: () {
           if (debugLogging) {
             debugPrint(
@@ -196,7 +199,7 @@ class BlockNoteEditorPool {
       );
 
       // Store the warm entry.
-      _warmEntry = PoolEntry(
+      _warmEntry = BlockNotePoolEntry(
         headlessWebView: headless,
         controller: warmController,
         assetLoader: result.assetLoader,
@@ -231,7 +234,7 @@ class BlockNoteEditorPool {
   /// The caller is responsible for the entry's lifecycle. The entry's
   /// [HeadlessInAppWebView] should be passed to `InAppWebView(headlessWebView:)`
   /// for display.
-  PoolEntry? acquire() {
+  BlockNotePoolEntry? acquire() {
     if (!_isReady || _warmEntry == null) {
       return null;
     }

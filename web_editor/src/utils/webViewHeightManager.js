@@ -214,14 +214,18 @@ export function updateWebViewHeight(extraBottomPadding, editor) {
 
     if (!isKeyboardListenerSetup) _setupKeyboardListener();
 
+    // Always clear previous delayed rechecks to prevent stale closures
+    _clearDelayedRechecks();
+
     // Re-check after delays when extra padding provided (viewport may not have updated yet)
     if (padding > 0) {
-      _clearDelayedRechecks();
       const runRecheck = () => {
+        // Read current values from module state instead of captured closure
+        const currentPadding = lastExtraBottomPadding ?? 0;
         const currentKeyboard = _detectKeyboardHeight();
         if (currentKeyboard !== lastKeyboardHeight) {
           lastKeyboardHeight = currentKeyboard;
-          _performPaddingUpdate(currentKeyboard, padding, editor);
+          _performPaddingUpdate(currentKeyboard, currentPadding, editor);
         }
       };
       delayedRecheckTimeoutIds = [

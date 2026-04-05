@@ -11,9 +11,9 @@ import 'package:flutter/services.dart';
 
 /// Loads BlockNote web assets from the Flutter package bundle into a temporary
 /// directory for direct file:// access by the WebView.
-class AssetLoader {
+class BlockNoteAssetLoader {
   /// Creates a new asset loader.
-  AssetLoader({this.debugLogging = false});
+  BlockNoteAssetLoader({this.debugLogging = false});
 
   /// Whether to enable debug logging.
   final bool debugLogging;
@@ -35,13 +35,13 @@ class AssetLoader {
       final indexPath = '${_tempDir!.path}/index.html';
 
       if (debugLogging) {
-        debugPrint('[AssetLoader] Assets ready at: $indexPath');
+        debugPrint('[BlockNoteAssetLoader] Assets ready at: $indexPath');
       }
 
       return indexPath;
     } catch (e) {
       if (debugLogging) {
-        debugPrint('[AssetLoader] Error loading assets: $e');
+        debugPrint('[BlockNoteAssetLoader] Error loading assets: $e');
       }
       rethrow;
     }
@@ -102,13 +102,14 @@ class AssetLoader {
 
           if (debugLogging) {
             debugPrint(
-              '[AssetLoader] Copied: $fileName (${data.lengthInBytes} bytes)',
+              '[BlockNoteAssetLoader] Copied: $fileName (${data.lengthInBytes} bytes)',
             );
           }
         } catch (e) {
           if (debugLogging) {
-            debugPrint('[AssetLoader] ERROR: Could not load $fileName: $e');
+            debugPrint('[BlockNoteAssetLoader] ERROR: Could not load $fileName: $e');
           }
+          rethrow;
         }
       }
 
@@ -127,7 +128,7 @@ class AssetLoader {
       }
 
       if (debugLogging) {
-        debugPrint('[AssetLoader] Copied $copiedCount assets total');
+        debugPrint('[BlockNoteAssetLoader] Copied $copiedCount assets total');
       }
 
       // Verify required files were copied
@@ -146,7 +147,7 @@ class AssetLoader {
       }
 
       if (debugLogging) {
-        debugPrint('[AssetLoader] Temp directory: ${tempDir.path}');
+        debugPrint('[BlockNoteAssetLoader] Temp directory: ${tempDir.path}');
         final files = await tempDir.list().toList();
         for (final file in files) {
           debugPrint('  - ${file.path.split('/').last}');
@@ -156,7 +157,7 @@ class AssetLoader {
       return tempDir;
     } catch (e) {
       if (debugLogging) {
-        debugPrint('[AssetLoader] Error creating temp directory: $e');
+        debugPrint('[BlockNoteAssetLoader] Error creating temp directory: $e');
       }
       rethrow;
     }
@@ -169,7 +170,7 @@ class AssetLoader {
         await _tempDir!.delete(recursive: true);
       } catch (e) {
         if (debugLogging) {
-          debugPrint('[AssetLoader] Error deleting temp dir: $e');
+          debugPrint('[BlockNoteAssetLoader] Error deleting temp dir: $e');
         }
       }
       _tempDir = null;
