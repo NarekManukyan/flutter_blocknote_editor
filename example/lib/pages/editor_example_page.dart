@@ -18,6 +18,7 @@ class EditorExamplePage extends StatefulWidget {
 class _EditorExamplePageState extends State<EditorExamplePage> {
   bool _isReady = false;
   bool _readOnly = false;
+  bool _useDarkMode = false;
   bool _useCustomTheme = false;
   bool _useCustomToolbar = false;
   bool _useCustomSlashCommands = false;
@@ -168,6 +169,15 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
               _showEditorInModalBottomSheet(context);
             },
             tooltip: 'Open editor in modal bottom sheet',
+          ),
+          IconButton(
+            icon: Icon(_useDarkMode ? Icons.light_mode : Icons.dark_mode),
+            onPressed: () {
+              setState(() {
+                _useDarkMode = !_useDarkMode;
+              });
+            },
+            tooltip: _useDarkMode ? 'Switch to light mode' : 'Switch to dark mode',
           ),
           IconButton(
             icon: Icon(_readOnly ? Icons.lock : Icons.lock_open),
@@ -393,7 +403,7 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
   Widget _buildStatusBar() {
     return Container(
       padding: const EdgeInsets.all(8.0),
-      color: Colors.grey[200],
+      color: _useDarkMode ? Colors.grey[850] : Colors.grey[200],
       child: Row(
         children: [
           Icon(
@@ -443,13 +453,15 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
             'Read-only: ${_readOnly ? "Yes" : "No"}',
             style: const TextStyle(fontSize: 12),
           ),
-          if (_useCustomTheme ||
+          if (_useDarkMode ||
+              _useCustomTheme ||
               _useCustomToolbar ||
               _useCustomSlashCommands ||
               _useAvailableSlashCommands ||
               _useCustomFont)
             const SizedBox(width: 8),
-          if (_useCustomTheme ||
+          if (_useDarkMode ||
+              _useCustomTheme ||
               _useCustomToolbar ||
               _useCustomSlashCommands ||
               _useAvailableSlashCommands ||
@@ -459,6 +471,12 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
                 spacing: 4,
                 runSpacing: 4,
                 children: [
+                  if (_useDarkMode)
+                    const Chip(
+                      label: Text('Dark'),
+                      labelStyle: TextStyle(fontSize: 10),
+                      padding: EdgeInsets.symmetric(horizontal: 4),
+                    ),
                   if (_useCustomTheme)
                     const Chip(
                       label: Text('Theme'),
@@ -498,8 +516,12 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
   }
 
   BlockNoteTheme? _buildTheme() {
-    if (_useCustomTheme) {
+    if (_useCustomTheme && _useDarkMode) {
+      return EditorConfig.createDarkCustomTheme(useCustomFont: _useCustomFont);
+    } else if (_useCustomTheme) {
       return EditorConfig.createCustomTheme(useCustomFont: _useCustomFont);
+    } else if (_useDarkMode) {
+      return EditorConfig.createDarkTheme(useCustomFont: _useCustomFont);
     } else if (_useCustomFont) {
       return EditorConfig.createFontTheme();
     }

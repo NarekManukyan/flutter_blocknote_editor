@@ -39,6 +39,78 @@ class EditorConfig {
     );
   }
 
+  /// Creates a dark theme.
+  static BlockNoteTheme createDarkTheme({bool useCustomFont = false}) {
+    return BlockNoteTheme(
+      colors: BlockNoteColorScheme(
+        editor: const BlockNoteColorPair(
+          text: Color(0xFFE0E0E0),
+          background: Color(0xFF1A1A1A),
+        ),
+        menu: const BlockNoteColorPair(
+          text: Color(0xFFE0E0E0),
+          background: Color(0xFF2D2D2D),
+        ),
+        tooltip: const BlockNoteColorPair(
+          text: Color(0xFFE0E0E0),
+          background: Color(0xFF383838),
+        ),
+        hovered: const BlockNoteColorPair(
+          text: Color(0xFFFFFFFF),
+          background: Color(0xFF3D3D3D),
+        ),
+        selected: const BlockNoteColorPair(
+          text: Color(0xFFFFFFFF),
+          background: Color(0xFF4A4A4A),
+        ),
+        shadow: const Color(0xFF000000),
+        border: const Color(0xFF444444),
+      ),
+      borderRadius: 4,
+      font: useCustomFont
+          ? const BlockNoteFontConfig(
+              family: "'Georgia', 'Times New Roman', serif",
+            )
+          : null,
+    );
+  }
+
+  /// Creates a dark variant of the custom red theme.
+  static BlockNoteTheme createDarkCustomTheme({bool useCustomFont = false}) {
+    return BlockNoteTheme(
+      colors: BlockNoteColorScheme(
+        editor: const BlockNoteColorPair(
+          text: Color(0xFFE0E0E0),
+          background: Color(0xFF1A0000),
+        ),
+        menu: const BlockNoteColorPair(
+          text: Color(0xFFFFFFFF),
+          background: Color(0xFF7B0000),
+        ),
+        tooltip: const BlockNoteColorPair(
+          text: Color(0xFFFFFFFF),
+          background: Color(0xFF900000),
+        ),
+        hovered: const BlockNoteColorPair(
+          text: Color(0xFFFFFFFF),
+          background: Color(0xFF900000),
+        ),
+        selected: const BlockNoteColorPair(
+          text: Color(0xFFFFFFFF),
+          background: Color(0xFFA50000),
+        ),
+        shadow: const Color(0xFF400000),
+        border: const Color(0xFF600000),
+      ),
+      borderRadius: 4,
+      font: useCustomFont
+          ? const BlockNoteFontConfig(
+              family: "'Georgia', 'Times New Roman', serif",
+            )
+          : null,
+    );
+  }
+
   /// Creates a simple font-only theme.
   static BlockNoteTheme createFontTheme() {
     return BlockNoteTheme(

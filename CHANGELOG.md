@@ -1,3 +1,25 @@
+## 0.0.20
+
+* Direct file:// WebView loading:
+  * Replaced local HTTP server (`shelf`/`shelf_static`) with direct `file://` URL loading
+  * Assets copied to temp directory and loaded via `file://`, eliminating HTTP server startup latency
+  * Removed `shelf` and `shelf_static` dependencies
+  * Android/iOS cleartext HTTP config no longer required for default setup
+  * New `AssetLoader` replaces `AssetServer`; `WebViewConfig` enables file access for ES modules
+* BlockNoteEditorPool for instant editor loading:
+  * New `BlockNoteEditorPool` singleton pre-warms a `HeadlessInAppWebView` with BlockNote.js loaded
+  * Subsequent editor instances (e.g. in modals) display instantly without reload
+  * Pool auto re-warms after each use; call `BlockNoteEditorPool.instance.warmup()` at app startup
+* Pool warmup fixes:
+  * Allow navigation in `HeadlessInAppWebView` during warmup
+  * Wait for page load then probe editor readiness separately for reliable init
+* Custom font fix:
+  * Fixed `.bn-default-styles` overriding theme `fontFamily` with hardcoded "Inter"
+  * Added CSS override using `var(--bn-font-family)` so theme font applies to content area
+* Dark mode support in example app
+* Web editor refactoring: improved modularity and reduced complexity in the React codebase
+* Updated embedded web editor bundle (`assets/web/editor.js`, `assets/web/editor.css`)
+
 ## 0.0.19
 
 * Keyboard and WebView (Scaffold):
