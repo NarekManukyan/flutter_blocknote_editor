@@ -27,6 +27,7 @@ import 'toolbar_popup_handler.dart';
 import 'webview_config.dart';
 import 'webview_height_manager.dart';
 import 'css_utils.dart';
+import '../pool/blocknote_editor_pool.dart';
 
 /// BlockNote editor widget.
 ///
@@ -220,6 +221,9 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
   Timer? _heightUpdateDebounceTimer;
   double _pendingExtraBottomPadding = 0;
 
+  /// Pool entry acquired from [BlockNoteEditorPool], if any.
+  PoolEntry? _poolEntry;
+
   @override
   void initState() {
     super.initState();
@@ -253,7 +257,13 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
 
   @override
   void dispose() {
-    // Clean up asset loader temp directory
+    // Clean up pool entry delegates to avoid leaks.
+    if (_poolEntry != null) {
+      _poolEntry!.onRawJsMessage = null;
+      _poolEntry!.onConsoleMessage = null;
+      _poolEntry = null;
+    }
+    // Clean up asset loader temp directory (only if not using pool).
     _assetLoader?.dispose();
     // Flush any pending transactions before disposing
     _batcher?.dispose();
@@ -282,7 +292,25 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
       debugLogging: widget.debugLogging,
     );
 
-    // Initialize WebView
+    // Try to acquire a pre-warmed entry from the pool.
+    final poolEntry = BlockNoteEditorPool.instance.acquire();
+    if (poolEntry != null) {
+      if (widget.debugLogging) {
+        debugPrint('[BlockNoteEditor] Using pre-warmed pool entry');
+      }
+      _poolEntry = poolEntry;
+      // The pool entry's asset loader owns the temp directory.
+      // Don't create a new one.
+      if (mounted) {
+        setState(() {
+          _initialUrl = poolEntry.assetUrl;
+          _isInitializing = false;
+        });
+      }
+      return;
+    }
+
+    // No pool entry available - initialize from scratch.
     final result = await WebViewInitializer.initialize(
       localhostUrl: widget.localhostUrl,
       debugLogging: widget.debugLogging,
@@ -445,6 +473,38 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
     // Load initial document now that editor is initialized
     // _isReady will be set to true after document is loaded and UI is updated
     _loadInitialDocument();
+  }
+
+  /// Handles initialization for a pre-warmed pool entry.
+  ///
+  /// The editor JS is already initialized, so we skip waiting for the "ready"
+  /// message and go straight to creating the controller and loading the document.
+  void _handleReadyFromPool() {
+    if (widget.debugLogging) {
+      debugPrint(
+        '[BlockNoteEditor] Using pooled entry (editor already initialized)',
+      );
+    }
+
+    // Initialize controller.
+    if (_bridge != null && _blockNoteController == null) {
+      _blockNoteController = BlockNoteController(
+        debugLogging: widget.debugLogging,
+      );
+      _blockNoteController!.initialize(_bridge!);
+    }
+
+    // Apply editor configuration and load document.
+    unawaited(Future(() async {
+      if (!mounted || _bridge == null) return;
+      await _preloadEditorConfiguration();
+      if (widget.transactionDebounceDuration != null) {
+        await _bridge!.setDebounceDuration(
+          widget.transactionDebounceDuration!.inMilliseconds,
+        );
+      }
+      _loadInitialDocument();
+    }));
   }
 
   /// Handles transactions from JavaScript.
@@ -736,11 +796,21 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
                   () => EagerGestureRecognizer(),
                 ),
               },
-              initialUrlRequest: URLRequest(url: WebUri(_initialUrl!)),
+              headlessWebView: _poolEntry?.headlessWebView,
+              initialUrlRequest:
+                  _poolEntry == null
+                      ? URLRequest(url: WebUri(_initialUrl!))
+                      : null,
               initialSettings: WebViewConfig.getDefaultSettings(
                 backgroundColor: editorBackgroundColor,
                 allowingReadAccessTo:
-                    _assetLoader?.tempDirPath != null
+                    _poolEntry?.assetLoader?.tempDirPath != null
+                        ? WebUri(
+                          Uri.directory(
+                            _poolEntry!.assetLoader!.tempDirPath!,
+                          ).toString(),
+                        )
+                        : _assetLoader?.tempDirPath != null
                         ? WebUri(
                           Uri.directory(_assetLoader!.tempDirPath!).toString(),
                         )
@@ -748,15 +818,52 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
               ),
               onWebViewCreated: (controller) {
                 _controller = controller;
-                // Create JavaScript bridge
+
+                if (_poolEntry != null) {
+                  // Pooled entry: editor is already initialized.
+                  // Create a new bridge on the existing controller and
+                  // re-register JS handlers to point to this widget.
+                  _bridge = JsBridge(
+                    controller: controller,
+                    onMessage: _handleBridgeMessage,
+                    debugLogging: widget.debugLogging,
+                  );
+                  // Replace the pool's JS handlers with this widget's handlers.
+                  WebViewConfig.setupJavaScriptHandlers(
+                    controller: controller,
+                    onJsMessage: _handleJsMessage,
+                    onConsoleMessage: (msg) {
+                      if (msg.contains('[ERROR]')) {
+                        debugPrint('[BlockNoteEditor] $msg');
+                        MessageHandlers.handleError(
+                          message: msg,
+                          debugLogging: widget.debugLogging,
+                        );
+                      } else if (widget.debugLogging) {
+                        debugPrint('[JS Console] $msg');
+                      }
+                    },
+                    debugLogging: widget.debugLogging,
+                  );
+                  // Also wire up pool entry delegates as a fallback.
+                  _poolEntry!.onRawJsMessage = _handleJsMessage;
+                  _poolEntry!.onConsoleMessage = (msg) {
+                    if (widget.debugLogging) {
+                      debugPrint('[JS Console] $msg');
+                    }
+                  };
+                  // Editor is already initialized - trigger document loading.
+                  _isEditorInitialized = true;
+                  _handleReadyFromPool();
+                  return;
+                }
+
+                // Non-pooled: standard initialization.
                 _bridge = JsBridge(
                   controller: controller,
                   onMessage: _handleBridgeMessage,
                   debugLogging: widget.debugLogging,
                 );
-                // Controller will be initialized in _handleReady() when editor sends ready message
-                // and onReady callback will be called after document is loaded
-                // Set up JavaScript handlers
                 WebViewConfig.setupJavaScriptHandlers(
                   controller: controller,
                   onJsMessage: _handleJsMessage,
@@ -775,6 +882,9 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
                 );
               },
               onLoadStop: (controller, url) async {
+                // Skip for pooled entries - page is already loaded.
+                if (_poolEntry != null) return;
+
                 if (widget.debugLogging) {
                   debugPrint('[BlockNoteEditor] Page finished loading: $url');
                 }
