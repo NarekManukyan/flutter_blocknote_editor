@@ -76,6 +76,9 @@ class BlockNoteEditorPool {
   Completer<void>? _warmupCompleter;
   bool _isWarming = false;
 
+  // Generation counter to detect dispose() during an in-flight warmup.
+  int _generation = 0;
+
   // Stored config for re-warming after consumption.
   String? _localhostUrl;
   bool _debugLogging = false;
@@ -101,21 +104,38 @@ class BlockNoteEditorPool {
     bool debugLogging = false,
     Duration warmupTimeout = const Duration(seconds: 30),
   }) async {
-    // Store config for re-warming.
+    // If already warming, return existing future (don't overwrite config).
+    if (_isWarming && _warmupCompleter != null) {
+      return _warmupCompleter!.future;
+    }
+
+    // If already warm with matching config, no-op.
+    if (_isReady && _warmEntry != null && _localhostUrl == localhostUrl) {
+      return;
+    }
+
+    // If already warm but config changed, discard the stale entry and re-warm.
+    if (_isReady && _warmEntry != null && _localhostUrl != localhostUrl) {
+      if (debugLogging) {
+        debugPrint(
+          '[BlockNoteEditorPool] Config changed '
+          '(old: $_localhostUrl, new: $localhostUrl) — discarding stale entry',
+        );
+      }
+      await _warmEntry!.headlessWebView.dispose();
+      await _warmEntry!.assetLoader?.dispose();
+      _warmEntry = null;
+      _isReady = false;
+    }
+
+    // Store config now that we know a new warmup will start.
     _localhostUrl = localhostUrl;
     _debugLogging = debugLogging;
     _warmupTimeout = warmupTimeout;
 
-    // If already warming or warm, return existing future.
-    if (_isWarming && _warmupCompleter != null) {
-      return _warmupCompleter!.future;
-    }
-    if (_isReady && _warmEntry != null) {
-      return;
-    }
-
     _isWarming = true;
     _warmupCompleter = Completer<void>();
+    final generation = _generation;
 
     BlockNoteAssetLoader? assetLoader;
     HeadlessInAppWebView? headless;
@@ -131,6 +151,12 @@ class BlockNoteEditorPool {
         debugLogging: debugLogging,
       );
       assetLoader = result.assetLoader;
+
+      // Check if pool was disposed during the async gap.
+      if (_generation != generation) {
+        await assetLoader?.dispose();
+        return;
+      }
 
       // Create headless WebView.
       late final InAppWebViewController warmController;
@@ -187,6 +213,14 @@ class BlockNoteEditorPool {
       // Start the headless WebView.
       await headless.run();
 
+      // Check if pool was disposed during the async gap.
+      if (_generation != generation) {
+        await headless.dispose();
+        headless = null;
+        await assetLoader?.dispose();
+        return;
+      }
+
       // Wait for the page to fully load and the JS bridge to be set up.
       // We do NOT wait for the React/BlockNote "ready" signal here — that
       // can take 15+ seconds in headless mode. The widget will handle it.
@@ -201,6 +235,14 @@ class BlockNoteEditorPool {
           throw TimeoutException('Page load timed out');
         },
       );
+
+      // Final generation check before committing.
+      if (_generation != generation) {
+        await headless.dispose();
+        headless = null;
+        await assetLoader?.dispose();
+        return;
+      }
 
       // Store the warm entry.
       _warmEntry = BlockNotePoolEntry(
@@ -219,7 +261,7 @@ class BlockNoteEditorPool {
         debugPrint('[BlockNoteEditorPool] Warmup complete - entry ready');
       }
 
-      if (!_warmupCompleter!.isCompleted) {
+      if (_warmupCompleter != null && !_warmupCompleter!.isCompleted) {
         _warmupCompleter!.complete();
       }
     } catch (e) {
@@ -234,6 +276,7 @@ class BlockNoteEditorPool {
       if (_warmupCompleter != null && !_warmupCompleter!.isCompleted) {
         _warmupCompleter!.completeError(e);
       }
+      rethrow;
     }
   }
 
@@ -280,18 +323,29 @@ class BlockNoteEditorPool {
   /// Starts re-warming a new entry in the background.
   void _rewarmInBackground() {
     // Schedule on next microtask to avoid blocking the current frame.
-    Future.microtask(() {
-      warmup(
-        localhostUrl: _localhostUrl,
-        debugLogging: _debugLogging,
-      );
+    Future.microtask(() async {
+      try {
+        await warmup(
+          localhostUrl: _localhostUrl,
+          debugLogging: _debugLogging,
+          warmupTimeout: _warmupTimeout,
+        );
+      } catch (e) {
+        if (_debugLogging) {
+          debugPrint('[BlockNoteEditorPool] Background re-warmup failed: $e');
+        }
+      }
     });
   }
 
   /// Disposes of the pool and any warm entries.
   ///
   /// Call this when the app no longer needs editor pooling.
+  /// Any in-flight warmup is cancelled via generation tracking.
   Future<void> dispose() async {
+    // Increment generation to cancel any in-flight warmup.
+    _generation++;
+
     if (_warmEntry != null) {
       await _warmEntry!.headlessWebView.dispose();
       await _warmEntry!.assetLoader?.dispose();
@@ -299,6 +353,11 @@ class BlockNoteEditorPool {
     }
     _isReady = false;
     _isWarming = false;
+    if (_warmupCompleter != null && !_warmupCompleter!.isCompleted) {
+      _warmupCompleter!.completeError(
+        StateError('BlockNoteEditorPool disposed during warmup'),
+      );
+    }
     _warmupCompleter = null;
 
     if (_debugLogging) {
