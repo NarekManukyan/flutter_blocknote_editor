@@ -18,19 +18,24 @@ export function buildBlockNoteTheme(theme) {
     // Deep clone to avoid mutation issues
     const cloned = JSON.parse(JSON.stringify(theme));
 
+    // Extract fontFamily from Flutter's font config ({family, files}) or direct fontFamily
+    const fontFamily = cloned.font?.family || cloned.fontFamily;
+    // Remove font object so it doesn't leak into BlockNote theme
+    delete cloned.font;
+
     let blockNoteTheme = {};
     if (cloned.light || cloned.dark) {
       if (cloned.light) blockNoteTheme.light = cloned.light;
       if (cloned.dark) blockNoteTheme.dark = cloned.dark;
       if (cloned.borderRadius !== undefined) blockNoteTheme.borderRadius = cloned.borderRadius;
-      if (cloned.fontFamily) blockNoteTheme.fontFamily = cloned.fontFamily;
+      if (fontFamily) blockNoteTheme.fontFamily = fontFamily;
     } else {
       blockNoteTheme = cloned;
     }
 
     // Ensure fontFamily propagates
-    if (cloned.fontFamily && !blockNoteTheme.fontFamily) {
-      blockNoteTheme.fontFamily = cloned.fontFamily;
+    if (fontFamily && !blockNoteTheme.fontFamily) {
+      blockNoteTheme.fontFamily = fontFamily;
     }
 
     debugLog('Converted theme:', blockNoteTheme);
