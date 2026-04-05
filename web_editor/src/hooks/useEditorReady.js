@@ -3,12 +3,7 @@
  */
 
 import { useCallback, useEffect, useRef } from 'react';
-import {
-  serializeStyledText,
-  serializeInlineContent,
-  serializeTableContent,
-  createSerializeBlock,
-} from '../utils/blockSerialization';
+import { createSerializeBlock, serializeInlineContent, serializeStyledText, serializeTableContent } from '../utils/blockSerialization';
 import { computeBlockDifferences } from '../utils/blockDiff';
 import {
   getSelectionVisibility,
@@ -20,161 +15,107 @@ import {
   createInitialOperations,
   sendTransactionsToFlutter,
 } from '../utils/transactionSender';
+import { sendToFlutter, sendErrorToFlutter } from '../utils/flutterBridge';
+
+// Create stable serializer (pure functions, no need for useCallback)
+const serializeBlock = createSerializeBlock(
+  (item) => serializeInlineContent(item, serializeStyledText),
+  (tableContent) =>
+    serializeTableContent(tableContent, (item) =>
+      serializeInlineContent(item, serializeStyledText),
+    ),
+);
 
 /**
- * Manage editor readiness, initialize change listeners, and expose helpers for transaction flushing and serialization.
- *
- * Initializes the editor-ready state, sends a ready signal, sets up debounced change handling that serializes top-level blocks and dispatches operations, exposes runtime helpers (sendPendingTransaction, resetPreviousBlocks, serializeBlock, updateDebounceDuration), and reports initialization errors when the editor is missing unless allowed.
- * @param {Object} editor - The BlockNote editor instance (or null/undefined when not present).
- * @param {Object} documentVersionRef - Mutable ref tracking the document version for outgoing transactions.
- * @param {Function} setIsLoading - Setter to update loading state.
- * @param {Function} setError - Setter to record an error message.
- * @param {boolean} allowMissingEditor - If true, skip setting an error when the editor is not provided.
- * @returns {boolean} `true` if the hook considers the editor ready, `false` otherwise.
+ * Serialize top-level blocks from the editor.
+ * @param {Object} editor
+ * @returns {Array|null}
  */
-export function useEditorReady(
-  editor,
-  documentVersionRef,
-  setIsLoading,
-  setError,
-  allowMissingEditor,
-) {
+function serializeTopLevelBlocks(editor) {
+  const blocks = editor.topLevelBlocks || [];
+  return blocks.length > 0 ? blocks.map(serializeBlock) : null;
+}
+
+/**
+ * Manage editor readiness, change listeners, and transaction dispatch.
+ *
+ * @param {Object} editor - The BlockNote editor instance.
+ * @param {Object} refs - Shared mutable refs with documentVersion, hasLoadedDocument, etc.
+ * @param {Function} setIsLoading - Loading state setter.
+ * @param {Function} setError - Error state setter.
+ * @param {boolean} allowMissingEditor - Skip error when editor is absent.
+ * @returns {boolean} Whether the editor is ready.
+ */
+export function useEditorReady(editor, refs, setIsLoading, setError, allowMissingEditor) {
   const isReadyRef = useRef(false);
   const debounceTimeoutRef = useRef(null);
   const previousBlocksRef = useRef(null);
   const debounceDurationRef = useRef(window.__blockNoteDebounceDuration ?? 300);
   const isReady = Boolean(editor);
 
-  // Update debounce duration function (exposed globally)
+  // Expose debounce duration updater
   useEffect(() => {
-    if (editor && isReady) {
-      window.updateDebounceDuration = (durationMs) => {
-        if (typeof durationMs === 'number' && durationMs >= 0) {
-          debounceDurationRef.current = durationMs;
-        }
-      };
-    }
-    return () => {
-      if (window.updateDebounceDuration) {
-        delete window.updateDebounceDuration;
+    if (!editor || !isReady) return;
+
+    window.updateDebounceDuration = (durationMs) => {
+      if (typeof durationMs === 'number' && durationMs >= 0) {
+        debounceDurationRef.current = durationMs;
       }
+    };
+    return () => {
+      delete window.updateDebounceDuration;
     };
   }, [editor, isReady]);
 
-  // Create serialization functions with proper dependencies
-  const serializeStyledTextFn = useCallback(
-    (item) => serializeStyledText(item),
-    [],
-  );
-  const serializeInlineContentFn = useCallback(
-    (item) => serializeInlineContent(item, serializeStyledTextFn),
-    [serializeStyledTextFn],
-  );
-  const serializeTableContentFn = useCallback(
-    (tableContent) =>
-      serializeTableContent(tableContent, serializeInlineContentFn),
-    [serializeInlineContentFn],
-  );
-  const serializeBlockFn = useCallback(
-    (block) =>
-      createSerializeBlock(
-        serializeInlineContentFn,
-        serializeTableContentFn,
-      )(block),
-    [serializeInlineContentFn, serializeTableContentFn],
-  );
-
-  const computeBlockDifferencesFn = useCallback(
-    (previousBlocks, currentBlocks) =>
-      computeBlockDifferences(editor, previousBlocks, currentBlocks),
-    [editor],
-  );
-  const getSelectionVisibilityFn = useCallback(
-    (view, root) => getSelectionVisibility(view, root),
-    [],
-  );
-
-  // Function to send transactions immediately
+  // Send transactions immediately
   const sendTransactions = useCallback(() => {
     if (!editor) return;
 
     try {
-      const currentBlocks = editor.topLevelBlocks || [];
-      const serializedCurrentBlocks =
-        currentBlocks.length > 0
-          ? currentBlocks.map((block) => serializeBlockFn(block))
-          : null;
-
+      const serializedCurrentBlocks = serializeTopLevelBlocks(editor);
       const operations =
         previousBlocksRef.current === null
           ? createInitialOperations(editor, serializedCurrentBlocks)
-          : computeBlockDifferencesFn(
-              previousBlocksRef.current,
-              serializedCurrentBlocks,
-            );
+          : computeBlockDifferences(editor, previousBlocksRef.current, serializedCurrentBlocks);
 
-      sendTransactionsToFlutter(operations, documentVersionRef);
-
-      // Update previous blocks reference for next comparison
+      sendTransactionsToFlutter(operations, refs);
       previousBlocksRef.current = serializedCurrentBlocks;
     } catch (error) {
-      window.BlockNoteChannel.postMessage(
-        JSON.stringify({
-          type: 'error',
-          data: { message: 'Error processing editor change: ' + error.message },
-        }),
-      );
+      sendErrorToFlutter('Error processing editor change: ' + error.message);
     }
-  }, [editor, documentVersionRef, serializeBlockFn, computeBlockDifferencesFn]);
+  }, [editor, refs]);
 
-  // Function to flush pending transactions immediately (clears debounce)
+  // Flush pending transactions (clear debounce + send)
   const flushTransactions = useCallback(() => {
-    // Clear any pending debounce timeout
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
       debounceTimeoutRef.current = null;
     }
-    // Send transactions immediately
     sendTransactions();
   }, [sendTransactions]);
 
-  // Function to reset previous blocks reference (called after document load)
+  // Reset previous blocks baseline (called after document load)
   const resetPreviousBlocks = useCallback(() => {
     if (!editor) return;
+    previousBlocksRef.current = serializeTopLevelBlocks(editor);
+  }, [editor]);
 
-    const currentBlocks = editor.topLevelBlocks || [];
-    previousBlocksRef.current =
-      currentBlocks.length > 0
-        ? currentBlocks.map((block) => serializeBlockFn(block))
-        : null;
-  }, [editor, serializeBlockFn]);
-
-  // Expose functions for external use
+  // Expose functions globally for Flutter access
   useEffect(() => {
-    if (editor && isReady) {
-      window.sendPendingTransaction = flushTransactions;
-      window.resetPreviousBlocks = resetPreviousBlocks;
-      window.serializeBlock = serializeBlockFn;
-    }
-    return () => {
-      if (window.sendPendingTransaction === flushTransactions) {
-        delete window.sendPendingTransaction;
-      }
-      if (window.resetPreviousBlocks === resetPreviousBlocks) {
-        delete window.resetPreviousBlocks;
-      }
-      if (window.serializeBlock === serializeBlockFn) {
-        delete window.serializeBlock;
-      }
-    };
-  }, [
-    editor,
-    isReady,
-    flushTransactions,
-    resetPreviousBlocks,
-    serializeBlockFn,
-  ]);
+    if (!editor || !isReady) return;
 
+    window.sendPendingTransaction = flushTransactions;
+    window.resetPreviousBlocks = resetPreviousBlocks;
+    window.serializeBlock = serializeBlock;
+
+    return () => {
+      if (window.sendPendingTransaction === flushTransactions) delete window.sendPendingTransaction;
+      if (window.resetPreviousBlocks === resetPreviousBlocks) delete window.resetPreviousBlocks;
+      if (window.serializeBlock === serializeBlock) delete window.serializeBlock;
+    };
+  }, [editor, isReady, flushTransactions, resetPreviousBlocks]);
+
+  // Main initialization effect
   useEffect(() => {
     if (!editor) {
       if (allowMissingEditor) {
@@ -187,88 +128,54 @@ export function useEditorReady(
     }
 
     if (!isReadyRef.current) {
-      if (window.BlockNoteDebugLogging) {
-        console.log('[BlockNote] Editor initialized, sending ready message');
-      }
       setIsLoading(false);
       isReadyRef.current = true;
 
-      // Send ready message to Flutter
-      try {
-        window.BlockNoteChannel.postMessage(
-          JSON.stringify({
-            type: 'ready',
-          }),
-        );
-      } catch (err) {
-        console.error('[BlockNote] Error sending ready message:', err);
-      }
+      sendToFlutter('ready');
 
-      // Initialize previous blocks reference with current state
-      const initialBlocks = editor.topLevelBlocks || [];
-      previousBlocksRef.current =
-        initialBlocks.length > 0
-          ? initialBlocks.map((block) => serializeBlockFn(block))
-          : null;
+      // Initialize baseline for diff tracking
+      previousBlocksRef.current = serializeTopLevelBlocks(editor);
 
-      // Set up change listener with debouncing
+      // Debounced change listener
       editor.onChange(() => {
-        // Clear existing timeout
         if (debounceTimeoutRef.current) {
           clearTimeout(debounceTimeoutRef.current);
         }
-
-        // Set new timeout to send transaction after debounce delay
         debounceTimeoutRef.current = setTimeout(() => {
           sendTransactions();
           debounceTimeoutRef.current = null;
         }, debounceDurationRef.current);
       });
 
-      // Set up selection change listener to ensure automatic scroll-to-selection works
-      if (editor._tiptapEditor) {
-        const tiptapEditor = editor._tiptapEditor;
-
-        // Listen for selection updates
+      // Selection + focus handling via tiptap internals
+      const tiptapEditor = editor._tiptapEditor;
+      if (tiptapEditor) {
         tiptapEditor.on('selectionUpdate', () => {
           setTimeout(() => {
             try {
-              const proseMirrorView = tiptapEditor.view;
-              if (proseMirrorView) {
+              const view = tiptapEditor.view;
+              if (view) {
                 const root = document.getElementById('root');
-                scrollSelectionIntoView(proseMirrorView, root);
+                scrollSelectionIntoView(view, root);
               }
             } catch {
-              // Silently fail - BlockNote should handle this automatically
+              // BlockNote handles this automatically
             }
           }, 10);
         });
 
-        // Set up focus listeners
-        setupFocusListeners(tiptapEditor, getSelectionVisibilityFn);
-
-        // Blur editor when user toggles a checklist checkbox so the editor does not retain focus
+        setupFocusListeners(tiptapEditor, getSelectionVisibility);
         setupChecklistBlurOnToggle(tiptapEditor);
       }
     }
 
-    // Cleanup function
     return () => {
       if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current);
         debounceTimeoutRef.current = null;
       }
     };
-  }, [
-    editor,
-    documentVersionRef,
-    getSelectionVisibilityFn,
-    serializeBlockFn,
-    setIsLoading,
-    setError,
-    sendTransactions,
-    allowMissingEditor,
-  ]);
+  }, [editor, setIsLoading, setError, sendTransactions, allowMissingEditor]);
 
   return isReady;
 }

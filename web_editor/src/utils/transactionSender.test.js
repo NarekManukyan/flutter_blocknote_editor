@@ -110,14 +110,14 @@ describe('transaction payload with index', () => {
         afterChildId: null,
       },
     ];
-    const documentVersionRef = { current: 0 };
+    const refs = { documentVersion: 0 };
     const posted = [];
     window.BlockNoteChannel = {
       postMessage: (msg) => {
         posted.push(JSON.parse(msg));
       },
     };
-    sendTransactionsToFlutter(operations, documentVersionRef);
+    sendTransactionsToFlutter(operations, refs);
     expect(posted).toHaveLength(1);
     const data = posted[0];
     expect(data.type).toBe('transactions');

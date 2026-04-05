@@ -381,7 +381,7 @@ class _EditorExamplePageState extends State<EditorExamplePage> {
                                 EditorConfig.createCustomSlashCommands())
                             : null,
                     onLinkTapped: _handleLinkTap,
-                    extraBottomPadding: 500,
+                    // extraBottomPadding: 500,
                   )
                 : const Center(child: CircularProgressIndicator()),
           ),
