@@ -122,6 +122,12 @@ body {
   z-index: 10001 !important;
 }
 
+/* Override @blocknote/core's hardcoded font-family on .bn-default-styles
+   so that the --bn-font-family CSS variable (set by theme) is respected */
+.bn-default-styles {
+  font-family: var(--bn-font-family) !important;
+}
+
 /* Slash command custom SVG icons: make inner SVG fill the wrapper */
 .bn-slash-icon-svg {
   color: inherit;
