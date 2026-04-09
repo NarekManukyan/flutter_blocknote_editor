@@ -88,6 +88,7 @@ class BlockNoteEditorPool {
   String? _localhostUrl;
   bool _debugLogging = false;
   Duration _warmupTimeout = const Duration(seconds: 30);
+  void Function(Object error, StackTrace st)? _onWarmupError;
 
   /// Whether a warm entry is available for immediate use.
   bool get hasWarmEntry => _warmEntry != null && _isReady;
@@ -108,6 +109,7 @@ class BlockNoteEditorPool {
     String? localhostUrl,
     bool debugLogging = false,
     Duration warmupTimeout = const Duration(seconds: 30),
+    void Function(Object error, StackTrace st)? onWarmupError,
   }) async {
     // If already warming, return existing future (don't overwrite config).
     if (_isWarming && _warmupCompleter != null) {
@@ -137,6 +139,7 @@ class BlockNoteEditorPool {
     _localhostUrl = localhostUrl;
     _debugLogging = debugLogging;
     _warmupTimeout = warmupTimeout;
+    _onWarmupError = onWarmupError;
 
     _isWarming = true;
     _warmupCompleter = Completer<void>();
@@ -334,11 +337,13 @@ class BlockNoteEditorPool {
           localhostUrl: _localhostUrl,
           debugLogging: _debugLogging,
           warmupTimeout: _warmupTimeout,
+          onWarmupError: _onWarmupError,
         );
-      } catch (e) {
+      } catch (e, st) {
         if (_debugLogging) {
           debugPrint('[BlockNoteEditorPool] Background re-warmup failed: $e');
         }
+        _onWarmupError?.call(e, st);
       }
     });
   }

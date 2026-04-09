@@ -1,3 +1,15 @@
+## 0.0.21
+
+Hardening pass from full code review (Dart + JS).
+
+* **Security:** removed `eval`-equivalent `new Function()` from slash menu (now dispatched via command-id registry); SVG content from the bridge is sanitized; iOS-only `allowFileAccessFromFileURLs` / `allowUniversalAccessFromFileURLs`.
+* **Bridge transport:** `JsBridge.sendMessage` now uses `callAsyncJavaScript` with structured arguments instead of fragile string escaping.
+* **Lifecycle:** explicit `_EditorState` enum replaces implicit boolean flags; `BlockNoteController` is now disposable and completes pending `getDocument()` futures with `StateError`; `initialize()` throws on double-init; UUID request IDs; schema-change deadlock fixed.
+* **Correctness:** removed timer/state mutation from `build()`; stale `sendTransactions` closure fix in `useEditorReady`; toolbar popup callbacks have TTL; bounded polling with cleanup in `setupToolbarPopupObserver` and `selectionVisibility`; `useBlockNoteEditor` memoizes `initialContent`; per-entry fault tolerance in `handleTransactions`; `blocksEqual` fast-path fix.
+* **Dependencies:** pinned `@blocknote/*` versions (no more `"latest"`); removed unused `@blocknote/shadcn` and `@blocknote/ariakit`.
+* **Cleanup:** shared `collection_utils.dart` (deduped across model files); `loadDocument` takes `resetPreviousBlocks` as a parameter instead of `window.*`; `resetWebViewHeightManager()` for singleton reset; `MediaQuery.devicePixelRatioOf(context)`; parallel optional asset loading; `JsToFlutterMessageType.unknown` for forward compatibility.
+* **Tests:** expanded from 12 → 54 Dart tests (`TransactionBatcher`, `BlockNoteController`, `message_types`); Vitest switched from `node` to `jsdom`.
+
 ## 0.0.20
 
 * Direct file:// WebView loading:

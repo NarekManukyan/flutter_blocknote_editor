@@ -8,6 +8,8 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 
+import '../utils/collection_utils.dart';
+
 /// Enumeration of default slash commands provided by BlockNote.
 ///
 /// Use this enum to easily reference and specify which default slash commands
@@ -641,26 +643,26 @@ class BlockNoteSlashCommandItem {
   BlockNoteSlashCommandItem copyWith({
     String? title,
     String? onItemClick,
-    Object? onItemClickScriptPath = _unset,
-    Object? subtext = _unset,
-    Object? badge = _unset,
-    Object? aliases = _unset,
-    Object? group = _unset,
-    Object? icon = _unset,
+    Object? onItemClickScriptPath = kUnset,
+    Object? subtext = kUnset,
+    Object? badge = kUnset,
+    Object? aliases = kUnset,
+    Object? group = kUnset,
+    Object? icon = kUnset,
   }) {
     return BlockNoteSlashCommandItem(
       title: title ?? this.title,
       onItemClick: onItemClick ?? this.onItemClick,
-      onItemClickScriptPath: identical(onItemClickScriptPath, _unset)
+      onItemClickScriptPath: identical(onItemClickScriptPath, kUnset)
           ? this.onItemClickScriptPath
           : onItemClickScriptPath as String?,
-      subtext: identical(subtext, _unset) ? this.subtext : subtext as String?,
-      badge: identical(badge, _unset) ? this.badge : badge as String?,
-      aliases: identical(aliases, _unset)
+      subtext: identical(subtext, kUnset) ? this.subtext : subtext as String?,
+      badge: identical(badge, kUnset) ? this.badge : badge as String?,
+      aliases: identical(aliases, kUnset)
           ? this.aliases
           : aliases as List<String>?,
-      group: identical(group, _unset) ? this.group : group as String?,
-      icon: identical(icon, _unset) ? this.icon : icon,
+      group: identical(group, kUnset) ? this.group : group as String?,
+      icon: identical(icon, kUnset) ? this.icon : icon,
     );
   }
 
@@ -678,7 +680,7 @@ class BlockNoteSlashCommandItem {
             other.onItemClickScriptPath == onItemClickScriptPath &&
             other.subtext == subtext &&
             other.badge == badge &&
-            _listEquals(other.aliases, aliases) &&
+            listEquals(other.aliases, aliases) &&
             other.group == group &&
             other.icon == icon;
   }
@@ -690,7 +692,7 @@ class BlockNoteSlashCommandItem {
         onItemClickScriptPath,
         subtext,
         badge,
-        _listHash(aliases),
+        listHash(aliases),
         group,
         icon,
       );
@@ -825,18 +827,18 @@ class BlockNoteSlashCommandConfig {
   }
 
   BlockNoteSlashCommandConfig copyWith({
-    Object? items = _unset,
+    Object? items = kUnset,
     bool? enabled,
     String? triggerCharacter,
-    Object? availableSlashCommands = _unset,
+    Object? availableSlashCommands = kUnset,
   }) {
     return BlockNoteSlashCommandConfig(
-      items: identical(items, _unset)
+      items: identical(items, kUnset)
           ? this.items
           : items as List<BlockNoteSlashCommandItem>?,
       enabled: enabled ?? this.enabled,
       triggerCharacter: triggerCharacter ?? this.triggerCharacter,
-      availableSlashCommands: identical(availableSlashCommands, _unset)
+      availableSlashCommands: identical(availableSlashCommands, kUnset)
           ? this.availableSlashCommands
           : availableSlashCommands as List<dynamic>?,
     );
@@ -851,33 +853,18 @@ class BlockNoteSlashCommandConfig {
   bool operator ==(Object other) {
     return identical(this, other) ||
         other is BlockNoteSlashCommandConfig &&
-            _listEquals(other.items, items) &&
+            listEquals(other.items, items) &&
             other.enabled == enabled &&
             other.triggerCharacter == triggerCharacter &&
-            _listEquals(other.availableSlashCommands, availableSlashCommands);
+            listEquals(other.availableSlashCommands, availableSlashCommands);
   }
 
   @override
   int get hashCode => Object.hash(
-        _listHash(items),
+        listHash(items),
         enabled,
         triggerCharacter,
-        _listHash(availableSlashCommands),
+        listHash(availableSlashCommands),
       );
 }
 
-const Object _unset = Object();
-
-bool _listEquals<T>(List<T>? a, List<T>? b) {
-  if (identical(a, b)) return true;
-  if (a == null || b == null || a.length != b.length) return false;
-  for (var i = 0; i < a.length; i++) {
-    if (a[i] != b[i]) return false;
-  }
-  return true;
-}
-
-int _listHash<T>(List<T>? list) {
-  if (list == null) return 0;
-  return Object.hashAll(list);
-}

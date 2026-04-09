@@ -19,7 +19,7 @@ class ToolbarPopupHandler {
     required BlockNoteEditor widget,
     required BuildContext context,
     required JsBridge? bridge,
-    required bool mounted,
+    required bool Function() isMounted,
     required bool debugLogging,
   }) {
     if (debugLogging) {
@@ -44,7 +44,7 @@ class ToolbarPopupHandler {
                 '[BlockNoteEditor] Handler returned: selectedValue=$selectedValue',
               );
             }
-            if (mounted && bridge != null) {
+            if (isMounted() && bridge != null) {
               bridge.sendToolbarPopupResponse(
                 requestId: message.requestId,
                 popupType: message.popupType,
@@ -62,7 +62,7 @@ class ToolbarPopupHandler {
               );
             }
             // Send null response on error (cancelled)
-            if (mounted && bridge != null) {
+            if (isMounted() && bridge != null) {
               bridge.sendToolbarPopupResponse(
                 requestId: message.requestId,
                 popupType: message.popupType,
@@ -74,7 +74,7 @@ class ToolbarPopupHandler {
     }
 
     // No custom handler - show default modal with theme customization
-    if (!mounted || !context.mounted) {
+    if (!isMounted() || !context.mounted) {
       bridge?.sendToolbarPopupResponse(
         requestId: message.requestId,
         popupType: message.popupType,
@@ -145,7 +145,7 @@ class ToolbarPopupHandler {
           },
         )
         .then((selectedValue) {
-          if (mounted && bridge != null) {
+          if (isMounted() && bridge != null) {
             bridge.sendToolbarPopupResponse(
               requestId: message.requestId,
               popupType: message.popupType,
@@ -163,7 +163,7 @@ class ToolbarPopupHandler {
             debugPrint('[BlockNoteEditor] Error showing default modal: $error');
           }
           // Send null response on error (cancelled)
-          if (mounted && bridge != null) {
+          if (isMounted() && bridge != null) {
             bridge.sendToolbarPopupResponse(
               requestId: message.requestId,
               popupType: message.popupType,

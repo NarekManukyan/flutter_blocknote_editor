@@ -6,6 +6,7 @@
 library;
 
 import 'blocknote_block.dart';
+import '../utils/collection_utils.dart';
 
 /// Transaction operation types.
 enum BlockNoteTransactionOperation {
@@ -121,30 +122,30 @@ class BlockNoteTransactionOp {
   BlockNoteTransactionOp copyWith({
     BlockNoteTransactionOperation? operation,
     String? blockId,
-    Object? block = _unset,
-    Object? parentId = _unset,
-    Object? afterChildId = _unset,
-    Object? beforeChildId = _unset,
-    Object? orderedChildIds = _unset,
-    Object? index = _unset,
+    Object? block = kUnset,
+    Object? parentId = kUnset,
+    Object? afterChildId = kUnset,
+    Object? beforeChildId = kUnset,
+    Object? orderedChildIds = kUnset,
+    Object? index = kUnset,
   }) {
     return BlockNoteTransactionOp(
       operation: operation ?? this.operation,
       blockId: blockId ?? this.blockId,
-      block: identical(block, _unset) ? this.block : block as BlockNoteBlock?,
-      parentId: identical(parentId, _unset)
+      block: identical(block, kUnset) ? this.block : block as BlockNoteBlock?,
+      parentId: identical(parentId, kUnset)
           ? this.parentId
           : parentId as String?,
-      afterChildId: identical(afterChildId, _unset)
+      afterChildId: identical(afterChildId, kUnset)
           ? this.afterChildId
           : afterChildId as String?,
-      beforeChildId: identical(beforeChildId, _unset)
+      beforeChildId: identical(beforeChildId, kUnset)
           ? this.beforeChildId
           : beforeChildId as String?,
-      orderedChildIds: identical(orderedChildIds, _unset)
+      orderedChildIds: identical(orderedChildIds, kUnset)
           ? this.orderedChildIds
           : orderedChildIds as List<String>?,
-      index: identical(index, _unset) ? this.index : index as int?,
+      index: identical(index, kUnset) ? this.index : index as int?,
     );
   }
 
@@ -163,7 +164,7 @@ class BlockNoteTransactionOp {
         other.parentId == parentId &&
         other.afterChildId == afterChildId &&
         other.beforeChildId == beforeChildId &&
-        _listEquals(other.orderedChildIds, orderedChildIds) &&
+        listEquals(other.orderedChildIds, orderedChildIds) &&
         other.index == index;
   }
 
@@ -175,7 +176,7 @@ class BlockNoteTransactionOp {
     parentId,
     afterChildId,
     beforeChildId,
-    _listHash(orderedChildIds),
+    listHash(orderedChildIds),
     index,
   );
 }
@@ -233,12 +234,12 @@ class BlockNoteTransaction {
   BlockNoteTransaction copyWith({
     int? baseVersion,
     List<BlockNoteTransactionOp>? operations,
-    Object? timestamp = _unset,
+    Object? timestamp = kUnset,
   }) {
     return BlockNoteTransaction(
       baseVersion: baseVersion ?? this.baseVersion,
       operations: operations ?? this.operations,
-      timestamp: identical(timestamp, _unset)
+      timestamp: identical(timestamp, kUnset)
           ? this.timestamp
           : timestamp as int?,
     );
@@ -254,27 +255,11 @@ class BlockNoteTransaction {
     return identical(this, other) ||
         other is BlockNoteTransaction &&
             other.baseVersion == baseVersion &&
-            _listEquals(other.operations, operations) &&
+            listEquals(other.operations, operations) &&
             other.timestamp == timestamp;
   }
 
   @override
   int get hashCode =>
-      Object.hash(baseVersion, _listHash(operations), timestamp);
-}
-
-const Object _unset = Object();
-
-bool _listEquals<T>(List<T>? a, List<T>? b) {
-  if (identical(a, b)) return true;
-  if (a == null || b == null || a.length != b.length) return false;
-  for (var i = 0; i < a.length; i++) {
-    if (a[i] != b[i]) return false;
-  }
-  return true;
-}
-
-int _listHash<T>(List<T>? list) {
-  if (list == null) return 0;
-  return Object.hashAll(list);
+      Object.hash(baseVersion, listHash(operations), timestamp);
 }

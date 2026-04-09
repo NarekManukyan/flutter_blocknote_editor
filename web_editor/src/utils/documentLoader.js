@@ -20,8 +20,9 @@ const cleanTableContentFn = (content) => cleanTableContent(content, cleanInlineC
  * @param {Object} editor - The BlockNote editor instance
  * @param {Object|string} documentData - Document data (object or JSON string)
  * @param {Object} refs - Shared mutable refs with documentVersion, hasLoadedDocument
+ * @param {Function} [resetPreviousBlocks] - Optional callback to reset the diff baseline after load
  */
-export function loadDocument(editor, documentData, refs) {
+export function loadDocument(editor, documentData, refs, resetPreviousBlocks) {
   try {
     if (!editor) {
       sendErrorToFlutter('Editor not initialized');
@@ -85,8 +86,8 @@ export function loadDocument(editor, documentData, refs) {
     refs.hasLoadedDocument = true;
 
     // Reset diff baseline after document load
-    if (typeof window.resetPreviousBlocks === 'function') {
-      setTimeout(() => window.resetPreviousBlocks(), 100);
+    if (typeof resetPreviousBlocks === 'function') {
+      setTimeout(() => resetPreviousBlocks(), 100);
     }
 
     debugLog('Document loaded successfully');

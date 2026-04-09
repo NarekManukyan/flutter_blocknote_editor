@@ -113,19 +113,24 @@ class BlockNoteAssetLoader {
         }
       }
 
-      // Copy optional assets (failures are silent)
-      for (final fileName in optionalAssets) {
-        try {
-          final assetPath =
-              'packages/flutter_blocknote_editor/assets/web/$fileName';
-          final data = await rootBundle.load(assetPath);
-          final file = File('${tempDir.path}/$fileName');
-          await file.writeAsBytes(data.buffer.asUint8List());
-          copiedCount++;
-        } catch (e) {
-          // Optional assets can fail silently
-        }
-      }
+      // Copy optional assets in parallel; individual failures are silent so
+      // one missing font/chunk does not abort the entire batch.
+      final optionalResults = await Future.wait(
+        optionalAssets.map((fileName) async {
+          try {
+            final assetPath =
+                'packages/flutter_blocknote_editor/assets/web/$fileName';
+            final data = await rootBundle.load(assetPath);
+            final file = File('${tempDir.path}/$fileName');
+            await file.writeAsBytes(data.buffer.asUint8List());
+            return true;
+          } catch (_) {
+            // Optional — ignore missing assets
+            return false;
+          }
+        }),
+      );
+      copiedCount += optionalResults.where((ok) => ok).length;
 
       if (debugLogging) {
         debugPrint('[BlockNoteAssetLoader] Copied $copiedCount assets total');

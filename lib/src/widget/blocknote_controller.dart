@@ -8,10 +8,13 @@ library;
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:uuid/uuid.dart';
 import '../bridge/js_bridge.dart';
 import '../model/blocknote_document.dart';
 import '../model/blocknote_toolbar_config.dart';
 import '../model/blocknote_slash_command.dart';
+
+const Uuid _uuid = Uuid();
 
 /// Controller for programmatic operations on a BlockNote editor.
 ///
@@ -50,16 +53,37 @@ class BlockNoteController {
   /// Initialize the controller with a JavaScript bridge.
   ///
   /// This is called internally by BlockNoteEditor when the editor is ready.
+  /// Throws [StateError] if called a second time on the same instance.
   void initialize(JsBridge bridge) {
     if (_bridge != null) {
-      if (debugLogging) {
-        debugPrint('[BlockNoteController] Already initialized');
-      }
-      return;
+      throw StateError(
+        'BlockNoteController.initialize() called twice. '
+        'Create a new controller for each editor instance.',
+      );
     }
     _bridge = bridge;
     if (debugLogging) {
       debugPrint('[BlockNoteController] Initialized');
+    }
+  }
+
+  /// Disposes the controller, completing any pending document requests with a
+  /// [StateError] so callers do not hang indefinitely.
+  ///
+  /// Called automatically by [_BlockNoteEditorState.dispose].
+  void dispose() {
+    _bridge = null;
+    for (final completer in _pendingDocumentRequests.values) {
+      if (!completer.isCompleted) {
+        completer.completeError(
+          StateError('BlockNoteController disposed'),
+          StackTrace.current,
+        );
+      }
+    }
+    _pendingDocumentRequests.clear();
+    if (debugLogging) {
+      debugPrint('[BlockNoteController] Disposed');
     }
   }
 
@@ -128,9 +152,9 @@ class BlockNoteController {
     }
   }
 
-  /// Generates a unique request ID for document requests.
+  /// Generates a collision-free request ID for document requests.
   String _generateRequestId() {
-    return 'doc_${DateTime.now().millisecondsSinceEpoch}_${_pendingDocumentRequests.length}';
+    return _uuid.v4();
   }
 
   /// Sets the editor read-only state.

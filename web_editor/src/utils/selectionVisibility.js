@@ -86,14 +86,21 @@ export function scrollSelectionIntoView(proseMirrorView, root) {
  *   visibility data (e.g., `{ isVisible, selectionTop, selectionBottom, rootTop, rootBottom }`) or `null`.
  */
 export function setupFocusListeners(tiptapEditor, getSelectionVisibilityFn) {
+  let attempts = 0;
+  const MAX_ATTEMPTS = 50;
+  let pollId = null;
+
   const setup = () => {
     try {
       const proseMirrorView = tiptapEditor.view;
       if (!proseMirrorView || !proseMirrorView.dom) {
-        setTimeout(setup, 100);
+        if (attempts >= MAX_ATTEMPTS) return;
+        attempts++;
+        pollId = setTimeout(setup, 100);
         return;
       }
 
+      pollId = null;
       const editorDOM = proseMirrorView.dom;
       const handleFocus = () => {
         setTimeout(() => {
@@ -117,11 +124,21 @@ export function setupFocusListeners(tiptapEditor, getSelectionVisibilityFn) {
       editorDOM.addEventListener('focus', handleFocus, true);
       editorDOM.addEventListener('click', handleFocus, true);
     } catch {
-      setTimeout(setup, 200);
+      if (attempts >= MAX_ATTEMPTS) return;
+      attempts++;
+      pollId = setTimeout(setup, 200);
     }
   };
 
   setup();
+
+  // Return cleanup so callers can cancel the polling if needed
+  return () => {
+    if (pollId !== null) {
+      clearTimeout(pollId);
+      pollId = null;
+    }
+  };
 }
 
 /**
@@ -132,14 +149,21 @@ export function setupFocusListeners(tiptapEditor, getSelectionVisibilityFn) {
  * @param {object} tiptapEditor - TipTap editor instance (expected to expose a `.view` with a `.dom` and `.commands.blur()`).
  */
 export function setupChecklistBlurOnToggle(tiptapEditor) {
+  let attempts = 0;
+  const MAX_ATTEMPTS = 50;
+  let pollId = null;
+
   const setup = () => {
     try {
       const proseMirrorView = tiptapEditor.view;
       if (!proseMirrorView || !proseMirrorView.dom) {
-        setTimeout(setup, 100);
+        if (attempts >= MAX_ATTEMPTS) return;
+        attempts++;
+        pollId = setTimeout(setup, 100);
         return;
       }
 
+      pollId = null;
       const editorDOM = proseMirrorView.dom;
 
       const isChecklistCheckbox = (el) =>
@@ -167,9 +191,19 @@ export function setupChecklistBlurOnToggle(tiptapEditor) {
 
       editorDOM.addEventListener('click', handleClick, true);
     } catch {
-      setTimeout(setup, 200);
+      if (attempts >= MAX_ATTEMPTS) return;
+      attempts++;
+      pollId = setTimeout(setup, 200);
     }
   };
 
   setup();
+
+  // Return cleanup so callers can cancel the polling if needed
+  return () => {
+    if (pollId !== null) {
+      clearTimeout(pollId);
+      pollId = null;
+    }
+  };
 }

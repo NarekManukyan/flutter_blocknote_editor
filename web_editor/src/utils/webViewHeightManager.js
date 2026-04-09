@@ -21,6 +21,48 @@ let currentTheme = null;
 const KEYBOARD_HEIGHT_BUFFER = 48;
 
 /**
+ * Resets all module-level state and removes any active listeners/pending frames.
+ * Should be called on editor dispose (e.g., via window.resetWebViewHeightManager).
+ */
+export function resetWebViewHeightManager() {
+  // Cancel any in-flight animation frames
+  if (heightUpdateRafId !== null) {
+    cancelAnimationFrame(heightUpdateRafId);
+    heightUpdateRafId = null;
+  }
+  if (scrollCheckRafId !== null) {
+    cancelAnimationFrame(scrollCheckRafId);
+    scrollCheckRafId = null;
+  }
+  // Remove visualViewport listener if it was set up
+  if (isKeyboardListenerSetup) {
+    try {
+      window.visualViewport?.removeEventListener('resize', _handleKeyboardChange);
+    } catch {
+      // ignore
+    }
+    window.removeEventListener('resize', _handleKeyboardChange);
+    isKeyboardListenerSetup = false;
+  }
+  // Cancel pending timeouts
+  _clearDelayedRechecks();
+  if (fallbackTimeoutId !== null) {
+    clearTimeout(fallbackTimeoutId);
+    fallbackTimeoutId = null;
+  }
+  // Reset scalar state
+  lastKeyboardHeight = null;
+  lastExtraBottomPadding = null;
+  baselineHeight = null;
+  editorInstance = null;
+  transitionEndHandler = null;
+  currentTheme = null;
+}
+
+// Expose for the Flutter bridge to call on dispose
+window.resetWebViewHeightManager = resetWebViewHeightManager;
+
+/**
  * Sets the current theme for background color detection.
  * @param {Object} theme - Theme object from Flutter
  */
@@ -121,7 +163,16 @@ function _applyFallbackBackground() {
 }
 
 function _rgbToHex(rgb) {
-  const m = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  // For rgba() with alpha < 1, return null so callers fall back to transparent.
+  const rgbaMatch = rgb.match(/^rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/);
+  if (rgbaMatch) {
+    const alpha = parseFloat(rgbaMatch[4]);
+    if (alpha < 1) return null;
+    // alpha === 1: treat as opaque rgb
+    const hex = (x) => parseInt(x, 10).toString(16).padStart(2, '0');
+    return '#' + hex(rgbaMatch[1]) + hex(rgbaMatch[2]) + hex(rgbaMatch[3]);
+  }
+  const m = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
   if (!m) return null;
   const hex = (x) => parseInt(x, 10).toString(16).padStart(2, '0');
   return '#' + hex(m[1]) + hex(m[2]) + hex(m[3]);

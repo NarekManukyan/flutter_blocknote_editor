@@ -15,6 +15,7 @@ class WebViewHeightManager {
   static void updateWebViewHeight({
     required JsBridge bridge,
     required InAppWebViewController controller,
+    required BuildContext context,
     double extraBottomPadding = 0,
     required bool debugLogging,
   }) {
@@ -25,9 +26,11 @@ class WebViewHeightManager {
       );
     }
 
-    // Convert to pixels (Flutter uses logical pixels, but we need physical pixels)
-    final pixelRatio =
-        WidgetsBinding.instance.platformDispatcher.views.first.devicePixelRatio;
+    // Convert to pixels (Flutter uses logical pixels, but we need physical pixels).
+    // MediaQuery.devicePixelRatioOf is preferred over platformDispatcher.views.first
+    // because it respects the nearest MediaQuery ancestor (e.g. in tests or
+    // multi-window scenarios).
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
     final extraBottomPaddingInPixels = (extraBottomPadding * pixelRatio).round();
 
     if (debugLogging) {

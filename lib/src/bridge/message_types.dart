@@ -63,6 +63,12 @@ enum JsToFlutterMessageType {
 
   /// Link was tapped in the editor.
   linkTap,
+
+  /// Unrecognised message type received from JavaScript.
+  ///
+  /// Used as a safe fallback in [JsToFlutterMessage.fromJson] instead of
+  /// crashing with an unhandled [StateError].
+  unknown,
 }
 
 /// Base class for Flutter → JavaScript messages.
@@ -346,7 +352,7 @@ abstract class JsToFlutterMessage {
 
     final type = JsToFlutterMessageType.values.firstWhere(
       (e) => e.name == enumName,
-      orElse: () => JsToFlutterMessageType.error,
+      orElse: () => JsToFlutterMessageType.unknown,
     );
 
     switch (type) {
@@ -362,8 +368,24 @@ abstract class JsToFlutterMessage {
         return DocumentMessage.fromJson(json);
       case JsToFlutterMessageType.linkTap:
         return LinkTapMessage.fromJson(json);
+      case JsToFlutterMessageType.unknown:
+        return UnknownMessage(rawType: typeStr);
     }
   }
+}
+
+/// Message for an unrecognised JavaScript message type.
+///
+/// Allows the dispatcher to ignore unknown messages without crashing.
+class UnknownMessage extends JsToFlutterMessage {
+  /// Creates a new unknown message.
+  const UnknownMessage({required this.rawType});
+
+  /// The raw type string received from JavaScript.
+  final String rawType;
+
+  @override
+  JsToFlutterMessageType get type => JsToFlutterMessageType.unknown;
 }
 
 /// Message indicating the editor is ready.

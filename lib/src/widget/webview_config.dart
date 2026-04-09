@@ -1,6 +1,7 @@
 /// WebView configuration utilities for BlockNote editor.
 library;
 
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
@@ -113,9 +114,11 @@ class WebViewConfig {
       disableVerticalScroll: false,
       disableHorizontalScroll: true,
       useShouldOverrideUrlLoading: true,
-      // Allow file:// access for loading local assets directly
-      allowFileAccessFromFileURLs: true,
-      allowUniversalAccessFromFileURLs: true,
+      // file:// cross-origin access is only needed on iOS (WKWebView) where
+      // assets are served from a temp directory via file:// URLs. On Android
+      // these flags open a security hole and must stay false.
+      allowFileAccessFromFileURLs: Platform.isIOS,
+      allowUniversalAccessFromFileURLs: Platform.isIOS,
       // Performance optimizations for Android
       cacheEnabled: true,
       clearCache: false,

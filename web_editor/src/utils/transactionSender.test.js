@@ -87,9 +87,6 @@ describe('filterRedundantOperations', () => {
 
 describe('transaction payload with index', () => {
   it('should include index 0, 1, 2 on each operation when sending', () => {
-    if (typeof globalThis.window === 'undefined') {
-      globalThis.window = {};
-    }
     const operations = [
       {
         operation: 'update',

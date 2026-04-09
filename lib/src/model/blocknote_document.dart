@@ -8,6 +8,7 @@ library;
 import 'package:uuid/uuid.dart';
 
 import 'blocknote_block.dart';
+import '../utils/collection_utils.dart';
 
 const Uuid _uuid = Uuid();
 
@@ -144,11 +145,11 @@ class BlockNoteDocument {
 
   BlockNoteDocument copyWith({
     List<BlockNoteBlock>? blocks,
-    Object? version = _unset,
+    Object? version = kUnset,
   }) {
     return BlockNoteDocument(
       blocks: blocks ?? this.blocks,
-      version: identical(version, _unset)
+      version: identical(version, kUnset)
           ? this.version
           : version as BlockNoteDocumentVersion?,
     );
@@ -161,26 +162,10 @@ class BlockNoteDocument {
   bool operator ==(Object other) {
     return identical(this, other) ||
         other is BlockNoteDocument &&
-            _listEquals(other.blocks, blocks) &&
+            listEquals(other.blocks, blocks) &&
             other.version == version;
   }
 
   @override
-  int get hashCode => Object.hash(_listHash(blocks), version);
-}
-
-const Object _unset = Object();
-
-bool _listEquals<T>(List<T>? a, List<T>? b) {
-  if (identical(a, b)) return true;
-  if (a == null || b == null || a.length != b.length) return false;
-  for (var i = 0; i < a.length; i++) {
-    if (a[i] != b[i]) return false;
-  }
-  return true;
-}
-
-int _listHash<T>(List<T>? list) {
-  if (list == null) return 0;
-  return Object.hashAll(list);
+  int get hashCode => Object.hash(listHash(blocks), version);
 }

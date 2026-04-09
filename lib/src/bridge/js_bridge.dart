@@ -37,38 +37,26 @@ class JsBridge {
   /// evaluation channel.
   Future<void> sendMessage(FlutterToJsMessage message) async {
     try {
-      final json = jsonEncode(message.toJson());
+      final payload = message.toJson();
+      final payloadJson = jsonEncode(payload);
       if (debugLogging) {
-        debugPrint('[JsBridge] Sending: $json');
+        debugPrint('[JsBridge] Sending: $payloadJson');
       }
 
-      // Send message via JavaScript evaluation
-      // Use JSON.parse in JavaScript to properly handle nested JSON strings
-      // This ensures proper parsing of escaped JSON strings
-      final escapedJson = json
-          .replaceAll('\\', '\\\\')
-          .replaceAll("'", "\\'")
-          .replaceAll('\n', '\\n')
-          .replaceAll(r'$', r'\$');
+      // Encode the JSON payload as a JavaScript string literal by running
+      // jsonEncode a second time. Dart's jsonEncode on a String produces a
+      // fully-escaped, quoted JS-compatible string literal (handles \r, \f,
+      // quotes, backslashes, and BMP unicode correctly) so the resulting
+      // JS expression is safe to evaluate without manual replaceAll escaping
+      // and without relying on callAsyncJavaScript's argument marshalling
+      // (which has been observed to drop / re-order response delivery for
+      // toolbar popups under some WebView builds).
+      final jsStringLiteral = jsonEncode(payloadJson);
       await controller.evaluateJavascript(
         source:
-            '''
-        (function() {
-          if (typeof window.handleFlutterMessage === 'function') {
-            try {
-              // Parse the JSON string to handle nested JSON properly
-              const messageJson = JSON.parse('$escapedJson');
-              window.handleFlutterMessage(messageJson);
-            } catch (e) {
-              console.error('[BlockNote] Error parsing message JSON:', e);
-              // Fallback: try as string
-              window.handleFlutterMessage('$escapedJson');
-            }
-          } else {
-            console.error('[BlockNote] handleFlutterMessage not available');
-          }
-        })();
-      ''',
+            'if (typeof window.handleFlutterMessage === "function") { '
+            'window.handleFlutterMessage(JSON.parse($jsStringLiteral)); } '
+            'else { console.error("[BlockNote] handleFlutterMessage not available"); }',
       );
     } catch (e) {
       if (debugLogging) {

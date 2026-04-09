@@ -1,11 +1,17 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { visualizer } from 'rollup-plugin-visualizer';
 
 export default defineConfig({
   plugins: [
     react({
-      // Optimize React for production
       jsxRuntime: 'automatic',
+    }),
+    visualizer({
+      filename: 'stats.html',
+      gzipSize: true,
+      brotliSize: true,
+      template: 'treemap',
     }),
   ],
   build: {
@@ -13,7 +19,6 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       output: {
-        // Use ES module format (WebView supports it)
         format: 'es',
         entryFileNames: 'editor.js',
         chunkFileNames: 'editor.js',
@@ -23,21 +28,23 @@ export default defineConfig({
           }
           return '[name][extname]';
         },
-        // Force all code into a single bundle
         inlineDynamicImports: true,
         manualChunks: undefined,
       },
-      // Ensure all dependencies are bundled
       external: [],
     },
-    // Enable minification for production builds (better performance)
-    // Use esbuild (default, faster than terser) with console removal
-    minify: 'esbuild',
-    // Note: esbuild doesn't support drop_console directly, but we handle it via
-    // conditional logging in the code (window.BlockNoteDebugLogging checks)
-    // Inline small assets
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        passes: 2,
+        drop_console: true,
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.debug', 'console.info'],
+      },
+      mangle: { toplevel: true },
+      format: { comments: false },
+    },
     assetsInlineLimit: 4096,
-    // Increase chunk size warning limit since we're creating one big bundle
     chunkSizeWarningLimit: 5000,
   },
   base: './',
