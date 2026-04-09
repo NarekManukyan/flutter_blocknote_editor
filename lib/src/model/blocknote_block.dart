@@ -5,6 +5,8 @@
 /// points for custom blocks (e.g., agenda_item).
 library;
 
+import '../utils/collection_utils.dart';
+
 /// Standard BlockNote block types.
 enum BlockNoteBlockType {
   /// Paragraph block.
@@ -100,12 +102,12 @@ class BlockNoteStyledText {
   BlockNoteStyledText copyWith({
     String? type,
     String? text,
-    Object? styles = _unset,
+    Object? styles = kUnset,
   }) {
     return BlockNoteStyledText(
       type: type ?? this.type,
       text: text ?? this.text,
-      styles: identical(styles, _unset)
+      styles: identical(styles, kUnset)
           ? this.styles
           : styles as Map<String, dynamic>?,
     );
@@ -122,11 +124,11 @@ class BlockNoteStyledText {
         other is BlockNoteStyledText &&
             other.type == type &&
             other.text == text &&
-            _mapEquals(other.styles, styles);
+            mapEquals(other.styles, styles);
   }
 
   @override
-  int get hashCode => Object.hash(type, text, _mapHash(styles));
+  int get hashCode => Object.hash(type, text, mapHash(styles));
 }
 
 /// BlockNote block inline content.
@@ -202,12 +204,12 @@ class BlockNoteTextContent extends BlockNoteInlineContent {
   BlockNoteTextContent copyWith({
     String? type,
     String? text,
-    Object? styles = _unset,
+    Object? styles = kUnset,
   }) {
     return BlockNoteTextContent(
       type: type ?? this.type,
       text: text ?? this.text,
-      styles: identical(styles, _unset)
+      styles: identical(styles, kUnset)
           ? this.styles
           : styles as Map<String, dynamic>?,
     );
@@ -224,11 +226,11 @@ class BlockNoteTextContent extends BlockNoteInlineContent {
         other is BlockNoteTextContent &&
             other.type == type &&
             other.text == text &&
-            _mapEquals(other.styles, styles);
+            mapEquals(other.styles, styles);
   }
 
   @override
-  int get hashCode => Object.hash(type, text, _mapHash(styles));
+  int get hashCode => Object.hash(type, text, mapHash(styles));
 }
 
 /// Link inline content.
@@ -271,11 +273,11 @@ class BlockNoteLinkContent extends BlockNoteInlineContent {
         other is BlockNoteLinkContent &&
             other.type == type &&
             other.href == href &&
-            _listEquals(other.content, content);
+            listEquals(other.content, content);
   }
 
   @override
-  int get hashCode => Object.hash(type, href, _listHash(content));
+  int get hashCode => Object.hash(type, href, listHash(content));
 }
 
 /// Custom inline content.
@@ -297,12 +299,12 @@ class BlockNoteCustomInlineContent extends BlockNoteInlineContent {
 
   BlockNoteCustomInlineContent copyWith({
     String? type,
-    Object? content = _unset,
+    Object? content = kUnset,
     Map<String, dynamic>? props,
   }) {
     return BlockNoteCustomInlineContent(
       type: type ?? this.type,
-      content: identical(content, _unset)
+      content: identical(content, kUnset)
           ? this.content
           : content as List<BlockNoteStyledText>?,
       props: props ?? this.props,
@@ -319,12 +321,12 @@ class BlockNoteCustomInlineContent extends BlockNoteInlineContent {
     return identical(this, other) ||
         other is BlockNoteCustomInlineContent &&
             other.type == type &&
-            _listEquals(other.content, content) &&
-            _mapEquals(other.props, props);
+            listEquals(other.content, content) &&
+            mapEquals(other.props, props);
   }
 
   @override
-  int get hashCode => Object.hash(type, _listHash(content), _mapHash(props));
+  int get hashCode => Object.hash(type, listHash(content), mapHash(props));
 }
 
 /// BlockNote table content structure.
@@ -380,11 +382,11 @@ class BlockNoteTableContent {
     return identical(this, other) ||
         other is BlockNoteTableContent &&
             other.type == type &&
-            _listEquals(other.rows, rows);
+            listEquals(other.rows, rows);
   }
 
   @override
-  int get hashCode => Object.hash(type, _listHash(rows));
+  int get hashCode => Object.hash(type, listHash(rows));
 }
 
 /// BlockNote table row structure.
@@ -428,7 +430,7 @@ class BlockNoteTableRow {
     if (other is! BlockNoteTableRow) return false;
     if (cells.length != other.cells.length) return false;
     for (var i = 0; i < cells.length; i++) {
-      if (!_listEquals(cells[i], other.cells[i])) {
+      if (!listEquals(cells[i], other.cells[i])) {
         return false;
       }
     }
@@ -438,7 +440,7 @@ class BlockNoteTableRow {
   @override
   int get hashCode {
     return Object.hashAll(
-      cells.map((cell) => _listHash(cell)),
+      cells.map((cell) => listHash(cell)),
     );
   }
 }
@@ -480,11 +482,11 @@ class BlockNoteInlineContentList extends BlockNoteBlockContent {
   bool operator ==(Object other) {
     return identical(this, other) ||
         other is BlockNoteInlineContentList &&
-            _listEquals(other.content, content);
+            listEquals(other.content, content);
   }
 
   @override
-  int get hashCode => _listHash(content);
+  int get hashCode => listHash(content);
 }
 
 class BlockNoteTableBlockContent extends BlockNoteBlockContent {
@@ -596,24 +598,24 @@ class BlockNoteBlock {
   BlockNoteBlock copyWith({
     String? id,
     BlockNoteBlockType? type,
-    Object? customType = _unset,
-    Object? content = _unset,
-    Object? props = _unset,
-    Object? children = _unset,
+    Object? customType = kUnset,
+    Object? content = kUnset,
+    Object? props = kUnset,
+    Object? children = kUnset,
   }) {
     return BlockNoteBlock(
       id: id ?? this.id,
       type: type ?? this.type,
-      customType: identical(customType, _unset)
+      customType: identical(customType, kUnset)
           ? this.customType
           : customType as String?,
-      content: identical(content, _unset)
+      content: identical(content, kUnset)
           ? this.content
           : content as BlockNoteBlockContent?,
-      props: identical(props, _unset)
+      props: identical(props, kUnset)
           ? this.props
           : props as Map<String, dynamic>?,
-      children: identical(children, _unset)
+      children: identical(children, kUnset)
           ? this.children
           : children as List<BlockNoteBlock>?,
     );
@@ -632,8 +634,8 @@ class BlockNoteBlock {
             other.type == type &&
             other.customType == customType &&
             other.content == content &&
-            _mapEquals(other.props, props) &&
-            _listEquals(other.children, children);
+            mapEquals(other.props, props) &&
+            listEquals(other.children, children);
   }
 
   @override
@@ -642,8 +644,8 @@ class BlockNoteBlock {
         type,
         customType,
         content,
-        _mapHash(props),
-        _listHash(children),
+        mapHash(props),
+        listHash(children),
       );
 }
 
@@ -793,35 +795,3 @@ List<BlockNoteStyledText>? _styledTextListFromJson(Object? value) {
       .toList();
 }
 
-const Object _unset = Object();
-
-bool _listEquals<T>(List<T>? a, List<T>? b) {
-  if (identical(a, b)) return true;
-  if (a == null || b == null || a.length != b.length) return false;
-  for (var i = 0; i < a.length; i++) {
-    if (a[i] != b[i]) return false;
-  }
-  return true;
-}
-
-bool _mapEquals<K, V>(Map<K, V>? a, Map<K, V>? b) {
-  if (identical(a, b)) return true;
-  if (a == null || b == null || a.length != b.length) return false;
-  for (final entry in a.entries) {
-    if (!b.containsKey(entry.key)) return false;
-    if (b[entry.key] != entry.value) return false;
-  }
-  return true;
-}
-
-int _listHash<T>(List<T>? list) {
-  if (list == null) return 0;
-  return Object.hashAll(list);
-}
-
-int _mapHash<K, V>(Map<K, V>? map) {
-  if (map == null) return 0;
-  return Object.hashAll(
-    map.entries.map((entry) => Object.hash(entry.key, entry.value)),
-  );
-}

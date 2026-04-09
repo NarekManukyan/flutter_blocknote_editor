@@ -17,9 +17,9 @@ export function useBlockNoteEditor(schemaConfig) {
     [schemaConfig],
   );
 
-  const editor = useCreateBlockNote({
-    schema,
-    initialContent: [
+  // Stable initial content — UUID generated once, not on every render.
+  const initialContent = useMemo(
+    () => [
       {
         id: generateBlockId(),
         type: 'paragraph',
@@ -33,6 +33,13 @@ export function useBlockNoteEditor(schemaConfig) {
         props: {},
       },
     ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  const editor = useCreateBlockNote({
+    schema,
+    initialContent,
   });
 
   // Expose editor globally for Flutter access

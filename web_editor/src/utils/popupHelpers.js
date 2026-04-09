@@ -24,6 +24,14 @@ export function removeHiddenPopups() {
   document
     .querySelectorAll('[data-bn-flutter-hidden="true"]')
     .forEach((element) => {
+      // If Mantine reuses this DOM node we need it to be re-detectable on
+      // the next open, so unhide + clear the handled marker before removing.
+      element.removeAttribute('data-bn-flutter-handled');
+      element.removeAttribute('data-bn-flutter-hidden');
+      element.style.removeProperty('display');
+      element.style.removeProperty('pointer-events');
+      element.style.removeProperty('visibility');
+      element.style.removeProperty('opacity');
       element.remove();
     });
 }

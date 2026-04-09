@@ -10,18 +10,19 @@ import { sendToFlutter } from '../utils/flutterBridge';
  * Load a document into the editor or defer it when unavailable.
  * @param {object|null} editor
  * @param {object} messageData
- * @param {object} refs - Shared mutable refs (documentVersion, hasLoadedDocument, pendingDocument, schemaChangePending)
+ * @param {object} refs - Shared mutable refs (documentVersion, hasLoadedDocument, pendingDocument)
  */
 export function handleLoadDocument(editor, messageData, refs) {
-  if (!editor || refs.schemaChangePending) {
+  if (!editor) {
     refs.pendingDocument = messageData;
     return;
   }
-  loadDocument(editor, messageData, refs);
+  loadDocument(editor, messageData, refs, refs.resetPreviousBlocks);
 }
 
 /**
- * Apply a new schema configuration and, if necessary, reload a deferred document.
+ * Apply a new schema configuration. Deferral of pendingDocument is handled by
+ * the App.jsx effect that watches editor + refs.pendingDocument.
  * @param {*} editor
  * @param {Object} message
  * @param {Function} dispatchSchema - Schema state dispatcher
@@ -41,15 +42,10 @@ export function handleSetSchemaConfig(
       : Boolean(message.data);
 
   dispatchSchema({ type: SCHEMA_ACTIONS.SET_REQUIRED, payload: isRequired });
-  refs.schemaChangePending = true;
   dispatchSchema({ type: SCHEMA_ACTIONS.SET_CONFIG, payload: message.data ?? null });
   dispatchSchema({ type: SCHEMA_ACTIONS.SET_READY, payload: true });
-  refs.schemaChangePending = false;
-
-  if (editor && refs.pendingDocument) {
-    loadDocument(editor, refs.pendingDocument, refs);
-    refs.pendingDocument = null;
-  }
+  // Note: pendingDocument loading after schema change is handled by the App.jsx
+  // effect (watches editor + refs.pendingDocument). Do not duplicate it here.
 }
 
 /**

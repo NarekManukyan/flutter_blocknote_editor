@@ -9,6 +9,74 @@ import {
 } from '@blocknote/react';
 import { filterSuggestionItems } from '@blocknote/core/extensions';
 
+// ---------------------------------------------------------------------------
+// Slash command handler registry
+// ---------------------------------------------------------------------------
+
+/**
+ * Registry mapping command-id strings to handler functions.
+ * Built-in handlers are registered below. Flutter-injected JS can register
+ * additional handlers via window.registerSlashCommandHandler(id, fn).
+ */
+const slashCommandHandlerRegistry = new Map();
+
+/**
+ * Register a slash command handler by id.
+ * @param {string} id - Command identifier sent as item.onItemClickId from Flutter.
+ * @param {function} fn - Handler function receiving (editor).
+ */
+function registerSlashCommandHandler(id, fn) {
+  if (typeof id !== 'string' || typeof fn !== 'function') {
+    console.warn('[BlockNote] registerSlashCommandHandler: id must be string and fn must be function');
+    return;
+  }
+  slashCommandHandlerRegistry.set(id, fn);
+}
+
+// Expose globally so Flutter-injected JS can register handlers at runtime.
+window.registerSlashCommandHandler = registerSlashCommandHandler;
+
+// --- Built-in handlers ---
+registerSlashCommandHandler('heading1', (editor) => {
+  editor.updateBlock(editor.getTextCursorPosition().block, { type: 'heading', props: { level: 1 } });
+});
+registerSlashCommandHandler('heading2', (editor) => {
+  editor.updateBlock(editor.getTextCursorPosition().block, { type: 'heading', props: { level: 2 } });
+});
+registerSlashCommandHandler('heading3', (editor) => {
+  editor.updateBlock(editor.getTextCursorPosition().block, { type: 'heading', props: { level: 3 } });
+});
+registerSlashCommandHandler('bulletListItem', (editor) => {
+  editor.updateBlock(editor.getTextCursorPosition().block, { type: 'bulletListItem' });
+});
+registerSlashCommandHandler('numberedListItem', (editor) => {
+  editor.updateBlock(editor.getTextCursorPosition().block, { type: 'numberedListItem' });
+});
+registerSlashCommandHandler('checkListItem', (editor) => {
+  editor.updateBlock(editor.getTextCursorPosition().block, { type: 'checkListItem' });
+});
+registerSlashCommandHandler('paragraph', (editor) => {
+  editor.updateBlock(editor.getTextCursorPosition().block, { type: 'paragraph' });
+});
+
+// ---------------------------------------------------------------------------
+// SVG sanitizer
+// ---------------------------------------------------------------------------
+
+/**
+ * Strip <script> tags and on* event-handler attributes from an SVG string.
+ * @param {string} svgContent
+ * @returns {string}
+ */
+function sanitizeSvgContent(svgContent) {
+  if (typeof svgContent !== 'string') return '';
+  // Remove <script>...</script> blocks (including multiline)
+  let sanitized = svgContent.replace(/<script[\s\S]*?<\/script>/gi, '');
+  // Remove on* event handler attributes (e.g. onclick="...", onerror='...')
+  sanitized = sanitized.replace(/\bon\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '');
+  return sanitized;
+}
+
 /** Match the default BlockNote icon size (18px) */
 const SLASH_ICON_SIZE = 18;
 
@@ -56,7 +124,7 @@ function renderSlashCommandIcon(itemIcon) {
         <div
           className="bn-slash-icon-svg"
           style={wrapperStyle}
-          dangerouslySetInnerHTML={{ __html: itemIcon.content }}
+          dangerouslySetInnerHTML={{ __html: sanitizeSvgContent(itemIcon.content) }}
         />
       );
     case 'image':
@@ -104,7 +172,7 @@ export function buildSlashMenuItems(slashCommandConfig, editor) {
   ) {
     const availableTitles = new Set(
       slashCommandConfig.availableSlashCommands.map((cmd) =>
-        typeof cmd === 'string' ? cmd : cmd,
+        typeof cmd === 'string' ? cmd : cmd.title ?? String(cmd),
       ),
     );
     filteredDefaultItems = defaultItems.filter((item) =>
@@ -117,11 +185,26 @@ export function buildSlashMenuItems(slashCommandConfig, editor) {
     slashCommandConfig.items?.map((item) => ({
       title: item.title,
       onItemClick: () => {
-        try {
-          const handler = new Function('editor', item.onItemClick);
-          handler(editor);
-        } catch (error) {
-          console.error('[BlockNote] Error executing slash command:', error);
+        // Prefer id-based dispatch
+        if (item.onItemClickId) {
+          const handler = slashCommandHandlerRegistry.get(item.onItemClickId);
+          if (handler) {
+            try {
+              handler(editor);
+            } catch (error) {
+              console.error('[BlockNote] Error executing slash command handler:', error);
+            }
+          } else {
+            console.warn(`[BlockNote] No handler registered for slash command id: "${item.onItemClickId}"`);
+          }
+          return;
+        }
+        // Legacy: onItemClick as string — do NOT eval, just warn
+        if (typeof item.onItemClick === 'string') {
+          console.warn(
+            '[BlockNote] item.onItemClick as a string is no longer supported. Use onItemClickId with a registered handler instead.',
+          );
+          return;
         }
       },
       subtext: item.subtext,

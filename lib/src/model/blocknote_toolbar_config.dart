@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'blocknote_block.dart';
+import '../utils/collection_utils.dart';
 
 /// Basic text styles for formatting toolbar buttons.
 enum BlockNoteBasicTextStyle {
@@ -174,18 +175,18 @@ class BlockNoteToolbarButton {
   }
 
   BlockNoteToolbarButton copyWith({
-    Object? key = _unset,
+    Object? key = kUnset,
     BlockNoteToolbarButtonType? type,
-    Object? basicTextStyle = _unset,
-    Object? textAlignment = _unset,
+    Object? basicTextStyle = kUnset,
+    Object? textAlignment = kUnset,
   }) {
     return BlockNoteToolbarButton(
-      key: identical(key, _unset) ? this.key : key as String?,
+      key: identical(key, kUnset) ? this.key : key as String?,
       type: type ?? this.type,
-      basicTextStyle: identical(basicTextStyle, _unset)
+      basicTextStyle: identical(basicTextStyle, kUnset)
           ? this.basicTextStyle
           : basicTextStyle as BlockNoteBasicTextStyle?,
-      textAlignment: identical(textAlignment, _unset)
+      textAlignment: identical(textAlignment, kUnset)
           ? this.textAlignment
           : textAlignment as TextAlign?,
     );
@@ -282,14 +283,14 @@ class BlockNoteBlockTypeItem {
   BlockNoteBlockTypeItem copyWith({
     BlockNoteBlockType? type,
     String? title,
-    Object? icon = _unset,
-    Object? group = _unset,
+    Object? icon = kUnset,
+    Object? group = kUnset,
   }) {
     return BlockNoteBlockTypeItem(
       type: type ?? this.type,
       title: title ?? this.title,
-      icon: identical(icon, _unset) ? this.icon : icon as String?,
-      group: identical(group, _unset) ? this.group : group as String?,
+      icon: identical(icon, kUnset) ? this.icon : icon as String?,
+      group: identical(group, kUnset) ? this.group : group as String?,
     );
   }
 
@@ -365,15 +366,15 @@ class BlockNoteToolbarConfig {
   }
 
   BlockNoteToolbarConfig copyWith({
-    Object? buttons = _unset,
-    Object? blockTypeSelectItems = _unset,
+    Object? buttons = kUnset,
+    Object? blockTypeSelectItems = kUnset,
     bool? enabled,
   }) {
     return BlockNoteToolbarConfig(
-      buttons: identical(buttons, _unset)
+      buttons: identical(buttons, kUnset)
           ? this.buttons
           : buttons as List<BlockNoteToolbarButton>?,
-      blockTypeSelectItems: identical(blockTypeSelectItems, _unset)
+      blockTypeSelectItems: identical(blockTypeSelectItems, kUnset)
           ? this.blockTypeSelectItems
           : blockTypeSelectItems as List<BlockNoteBlockTypeItem>?,
       enabled: enabled ?? this.enabled,
@@ -389,14 +390,14 @@ class BlockNoteToolbarConfig {
   bool operator ==(Object other) {
     return identical(this, other) ||
         other is BlockNoteToolbarConfig &&
-            _listEquals(other.buttons, buttons) &&
-            _listEquals(other.blockTypeSelectItems, blockTypeSelectItems) &&
+            listEquals(other.buttons, buttons) &&
+            listEquals(other.blockTypeSelectItems, blockTypeSelectItems) &&
             other.enabled == enabled;
   }
 
   @override
   int get hashCode =>
-      Object.hash(_listHash(buttons), _listHash(blockTypeSelectItems), enabled);
+      Object.hash(listHash(buttons), listHash(blockTypeSelectItems), enabled);
 }
 
 /// Helper to convert buttons to JSON with effectiveKey.
@@ -414,18 +415,3 @@ List<Map<String, dynamic>>? _buttonsToJson(
   }).toList();
 }
 
-const Object _unset = Object();
-
-bool _listEquals<T>(List<T>? a, List<T>? b) {
-  if (identical(a, b)) return true;
-  if (a == null || b == null || a.length != b.length) return false;
-  for (var i = 0; i < a.length; i++) {
-    if (a[i] != b[i]) return false;
-  }
-  return true;
-}
-
-int _listHash<T>(List<T>? list) {
-  if (list == null) return 0;
-  return Object.hashAll(list);
-}

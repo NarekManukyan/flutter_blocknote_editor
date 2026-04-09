@@ -19,6 +19,7 @@ class MessageHandlers {
     Function(DocumentMessage)? onDocument,
     Function(LinkTapMessage)? onLinkTap,
     required bool mounted,
+    bool debugLogging = false,
   }) {
     if (!mounted) return;
 
@@ -43,6 +44,15 @@ class MessageHandlers {
       case JsToFlutterMessageType.linkTap:
         if (onLinkTap != null) {
           onLinkTap(message as LinkTapMessage);
+        }
+        break;
+      case JsToFlutterMessageType.unknown:
+        // Unrecognised message — log and ignore to avoid crashing.
+        if (debugLogging) {
+          debugPrint(
+            '[BlockNoteEditor] Received unknown message type: '
+            '${(message as UnknownMessage).rawType}',
+          );
         }
         break;
     }
@@ -83,21 +93,18 @@ class MessageHandlers {
   }) {
     if (batcher == null) return;
 
-    try {
-      // Parse transactions from JSON
-      final transactions = message.data
-          .map((json) => BlockNoteTransaction.fromJson(json))
-          .toList();
-
-      // Add to batcher
-      for (final transaction in transactions) {
+    // Parse each transaction individually so one malformed entry does not
+    // silently drop the rest of the batch.
+    for (final json in message.data) {
+      try {
+        final transaction = BlockNoteTransaction.fromJson(json);
         batcher.addTransaction(transaction);
+      } catch (e) {
+        if (debugLogging) {
+          debugPrint('[BlockNoteEditor] Error parsing transaction entry: $e');
+        }
+        onError('Failed to parse transaction: $e');
       }
-    } catch (e) {
-      if (debugLogging) {
-        debugPrint('[BlockNoteEditor] Error parsing transactions: $e');
-      }
-      onError('Failed to parse transactions: $e');
     }
   }
 

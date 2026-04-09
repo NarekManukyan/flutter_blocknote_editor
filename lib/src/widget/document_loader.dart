@@ -156,7 +156,7 @@ class DocumentLoader {
     required BlockNoteEditor widget,
     required JsBridge bridge,
   }) async {
-    final schemaConfig = _resolveSchemaConfig(widget);
+    final schemaConfig = resolveSchemaConfig(widget);
     if (schemaConfig == null) {
       return;
     }
@@ -194,7 +194,8 @@ class DocumentLoader {
     await apply(value);
   }
 
-  static Map<String, dynamic>? _resolveSchemaConfig(BlockNoteEditor widget) {
+  /// Resolves the active schema config from [widget.schemaConfigs] or [widget.schemaConfig].
+  static Map<String, dynamic>? resolveSchemaConfig(BlockNoteEditor widget) {
     final configs = widget.schemaConfigs;
     if (configs != null && configs.isNotEmpty) {
       final activeId = widget.activeSchemaId;

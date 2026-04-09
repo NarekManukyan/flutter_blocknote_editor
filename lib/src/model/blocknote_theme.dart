@@ -6,6 +6,8 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../utils/collection_utils.dart';
+
 /// Converts a Flutter Color to a hex string (e.g., "#3f3f3f").
 String _colorToHex(Color color) {
   final argb = color.toARGB32();
@@ -187,34 +189,34 @@ class BlockNoteHighlightColors {
   }
 
   BlockNoteHighlightColors copyWith({
-    Object? gray = _unset,
-    Object? brown = _unset,
-    Object? red = _unset,
-    Object? orange = _unset,
-    Object? yellow = _unset,
-    Object? green = _unset,
-    Object? blue = _unset,
-    Object? purple = _unset,
-    Object? pink = _unset,
+    Object? gray = kUnset,
+    Object? brown = kUnset,
+    Object? red = kUnset,
+    Object? orange = kUnset,
+    Object? yellow = kUnset,
+    Object? green = kUnset,
+    Object? blue = kUnset,
+    Object? purple = kUnset,
+    Object? pink = kUnset,
   }) {
     return BlockNoteHighlightColors(
-      gray: identical(gray, _unset) ? this.gray : gray as BlockNoteColorPair?,
+      gray: identical(gray, kUnset) ? this.gray : gray as BlockNoteColorPair?,
       brown:
-          identical(brown, _unset) ? this.brown : brown as BlockNoteColorPair?,
-      red: identical(red, _unset) ? this.red : red as BlockNoteColorPair?,
-      orange: identical(orange, _unset)
+          identical(brown, kUnset) ? this.brown : brown as BlockNoteColorPair?,
+      red: identical(red, kUnset) ? this.red : red as BlockNoteColorPair?,
+      orange: identical(orange, kUnset)
           ? this.orange
           : orange as BlockNoteColorPair?,
-      yellow: identical(yellow, _unset)
+      yellow: identical(yellow, kUnset)
           ? this.yellow
           : yellow as BlockNoteColorPair?,
       green:
-          identical(green, _unset) ? this.green : green as BlockNoteColorPair?,
-      blue: identical(blue, _unset) ? this.blue : blue as BlockNoteColorPair?,
-      purple: identical(purple, _unset)
+          identical(green, kUnset) ? this.green : green as BlockNoteColorPair?,
+      blue: identical(blue, kUnset) ? this.blue : blue as BlockNoteColorPair?,
+      purple: identical(purple, kUnset)
           ? this.purple
           : purple as BlockNoteColorPair?,
-      pink: identical(pink, _unset) ? this.pink : pink as BlockNoteColorPair?,
+      pink: identical(pink, kUnset) ? this.pink : pink as BlockNoteColorPair?,
     );
   }
 
@@ -335,43 +337,43 @@ class BlockNoteColorScheme {
   }
 
   BlockNoteColorScheme copyWith({
-    Object? editor = _unset,
-    Object? menu = _unset,
-    Object? tooltip = _unset,
-    Object? hovered = _unset,
-    Object? selected = _unset,
-    Object? disabled = _unset,
-    Object? shadow = _unset,
-    Object? border = _unset,
-    Object? sideMenu = _unset,
-    Object? highlights = _unset,
+    Object? editor = kUnset,
+    Object? menu = kUnset,
+    Object? tooltip = kUnset,
+    Object? hovered = kUnset,
+    Object? selected = kUnset,
+    Object? disabled = kUnset,
+    Object? shadow = kUnset,
+    Object? border = kUnset,
+    Object? sideMenu = kUnset,
+    Object? highlights = kUnset,
   }) {
     return BlockNoteColorScheme(
-      editor: identical(editor, _unset)
+      editor: identical(editor, kUnset)
           ? this.editor
           : editor as BlockNoteColorPair?,
       menu:
-          identical(menu, _unset) ? this.menu : menu as BlockNoteColorPair?,
-      tooltip: identical(tooltip, _unset)
+          identical(menu, kUnset) ? this.menu : menu as BlockNoteColorPair?,
+      tooltip: identical(tooltip, kUnset)
           ? this.tooltip
           : tooltip as BlockNoteColorPair?,
-      hovered: identical(hovered, _unset)
+      hovered: identical(hovered, kUnset)
           ? this.hovered
           : hovered as BlockNoteColorPair?,
-      selected: identical(selected, _unset)
+      selected: identical(selected, kUnset)
           ? this.selected
           : selected as BlockNoteColorPair?,
-      disabled: identical(disabled, _unset)
+      disabled: identical(disabled, kUnset)
           ? this.disabled
           : disabled as BlockNoteColorPair?,
       shadow:
-          identical(shadow, _unset) ? this.shadow : shadow as Color?,
+          identical(shadow, kUnset) ? this.shadow : shadow as Color?,
       border:
-          identical(border, _unset) ? this.border : border as Color?,
-      sideMenu: identical(sideMenu, _unset)
+          identical(border, kUnset) ? this.border : border as Color?,
+      sideMenu: identical(sideMenu, kUnset)
           ? this.sideMenu
           : sideMenu as Color?,
-      highlights: identical(highlights, _unset)
+      highlights: identical(highlights, kUnset)
           ? this.highlights
           : highlights as BlockNoteHighlightColors?,
     );
@@ -496,14 +498,14 @@ class BlockNoteFontFile {
   BlockNoteFontFile copyWith({
     String? path,
     BlockNoteFontFormat? format,
-    Object? weight = _unset,
-    Object? style = _unset,
+    Object? weight = kUnset,
+    Object? style = kUnset,
   }) {
     return BlockNoteFontFile(
       path: path ?? this.path,
       format: format ?? this.format,
-      weight: identical(weight, _unset) ? this.weight : weight as FontWeight?,
-      style: identical(style, _unset) ? this.style : style as FontStyle?,
+      weight: identical(weight, kUnset) ? this.weight : weight as FontWeight?,
+      style: identical(style, kUnset) ? this.style : style as FontStyle?,
     );
   }
 
@@ -680,11 +682,11 @@ class BlockNoteFontConfig {
     return identical(this, other) ||
         other is BlockNoteFontConfig &&
             other.family == family &&
-            _listEquals(other.files, files);
+            listEquals(other.files, files);
   }
 
   @override
-  int get hashCode => Object.hash(family, _listHash(files));
+  int get hashCode => Object.hash(family, listHash(files));
 }
 
 /// Extension for BlockNoteFontFile to add toCssSrc method.
@@ -790,20 +792,20 @@ class BlockNoteTheme {
   }
 
   BlockNoteTheme copyWith({
-    Object? colors = _unset,
-    Object? borderRadius = _unset,
-    Object? font = _unset,
-    Object? light = _unset,
-    Object? dark = _unset,
+    Object? colors = kUnset,
+    Object? borderRadius = kUnset,
+    Object? font = kUnset,
+    Object? light = kUnset,
+    Object? dark = kUnset,
   }) {
     return BlockNoteTheme(
-      colors: identical(colors, _unset) ? this.colors : colors as BlockNoteColorScheme?,
-      borderRadius: identical(borderRadius, _unset)
+      colors: identical(colors, kUnset) ? this.colors : colors as BlockNoteColorScheme?,
+      borderRadius: identical(borderRadius, kUnset)
           ? this.borderRadius
           : borderRadius as double?,
-      font: identical(font, _unset) ? this.font : font as BlockNoteFontConfig?,
-      light: identical(light, _unset) ? this.light : light as BlockNoteColorScheme?,
-      dark: identical(dark, _unset) ? this.dark : dark as BlockNoteColorScheme?,
+      font: identical(font, kUnset) ? this.font : font as BlockNoteFontConfig?,
+      light: identical(light, kUnset) ? this.light : light as BlockNoteColorScheme?,
+      dark: identical(dark, kUnset) ? this.dark : dark as BlockNoteColorScheme?,
     );
   }
 
@@ -853,18 +855,3 @@ void _addIfNotNull(
   }
 }
 
-const Object _unset = Object();
-
-bool _listEquals<T>(List<T>? a, List<T>? b) {
-  if (identical(a, b)) return true;
-  if (a == null || b == null || a.length != b.length) return false;
-  for (var i = 0; i < a.length; i++) {
-    if (a[i] != b[i]) return false;
-  }
-  return true;
-}
-
-int _listHash<T>(List<T>? list) {
-  if (list == null) return 0;
-  return Object.hashAll(list);
-}

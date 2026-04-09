@@ -47,10 +47,11 @@ function serializeTopLevelBlocks(editor) {
  * @returns {boolean} Whether the editor is ready.
  */
 export function useEditorReady(editor, refs, setIsLoading, setError, allowMissingEditor) {
-  const isReadyRef = useRef(false);
+  const hasInitializedRef = useRef(false);
   const debounceTimeoutRef = useRef(null);
   const previousBlocksRef = useRef(null);
   const debounceDurationRef = useRef(window.__blockNoteDebounceDuration ?? 300);
+  const sendTransactionsRef = useRef(null);
   const isReady = Boolean(editor);
 
   // Expose debounce duration updater
@@ -85,6 +86,9 @@ export function useEditorReady(editor, refs, setIsLoading, setError, allowMissin
     }
   }, [editor, refs]);
 
+  // Keep ref in sync every render so the onChange closure always calls the latest version.
+  sendTransactionsRef.current = sendTransactions;
+
   // Flush pending transactions (clear debounce + send)
   const flushTransactions = useCallback(() => {
     if (debounceTimeoutRef.current) {
@@ -100,20 +104,20 @@ export function useEditorReady(editor, refs, setIsLoading, setError, allowMissin
     previousBlocksRef.current = serializeTopLevelBlocks(editor);
   }, [editor]);
 
-  // Expose functions globally for Flutter access
+  // Expose functions globally for Flutter access; store resetPreviousBlocks in refs (not window)
   useEffect(() => {
     if (!editor || !isReady) return;
 
     window.sendPendingTransaction = flushTransactions;
-    window.resetPreviousBlocks = resetPreviousBlocks;
     window.serializeBlock = serializeBlock;
+    refs.resetPreviousBlocks = resetPreviousBlocks;
 
     return () => {
       if (window.sendPendingTransaction === flushTransactions) delete window.sendPendingTransaction;
-      if (window.resetPreviousBlocks === resetPreviousBlocks) delete window.resetPreviousBlocks;
       if (window.serializeBlock === serializeBlock) delete window.serializeBlock;
+      if (refs.resetPreviousBlocks === resetPreviousBlocks) refs.resetPreviousBlocks = null;
     };
-  }, [editor, isReady, flushTransactions, resetPreviousBlocks]);
+  }, [editor, isReady, flushTransactions, resetPreviousBlocks, refs]);
 
   // Main initialization effect
   useEffect(() => {
@@ -127,22 +131,22 @@ export function useEditorReady(editor, refs, setIsLoading, setError, allowMissin
       return;
     }
 
-    if (!isReadyRef.current) {
+    if (!hasInitializedRef.current) {
       setIsLoading(false);
-      isReadyRef.current = true;
+      hasInitializedRef.current = true;
 
       sendToFlutter('ready');
 
       // Initialize baseline for diff tracking
       previousBlocksRef.current = serializeTopLevelBlocks(editor);
 
-      // Debounced change listener
-      editor.onChange(() => {
+      // Debounced change listener — closure calls ref so it always invokes the latest sendTransactions.
+      const onChangeCleanup = editor.onChange(() => {
         if (debounceTimeoutRef.current) {
           clearTimeout(debounceTimeoutRef.current);
         }
         debounceTimeoutRef.current = setTimeout(() => {
-          sendTransactions();
+          sendTransactionsRef.current?.();
           debounceTimeoutRef.current = null;
         }, debounceDurationRef.current);
       });
@@ -167,6 +171,17 @@ export function useEditorReady(editor, refs, setIsLoading, setError, allowMissin
         setupFocusListeners(tiptapEditor, getSelectionVisibility);
         setupChecklistBlurOnToggle(tiptapEditor);
       }
+
+      return () => {
+        if (debounceTimeoutRef.current) {
+          clearTimeout(debounceTimeoutRef.current);
+          debounceTimeoutRef.current = null;
+        }
+        // Call BlockNote onChange cleanup if it returned one
+        if (typeof onChangeCleanup === 'function') {
+          onChangeCleanup();
+        }
+      };
     }
 
     return () => {
@@ -175,7 +190,7 @@ export function useEditorReady(editor, refs, setIsLoading, setError, allowMissin
         debounceTimeoutRef.current = null;
       }
     };
-  }, [editor, setIsLoading, setError, sendTransactions, allowMissingEditor]);
+  }, [editor, setIsLoading, setError, allowMissingEditor]);
 
   return isReady;
 }

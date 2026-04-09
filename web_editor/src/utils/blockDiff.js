@@ -21,11 +21,10 @@ export function blocksEqual(block1, block2) {
   const blocksEqualInner = (left, right) => {
     if (!left && !right) return true;
     if (!left || !right) return false;
+    // Fast path: identical reference means all fields are equal.
+    if (left === right) return true;
     if (left.id !== right.id) return false;
     if (left.type !== right.type) return false;
-
-    // Fast path: if references are the same, they're equal
-    if (left === right) return true;
 
     // Shallow comparison for content (most common case)
     const leftContent = left.content ?? null;

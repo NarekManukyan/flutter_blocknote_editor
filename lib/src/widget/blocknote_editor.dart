@@ -29,6 +29,26 @@ import 'webview_height_manager.dart';
 import 'css_utils.dart';
 import '../pool/blocknote_editor_pool.dart';
 
+/// Lifecycle state of the BlockNote editor.
+///
+/// Valid transitions:
+///   idle → initializing → editorReady → documentLoaded
+///   documentLoaded → editorReady  (schema change resets document load)
+///   any → idle                    (dispose; no setState needed)
+enum _EditorState {
+  /// No initialization started yet, or disposed.
+  idle,
+
+  /// [_initializeWebView] is running (fetching asset URL).
+  initializing,
+
+  /// The JS editor has sent its "ready" signal; document not yet loaded.
+  editorReady,
+
+  /// Document has been loaded and the ready callback has fired.
+  documentLoaded,
+}
+
 /// BlockNote editor widget.
 ///
 /// Embeds BlockNoteJS inside a WebView and provides bidirectional
@@ -206,16 +226,50 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
   TransactionBatcher? _batcher;
   BlockNoteAssetLoader? _assetLoader;
   BlockNoteController? _blockNoteController;
-  bool _isReady = false;
-  bool _isEditorInitialized = false;
-  bool _hasLoadedDocument = false;
+
+  /// Current lifecycle state of this editor instance.
+  _EditorState _state = _EditorState.idle;
+
   bool _hasPreloadedCustomJavaScript = false;
   bool _hasPreloadedCustomCss = false;
   bool _hasPreloadedSchemaConfig = false;
   double _lastExtraBottomPadding = 0;
   String? _initialUrl;
-  bool _isInitializing = false;
   String? _loadedInitialUrl;
+
+  // ---------------------------------------------------------------------------
+  // State-machine helpers
+  // ---------------------------------------------------------------------------
+
+  /// Advances the state machine to [next] and schedules a rebuild.
+  ///
+  /// Asserts valid forward transitions in debug mode:
+  ///   idle → initializing → editorReady → documentLoaded
+  ///   documentLoaded → editorReady  (schema change)
+  void _advanceState(_EditorState next) {
+    assert(() {
+      const valid = {
+        _EditorState.idle: {_EditorState.initializing},
+        _EditorState.initializing: {_EditorState.editorReady},
+        _EditorState.editorReady: {_EditorState.documentLoaded},
+        _EditorState.documentLoaded: {_EditorState.editorReady},
+      };
+      assert(
+        valid[_state]?.contains(next) ?? false,
+        'Invalid _EditorState transition: $_state → $next',
+      );
+      return true;
+    }());
+    setState(() => _state = next);
+  }
+
+  // Convenience getters that preserve the semantics of the old boolean flags.
+  bool get _isInitializing => _state == _EditorState.initializing;
+  bool get _isEditorInitialized =>
+      _state == _EditorState.editorReady ||
+      _state == _EditorState.documentLoaded;
+  bool get _hasLoadedDocument => _state == _EditorState.documentLoaded;
+  bool get _isReady => _state == _EditorState.documentLoaded;
   Timer? _contentSizeChangeDebounceTimer;
   DateTime? _lastSignificantChangeTime;
   Timer? _heightUpdateDebounceTimer;
@@ -241,18 +295,7 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Ensure initialization happens
-    if (_initialUrl == null && !_isInitializing) {
-      _initializeWebView().catchError((error) {
-        if (widget.debugLogging) {
-          debugPrint('[BlockNoteEditor] Error initializing WebView: $error');
-        }
-        MessageHandlers.handleError(
-          message: 'Failed to initialize WebView: $error',
-          debugLogging: widget.debugLogging,
-        );
-      });
-    }
+    // Initialization is started in initState; nothing extra needed here.
   }
 
   @override
@@ -268,6 +311,8 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
     _assetLoader?.dispose();
     // Flush any pending transactions before disposing
     _batcher?.dispose();
+    // Complete any pending document requests with an error.
+    _blockNoteController?.dispose();
     // Cancel debounce timers
     _contentSizeChangeDebounceTimer?.cancel();
     _heightUpdateDebounceTimer?.cancel();
@@ -278,7 +323,7 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
   Future<void> _initializeWebView() async {
     if (_isInitializing || _initialUrl != null) return;
 
-    _isInitializing = true;
+    _advanceState(_EditorState.initializing);
 
     try {
       // Create transaction batcher
@@ -306,9 +351,12 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
         // The pool entry's asset loader owns the temp directory.
         // Don't create a new one.
         if (mounted) {
+          // URL is ready; transition to editorReady will happen via
+          // _handleReady / _probeEditorReadiness once the WebView attaches.
+          // For now just record the URL and leave state as initializing —
+          // the build gate only checks _initialUrl == null.
           setState(() {
             _initialUrl = poolEntry.assetUrl;
-            _isInitializing = false;
           });
         }
         return;
@@ -324,11 +372,11 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
       if (mounted) {
         setState(() {
           _initialUrl = result.url;
-          _isInitializing = false;
         });
       }
     } catch (e) {
-      _isInitializing = false;
+      // Reset to idle so a retry is possible.
+      setState(() => _state = _EditorState.idle);
       rethrow;
     }
   }
@@ -343,7 +391,8 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
       return;
     }
 
-    _hasLoadedDocument = true;
+    // Mark document load in progress by keeping state at editorReady.
+    // _advanceState to documentLoaded happens in the post-frame callback below.
 
     // Load document immediately since editor is initialized
     if (!mounted) return;
@@ -375,9 +424,7 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
 
         // Mark as ready after document is loaded and UI is updated
         if (mounted) {
-          setState(() {
-            _isReady = true;
-          });
+          _advanceState(_EditorState.documentLoaded);
 
           if (widget.debugLogging) {
             debugPrint('[BlockNoteEditor] Editor is ready (document loaded)');
@@ -411,6 +458,7 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
       onDocument: _handleDocument,
       onLinkTap: _handleLinkTap,
       mounted: mounted,
+      debugLogging: widget.debugLogging,
     );
   }
 
@@ -462,7 +510,7 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
   void _handleReady() {
     if (_isEditorInitialized) return;
 
-    _isEditorInitialized = true;
+    _advanceState(_EditorState.editorReady);
 
     if (widget.debugLogging) {
       debugPrint(
@@ -470,8 +518,10 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
       );
     }
 
-    // Initialize controller
-    if (_bridge != null && _blockNoteController == null) {
+    // Create (or recreate) the controller so initialize() is always called on
+    // a fresh instance — avoids the StateError on schema-change re-init.
+    if (_bridge != null) {
+      _blockNoteController?.dispose();
       _blockNoteController = BlockNoteController(
         debugLogging: widget.debugLogging,
       );
@@ -494,8 +544,9 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
       );
     }
 
-    // Initialize controller.
-    if (_bridge != null && _blockNoteController == null) {
+    // Create (or recreate) the controller.
+    if (_bridge != null) {
+      _blockNoteController?.dispose();
       _blockNoteController = BlockNoteController(
         debugLogging: widget.debugLogging,
       );
@@ -556,7 +607,7 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
 
         if (isEditorReady) {
           // Editor JS is ready - proceed with pool flow.
-          _isEditorInitialized = true;
+          _advanceState(_EditorState.editorReady);
           _handleReadyFromPool();
         } else {
           // Editor JS is not ready yet - apply pre-config and let the normal
@@ -606,7 +657,7 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
       widget: widget,
       context: context,
       bridge: _bridge,
-      mounted: mounted,
+      isMounted: () => mounted,
       debugLogging: widget.debugLogging,
     );
   }
@@ -656,13 +707,37 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
             oldWidget.schemaConfigs != widget.schemaConfigs ||
             oldWidget.activeSchemaId != widget.activeSchemaId) &&
         _bridge != null) {
-      _hasLoadedDocument = false;
-      _isReady = false;
-      _isEditorInitialized = false;
-      _hasPreloadedSchemaConfig = false;
-      final resolvedSchemaConfig = _resolveSchemaConfig();
+      // Schema change: reset to editorReady so _handleReady() / document load
+      // will re-run when JS sends the new "ready" signal.
+      setState(() {
+        _state = _EditorState.editorReady;
+        _hasPreloadedSchemaConfig = false;
+      });
+      final resolvedSchemaConfig = DocumentLoader.resolveSchemaConfig(widget);
       if (resolvedSchemaConfig != null) {
-        _bridge!.setSchemaConfig(resolvedSchemaConfig);
+        // After schema config is applied the JS editor reloads and fires a new
+        // "ready" signal. If that signal arrives first, _handleReady() will
+        // advance state to editorReady and then call _loadInitialDocument.
+        // If the signal hasn't arrived by the time the future resolves, we
+        // call _loadInitialDocument directly (state is already editorReady).
+        unawaited(
+          _bridge!
+              .setSchemaConfig(resolvedSchemaConfig)
+              .then((_) {
+                // If the document hasn't been loaded yet (JS ready signal
+                // did not arrive before this future resolved), kick it off now.
+                if (mounted && !_hasLoadedDocument) {
+                  _loadInitialDocument();
+                }
+              })
+              .catchError((Object e) {
+                if (widget.debugLogging) {
+                  debugPrint(
+                    '[BlockNoteEditor] Error setting schema config: $e',
+                  );
+                }
+              }),
+        );
       }
     }
 
@@ -686,8 +761,10 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
     }
 
     // Update custom JavaScript assets if they changed
-    if (oldWidget.customJavaScriptAssetPaths !=
-            widget.customJavaScriptAssetPaths &&
+    if (!listEquals(
+          oldWidget.customJavaScriptAssetPaths,
+          widget.customJavaScriptAssetPaths,
+        ) &&
         _bridge != null) {
       _hasPreloadedCustomJavaScript = false;
       _applyCustomJavaScriptAssets();
@@ -709,6 +786,15 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
       if (duration != null) {
         _bridge!.setDebounceDuration(duration.inMilliseconds);
       }
+    }
+
+    // Update WebView bottom padding if extraBottomPadding changed.
+    // Scheduled via a post-frame callback so layout is complete before we send
+    // the update — keeping build() pure (no timers or state mutations there).
+    if (oldWidget.extraBottomPadding != widget.extraBottomPadding) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _scheduleHeightUpdate(widget.extraBottomPadding);
+      });
     }
   }
 
@@ -736,7 +822,7 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
     }
 
     if (!_hasPreloadedSchemaConfig) {
-      final resolvedSchemaConfig = _resolveSchemaConfig();
+      final resolvedSchemaConfig = DocumentLoader.resolveSchemaConfig(widget);
       final hasSchemaConfig =
           resolvedSchemaConfig != null ||
           (widget.schemaConfigs != null && widget.schemaConfigs!.isNotEmpty);
@@ -746,18 +832,6 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
       );
       _hasPreloadedSchemaConfig = true;
     }
-  }
-
-  Map<String, dynamic>? _resolveSchemaConfig() {
-    final configs = widget.schemaConfigs;
-    if (configs != null && configs.isNotEmpty) {
-      final activeId = widget.activeSchemaId;
-      if (activeId != null && configs.containsKey(activeId)) {
-        return configs[activeId];
-      }
-      return configs.values.first;
-    }
-    return widget.schemaConfig;
   }
 
   Future<void> _applyCustomJavaScriptAssets() async {
@@ -794,6 +868,32 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
     await bridge.injectCustomCss(combinedCss);
   }
 
+  /// Schedules a debounced update of the WebView bottom padding.
+  ///
+  /// Must only be called from [didUpdateWidget] or a post-frame callback,
+  /// never from [build].
+  void _scheduleHeightUpdate(double extraBottomPadding) {
+    if (!_isReady || _bridge == null || _controller == null) return;
+
+    final paddingDiff = (extraBottomPadding - _lastExtraBottomPadding).abs();
+    final significantChange = paddingDiff > 5.0;
+    if (_lastExtraBottomPadding != 0 && !significantChange) return;
+
+    _pendingExtraBottomPadding = extraBottomPadding;
+    _heightUpdateDebounceTimer?.cancel();
+    _heightUpdateDebounceTimer = Timer(const Duration(milliseconds: 50), () {
+      if (!mounted || !_isReady || _bridge == null || _controller == null) {
+        return;
+      }
+      final finalPaddingDiff =
+          (_pendingExtraBottomPadding - _lastExtraBottomPadding).abs();
+      if (_lastExtraBottomPadding == 0 || finalPaddingDiff > 5.0) {
+        _lastExtraBottomPadding = _pendingExtraBottomPadding;
+        _updateWebViewHeight();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -803,46 +903,6 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
           return const Center(child: CircularProgressIndicator());
         }
 
-        // Update WebView bottom padding when editor is ready or when extraBottomPadding changes
-        // Use debouncing to avoid excessive updates
-        if (_isReady && _bridge != null && _controller != null) {
-          final extraBottomPadding = widget.extraBottomPadding;
-          final paddingDiff = (extraBottomPadding - _lastExtraBottomPadding)
-              .abs();
-
-          // Use a larger threshold (5 pixels) to avoid updates on every frame
-          final significantChange = paddingDiff > 5.0;
-
-          if (_lastExtraBottomPadding == 0 || significantChange) {
-            // Store pending value
-            _pendingExtraBottomPadding = extraBottomPadding;
-
-            // Cancel previous debounce timer
-            _heightUpdateDebounceTimer?.cancel();
-
-            // Debounce padding updates to avoid excessive calls
-            // Use a shorter delay (50ms) for responsiveness while still batching updates
-            _heightUpdateDebounceTimer = Timer(
-              const Duration(milliseconds: 50),
-              () {
-                if (mounted &&
-                    _isReady &&
-                    _bridge != null &&
-                    _controller != null) {
-                  // Only update if value actually changed significantly
-                  final finalPaddingDiff =
-                      (_pendingExtraBottomPadding - _lastExtraBottomPadding)
-                          .abs();
-
-                  if (_lastExtraBottomPadding == 0 || finalPaddingDiff > 5.0) {
-                    _lastExtraBottomPadding = _pendingExtraBottomPadding;
-                    _updateWebViewHeight();
-                  }
-                }
-              },
-            );
-          }
-        }
         // Extract editor background color from theme if available
         // This ensures the skeleton background matches the editor background
         Color? editorBackgroundColor;
@@ -1091,6 +1151,7 @@ class _BlockNoteEditorState extends State<BlockNoteEditor> {
     WebViewHeightManager.updateWebViewHeight(
       bridge: _bridge!,
       controller: _controller!,
+      context: context,
       extraBottomPadding: widget.extraBottomPadding,
       debugLogging: widget.debugLogging,
     );
