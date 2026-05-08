@@ -933,3 +933,8 @@ migrate_working_dir/
 .npm-cache/_cacache/index-v5/fe/d9/065769d90683528816e0573c51de31d23345a3b7b6f338e6a4b77381b1f1
 .npm-cache/_cacache/index-v5/ff/11/bd1bdd0361bbe4ffe0d3e792454b0e5441eb1e8bdb36bd5a652eb0be6e65
 .npm-cache/_cacache/index-v5/ff/63/576244d9daa8d57fa076bc0eeaf71c1cb5d3d003be3ad6cd9462db987ce1
+
+# Local AI/editor settings
+.claude/
+# Build analyzer output
+web_editor/stats.html
