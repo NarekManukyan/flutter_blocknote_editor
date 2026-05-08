@@ -192,11 +192,13 @@ These configurations only allow cleartext traffic for localhost, which is safe s
 </details>
 
 <details>
-<summary><strong>Note: bundled fonts use a <code>.bin</code> extension</strong></summary>
+<summary><strong>Note: no bundled fonts (iOS App Store / ITMS-90853)</strong></summary>
 
-The Inter `.woff`/`.woff2` files in `assets/web/` are bundled with a `.bin` suffix (e.g. `inter-v12-latin-regular.woff2.bin`). This is required to pass Apple's iOS App Store validator, which rejects any `.woff`/`.woff2` file in the app bundle with error **ITMS-90853** ("Font not supported by platform") — even though these fonts are only consumed by the embedded WebView and never touch native iOS font APIs.
+This package does **not** bundle the Inter font files. Apple's iOS App Store validator rejects any `.woff`/`.woff2` file in the app bundle with error **ITMS-90853** ("Font not supported by platform") — even when the fonts are only consumed by an embedded WebView. The validator detects WOFF/WOFF2 by file magic bytes (`wOFF`, `wOF2`), so renaming the files to a non-font extension (e.g. `.bin`) does not bypass the check (this was attempted in 0.0.22 — it didn't work; that version has been retracted).
 
-At runtime, `BlockNoteAssetLoader` reads the `.bin` assets and writes them to the temp directory under their original `.woff`/`.woff2` names, so the editor's CSS `@font-face` URLs resolve normally inside the WebView. Do **not** rename these files back — your iOS submissions will be rejected. The `web_editor` build script handles the rename automatically via the `postbuild:rename-fonts` step.
+The editor falls back to the system font stack (`-apple-system`, `SF Pro Display`, `BlinkMacSystemFont`, `Roboto`, …) which `@blocknote/core` already declares as fallbacks. Visual difference vs. Inter is minimal on iOS (SF Pro is metrically very close).
+
+If you need a specific font, bundle it in **your own app** (not this package) and provide the CSS via `customCss` / `customCssAssetPaths` along with a matching `BlockNoteFontConfig`. Use `.ttf`/`.otf` formats to stay App Store compatible (CoreText accepts them, and so does WebKit via `@font-face`).
 
 </details>
 

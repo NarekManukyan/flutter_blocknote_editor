@@ -1,7 +1,13 @@
-## 0.0.22
+## 0.0.23
 
-* **iOS App Store fix (ITMS-90853):** bundled Inter `.woff`/`.woff2` font files are now stored in the package as `.woff.bin`/`.woff2.bin` to bypass Apple's native font validator (which rejects WOFF/WOFF2 in the iOS bundle even though they are only consumed by the embedded WebView). At runtime, `BlockNoteAssetLoader` loads the `.bin` assets and writes them to the temp directory under their original `.woff`/`.woff2` names, so the editor's CSS `@font-face` URLs continue to resolve unchanged.
-* **Build:** `web_editor` build now auto-renames font outputs to `.bin` via a `postbuild:rename-fonts` step.
+* **iOS App Store fix (ITMS-90853), proper version:** removed bundled Inter font files entirely. The editor now relies on the system font stack (`-apple-system`, `SF Pro Display`, `BlinkMacSystemFont`, `Roboto`, etc.) which `@blocknote/core` already declares as fallbacks. The 0.0.22 attempt to rename `.woff`/`.woff2` files to `.woff.bin`/`.woff2.bin` did **not** work — Apple's validator sniffs file magic bytes (`wOFF`, `wOF2`), not the extension.
+* **Build:** `web_editor` build now strips any emitted font files via a `postbuild:strip-fonts` step (defense-in-depth in case upstream `@blocknote/core` re-introduces font imports).
+* **Custom fonts:** unaffected. Users supplying a `BlockNoteFontConfig` and `customCss`/`customCssAssetPaths` continue to work exactly as before. To restore Inter, bundle it in your own app and declare `@font-face` rules via `customCss` (use `.ttf`/`.otf` to stay App Store compatible).
+* **0.0.22 has been retracted** on pub.dev — it does not fix ITMS-90853. Use 0.0.23 instead.
+
+## 0.0.22 (retracted)
+
+* Attempted iOS App Store fix by renaming `.woff`/`.woff2` to `.woff.bin`/`.woff2.bin`. **Does not work** — Apple's validator detects WOFF/WOFF2 by magic bytes regardless of extension. Replaced by 0.0.23.
 
 ## 0.0.21
 

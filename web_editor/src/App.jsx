@@ -8,7 +8,14 @@ import React, {
 } from 'react';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
-import '@blocknote/core/fonts/inter.css';
+// Inter fonts intentionally NOT imported: the @blocknote/core/fonts/inter.css
+// stylesheet pulls in WOFF/WOFF2 files that cause Apple App Store rejection
+// (ITMS-90853 — the iOS validator rejects .woff/.woff2 files in the app
+// bundle even though they are only consumed by the embedded WebView).
+// Renaming the files (e.g. .bin) does not work — the validator sniffs magic
+// bytes (`wOFF`, `wOF2`), not the extension. The editor falls back to the
+// system font stack (SF Pro Display / -apple-system / BlinkMacSystemFont /
+// Roboto / etc.) which @blocknote/core declares as fallbacks anyway.
 import { useBlockNoteEditor } from './hooks/useBlockNoteEditor';
 import { useEditorReady } from './hooks/useEditorReady';
 import { useFlutterMessages } from './hooks/useFlutterMessages';
