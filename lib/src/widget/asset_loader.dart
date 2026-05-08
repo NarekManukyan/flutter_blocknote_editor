@@ -55,9 +55,13 @@ class BlockNoteAssetLoader {
       // Core required assets
       final requiredAssets = ['index.html', 'editor.js', 'editor.css'];
 
-      // Optional assets (fonts, chunks)
-      final optionalAssets = [
-        // Font files
+      // Font files are bundled with a `.bin` suffix in the package to avoid
+      // Apple's ITMS-90853 validator rejecting `.woff`/`.woff2` files in the
+      // iOS app bundle (CoreText only accepts .ttf/.otf, but the validator
+      // scans every file regardless of usage). At runtime we load the `.bin`
+      // asset and write it under the original `.woff`/`.woff2` name so the
+      // CSS @font-face URLs in editor.css continue to resolve unchanged.
+      final fontFiles = [
         'inter-v12-latin-100.woff',
         'inter-v12-latin-100.woff2',
         'inter-v12-latin-200.woff',
@@ -76,7 +80,10 @@ class BlockNoteAssetLoader {
         'inter-v12-latin-900.woff2',
         'inter-v12-latin-regular.woff',
         'inter-v12-latin-regular.woff2',
-        // Chunk files (if any)
+      ];
+
+      // Optional non-font assets (chunks)
+      final optionalAssets = [
         'chunk-index.js',
         'chunk-list-item.js',
         'chunk-module.js',
@@ -131,6 +138,23 @@ class BlockNoteAssetLoader {
         }),
       );
       copiedCount += optionalResults.where((ok) => ok).length;
+
+      // Load fonts from `.bin` bundle entries, write under original name.
+      final fontResults = await Future.wait(
+        fontFiles.map((fileName) async {
+          try {
+            final assetPath =
+                'packages/flutter_blocknote_editor/assets/web/$fileName.bin';
+            final data = await rootBundle.load(assetPath);
+            final file = File('${tempDir.path}/$fileName');
+            await file.writeAsBytes(data.buffer.asUint8List());
+            return true;
+          } catch (_) {
+            return false;
+          }
+        }),
+      );
+      copiedCount += fontResults.where((ok) => ok).length;
 
       if (debugLogging) {
         debugPrint('[BlockNoteAssetLoader] Copied $copiedCount assets total');

@@ -191,6 +191,15 @@ These configurations only allow cleartext traffic for localhost, which is safe s
 
 </details>
 
+<details>
+<summary><strong>Note: bundled fonts use a <code>.bin</code> extension</strong></summary>
+
+The Inter `.woff`/`.woff2` files in `assets/web/` are bundled with a `.bin` suffix (e.g. `inter-v12-latin-regular.woff2.bin`). This is required to pass Apple's iOS App Store validator, which rejects any `.woff`/`.woff2` file in the app bundle with error **ITMS-90853** ("Font not supported by platform") — even though these fonts are only consumed by the embedded WebView and never touch native iOS font APIs.
+
+At runtime, `BlockNoteAssetLoader` reads the `.bin` assets and writes them to the temp directory under their original `.woff`/`.woff2` names, so the editor's CSS `@font-face` URLs resolve normally inside the WebView. Do **not** rename these files back — your iOS submissions will be rejected. The `web_editor` build script handles the rename automatically via the `postbuild:rename-fonts` step.
+
+</details>
+
 ## Usage
 
 ### Keyboard and WebView (Scaffold)

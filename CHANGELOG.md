@@ -1,3 +1,8 @@
+## 0.0.22
+
+* **iOS App Store fix (ITMS-90853):** bundled Inter `.woff`/`.woff2` font files are now stored in the package as `.woff.bin`/`.woff2.bin` to bypass Apple's native font validator (which rejects WOFF/WOFF2 in the iOS bundle even though they are only consumed by the embedded WebView). At runtime, `BlockNoteAssetLoader` loads the `.bin` assets and writes them to the temp directory under their original `.woff`/`.woff2` names, so the editor's CSS `@font-face` URLs continue to resolve unchanged.
+* **Build:** `web_editor` build now auto-renames font outputs to `.bin` via a `postbuild:rename-fonts` step.
+
 ## 0.0.21
 
 Hardening pass from full code review (Dart + JS).
