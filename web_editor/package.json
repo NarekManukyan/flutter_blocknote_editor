@@ -5,10 +5,10 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "vite build && npm run postbuild:rename-fonts",
-    "build:minified": "vite build --minify && npm run postbuild:rename-fonts",
+    "build": "vite build && npm run postbuild:strip-fonts",
+    "build:minified": "vite build --minify && npm run postbuild:strip-fonts",
     "build:all": "npm install && npm run build:minified",
-    "postbuild:rename-fonts": "node -e \"const fs=require('fs'),p=require('path'),d=p.resolve('../assets/web');for(const f of fs.readdirSync(d)){if(/\\.woff2?$/.test(f)){fs.renameSync(p.join(d,f),p.join(d,f+'.bin'));console.log('renamed',f,'->',f+'.bin');}}\"",
+    "postbuild:strip-fonts": "node -e \"const fs=require('fs'),p=require('path'),d=p.resolve('../assets/web');for(const f of fs.readdirSync(d)){if(/\\.(woff2?|woff2?\\.bin)$/.test(f)){fs.unlinkSync(p.join(d,f));console.log('removed',f);}}\"",
     "format": "prettier --write .",
     "lint": "eslint .",
     "preview": "vite preview --host 0.0.0.0 --port 4173",
