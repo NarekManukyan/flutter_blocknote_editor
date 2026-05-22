@@ -1,3 +1,9 @@
+## 0.0.24
+
+* **Android WebView fix (endless shimmer):** Chromium 148+ (Android 16 / latest WebView) enforces strict CORS on `file://` origins (treated as `null`), which blocked `editor.js` and `editor.css` from loading via `index.html` and left `window.BlockNoteCustomSchema` undefined — the editor never initialized. Re-enabled `allowFileAccessFromFileURLs` and `allowUniversalAccessFromFileURLs` on Android (already on for iOS). Assets live in the app-private `code_cache/` directory and are bundled with the package, so cross-origin `file://` access is scoped to trusted, package-supplied content.
+* **Example app:** Gradle wrapper and `gradle.properties` refreshed; `pubspec.lock` regenerated.
+* **web_editor:** dropped now-unused bundled Inter `.woff2` files (the package itself stopped shipping them in 0.0.23; this completes the cleanup in the React source tree).
+
 ## 0.0.23
 
 * **iOS App Store fix (ITMS-90853), proper version:** removed bundled Inter font files entirely. The editor now relies on the system font stack (`-apple-system`, `SF Pro Display`, `BlinkMacSystemFont`, `Roboto`, etc.) which `@blocknote/core` already declares as fallbacks. The 0.0.22 attempt to rename `.woff`/`.woff2` files to `.woff.bin`/`.woff2.bin` did **not** work — Apple's validator sniffs file magic bytes (`wOFF`, `wOF2`), not the extension.
